@@ -1,4 +1,4 @@
-// Poz Katalog — KOBİNERJİ Hızlı Teklif Kalemleri (hizli_teklif_kalemleri.csv kaynaklı)
+// Poz Katalog — SahaTakipHızlı Teklif Kalemleri (hizli_teklif_kalemleri.csv kaynaklı)
 // Her kalem: malzeme birim fiyatı + montaj işçilik + demontaj (opsiyonel) + genel gider% + kâr%
 
 export type PozCategory = 'Malzeme' | 'İşçilik' | 'Servis' | 'Mühendislik' | 'Ulaşım' | 'Diğer';

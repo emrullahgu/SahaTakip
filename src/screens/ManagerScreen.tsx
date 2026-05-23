@@ -11,12 +11,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography } from '../theme';
+import type { RootStackParamList } from '../types';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
 import { WorkOrder } from '../types';
+import {
+  generateAndShareAttendancePdf,
+  generateAndShareAttendanceCsv,
+} from '../services/pdf';
 
 type ManagerTab = 'dashboard' | 'approvals' | 'puantaj' | 'arsiv';
 
@@ -41,6 +48,7 @@ export default function ManagerScreen() {
     updateWage,
   } = useAppContext();
 
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeTab, setActiveTab] = useState<ManagerTab>('dashboard');
   const [archiveYear, setArchiveYear] = useState('Hepsi');
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +124,95 @@ export default function ManagerScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
+          {/* Hızlı İşlemler */}
+          <View style={styles.quickRow}>
+            <TouchableOpacity
+              style={styles.quickBtn}
+              onPress={() => navigation.navigate('BulkAssign')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Toplu Atama</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: colors.indigo.default }]}
+              onPress={() => navigation.navigate('RecurringTasks')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="repeat-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Periyodik Görevler</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* FAZ 7 — Stok / Malzeme / Zimmet kısayolları */}
+          <View style={styles.quickRow}>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0891b2' }]}
+              onPress={() => navigation.navigate('Stock')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cube-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Stok</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0d9488' }]}
+              onPress={() => navigation.navigate('Warehouses')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="business-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Depo & Zimmet</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.quickRow}>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#a855f7' }]}
+              onPress={() => navigation.navigate('Assignments')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Zimmet Listesi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#7c3aed' }]}
+              onPress={() => navigation.navigate('Materials')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="layers-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Malzemeler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#dc2626' }]}
+              onPress={() => navigation.navigate('Vehicles')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="car-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Araçlar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('Dashboard')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="speedometer-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Dashboard</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#6366f1' }]}
+              onPress={() => navigation.navigate('Reports')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="document-text-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Raporlar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#ef4444' }]}
+              onPress={() => navigation.navigate('Sla')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="alarm-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>SLA / Geciken</Text>
+            </TouchableOpacity>
+          </View>
           {/* KPI Cards */}
           <View style={styles.kpiGrid}>
             <View style={styles.kpiCard}>
@@ -258,11 +355,49 @@ export default function ManagerScreen() {
             Günlük durumu değiştirmek için ilgili güne dokunun.
           </Text>
 
+          {/* POZ-DEV-022: Rapor butonları */}
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+            <TouchableOpacity
+              style={{
+                flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                backgroundColor: colors.indigo.default, padding: spacing.sm, borderRadius: radius.md,
+              }}
+              onPress={() => {
+                const ym = new Date().toISOString().slice(0, 7);
+                generateAndShareAttendancePdf(employees, ym).catch(() => {});
+              }}
+            >
+              <Ionicons name="document-text" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: typography.xs }}>
+                PDF Rapor
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                backgroundColor: colors.emerald.default, padding: spacing.sm, borderRadius: radius.md,
+              }}
+              onPress={() => {
+                const ym = new Date().toISOString().slice(0, 7);
+                generateAndShareAttendanceCsv(employees, ym).catch(() => {});
+              }}
+            >
+              <Ionicons name="grid" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: typography.xs }}>
+                Excel / CSV
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {employees.map(emp => {
             const weekly = Math.round(emp.daysWorked * emp.dailyRate);
             return (
               <View key={emp.id} style={styles.empCard}>
-                <View style={styles.empHeader}>
+                <TouchableOpacity
+                  style={styles.empHeader}
+                  onPress={() => navigation.navigate('EmployeeDetail', { employeeId: emp.id })}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.empAvatar}>
                     <Text style={styles.empAvatarText}>
                       {emp.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
@@ -276,7 +411,8 @@ export default function ManagerScreen() {
                     <Text style={styles.empWageVal}>₺{weekly.toLocaleString('tr-TR')}</Text>
                     <Text style={styles.empWageSub}>{emp.daysWorked} gün hakediş</Text>
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
+                </TouchableOpacity>
 
                 {/* Attendance */}
                 <View style={styles.attendanceRow}>
@@ -574,6 +710,18 @@ const approvalStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
+  quickRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  quickBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: colors.emerald.default,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  quickText: { color: '#fff', fontWeight: '700' },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.bg.secondary,

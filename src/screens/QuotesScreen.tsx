@@ -39,6 +39,8 @@ export default function QuotesScreen() {
   const { quotes, toast, deleteQuote } = useAppContext();
   const [filter, setFilter] = useState<QuoteStatus | 'Tümü'>('Tümü');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const filtered = useMemo(
     () =>
@@ -48,9 +50,11 @@ export default function QuotesScreen() {
           q.customerName.toLowerCase().includes(search.toLowerCase()) ||
           q.title.toLowerCase().includes(search.toLowerCase()) ||
           q.number.toLowerCase().includes(search.toLowerCase());
-        return matchFilter && matchSearch;
+        const matchFrom = !dateFrom || q.date >= dateFrom;
+        const matchTo = !dateTo || q.date <= dateTo;
+        return matchFilter && matchSearch && matchFrom && matchTo;
       }),
-    [quotes, filter, search]
+    [quotes, filter, search, dateFrom, dateTo]
   );
 
   const stats = useMemo(() => {
@@ -115,6 +119,32 @@ export default function QuotesScreen() {
           value={search}
           onChangeText={setSearch}
         />
+      </View>
+
+      {/* FAZ 4 — Tarih aralığı + şablonlar */}
+      <View style={styles.dateRow}>
+        <TextInput
+          style={styles.dateInput}
+          placeholder="Başlangıç (YYYY-MM-DD)"
+          placeholderTextColor={colors.text.faint}
+          value={dateFrom}
+          onChangeText={setDateFrom}
+        />
+        <TextInput
+          style={styles.dateInput}
+          placeholder="Bitiş (YYYY-MM-DD)"
+          placeholderTextColor={colors.text.faint}
+          value={dateTo}
+          onChangeText={setDateTo}
+        />
+        <TouchableOpacity
+          style={styles.tplBtn}
+          onPress={() => navigation.navigate('QuoteTemplates')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="copy-outline" size={14} color="#fff" />
+          <Text style={styles.tplBtnText}>Şablonlar</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Filter Chips */}
@@ -278,6 +308,34 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   searchInput: { flex: 1, color: colors.text.primary, fontSize: typography.sm, paddingVertical: 4 },
+
+  dateRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  dateInput: {
+    flex: 1,
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: colors.text.primary,
+    fontSize: typography.xs,
+  },
+  tplBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.indigo.default,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+  },
+  tplBtnText: { color: '#fff', fontWeight: '700', fontSize: typography.xs },
 
   filterScroll: { maxHeight: 44, marginTop: spacing.sm },
   filterRow: { paddingHorizontal: spacing.lg, gap: 6 },

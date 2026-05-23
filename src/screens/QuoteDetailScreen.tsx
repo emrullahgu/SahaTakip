@@ -3,14 +3,17 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext, calcLineTotal } from '../context/AppContext';
 import { RootStackParamList, QuoteStatus } from '../types';
 import Toast from '../components/Toast';
 import { generateAndShareQuotePdf } from '../services/pdf';
+import { sendQuoteEmail } from '../services/quoteEmail';
 
 type DetailRoute = RouteProp<RootStackParamList, 'QuoteDetail'>;
+type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
 const NEXT_STATUS: Record<QuoteStatus, QuoteStatus | null> = {
   'Taslak': 'Onay Bekliyor',
@@ -22,9 +25,9 @@ const NEXT_STATUS: Record<QuoteStatus, QuoteStatus | null> = {
 };
 
 export default function QuoteDetailScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavProp>();
   const route = useRoute<DetailRoute>();
-  const { quotes, setQuoteStatus, deleteQuote, toast, showToast } = useAppContext();
+  const { quotes, setQuoteStatus, deleteQuote, toast, showToast, acceptQuoteAndCreateWorkOrder } = useAppContext();
   const quote = quotes.find(q => q.id === route.params.quoteId);
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -155,6 +158,95 @@ export default function QuoteDetailScreen() {
               <Text style={styles.advanceBtnText}>{nextStatus}'e Geçir</Text>
             </TouchableOpacity>
           )}
+
+          {/* FAZ 4 — E-posta gönder */}
+          <TouchableOpacity
+            style={styles.emailBtn}
+            onPress={async () => {
+              Alert.prompt?.(
+                'E-posta adresi',
+                'Teklifi göndereceğiniz adres:',
+                async (email?: string) => {
+                  if (!email) return;
+                  const res = await sendQuoteEmail(quote, email);
+                  showToast(
+                    res.ok
+                      ? res.mode === 'edge'
+                        ? 'E-posta gönderildi.'
+                        : 'Mail uygulaması açıldı.'
+                      : 'Gönderilemedi.',
+                    res.ok ? 'success' : 'error',
+                  );
+                },
+                'plain-text',
+              );
+              if (!Alert.prompt) {
+                const r = await sendQuoteEmail(quote, 'musteri@ornek.com');
+                showToast(r.ok ? 'Mail uygulaması açıldı.' : 'Gönderilemedi.', r.ok ? 'success' : 'error');
+              }
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="mail-outline" size={16} color="#fff" />
+            <Text style={styles.emailBtnText}>E-posta ile Gönder</Text>
+          </TouchableOpacity>
+
+          {/* FAZ 4 — Revizyonlar */}
+          <TouchableOpacity
+            style={styles.linkBtn}
+            onPress={() => navigation.navigate('QuoteRevisions', { quoteId: quote.id })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="layers-outline" size={16} color={brand.green} />
+            <Text style={styles.linkBtnText}>
+              Revizyon Geçmişi {quote.revision ? `(${quote.revision})` : ''}
+            </Text>
+          </TouchableOpacity>
+
+          {/* FAZ 4 — Kabul + iş emri oluştur */}
+          {(quote.status === 'Müşteriye Gönderildi' || quote.status === 'Onay Bekliyor') && (
+            <TouchableOpacity
+              style={[styles.advanceBtn, { backgroundColor: colors.emerald.default }]}
+              onPress={() => {
+                Alert.alert(
+                  'Teklifi kabul et',
+                  `${quote.number} kabul edilip otomatik iş emri oluşturulsun mu?`,
+                  [
+                    { text: 'Vazgeç', style: 'cancel' },
+                    {
+                      text: 'Kabul Et',
+                      onPress: () => {
+                        const woId = acceptQuoteAndCreateWorkOrder(quote.id, quote.engineer);
+                        if (woId) {
+                          Alert.alert('Tamam', `İş emri: ${woId}`);
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-done-circle" size={18} color="#fff" />
+              <Text style={styles.advanceBtnText}>Kabul + İş Emri Oluştur</Text>
+            </TouchableOpacity>
+          )}
+
+          {quote.generatedWorkOrderId && (
+            <TouchableOpacity
+              style={styles.linkBtn}
+              onPress={() =>
+                navigation.navigate('WorkOrderDetail', {
+                  workOrderId: quote.generatedWorkOrderId!,
+                })
+              }
+              activeOpacity={0.8}
+            >
+              <Ionicons name="briefcase-outline" size={16} color={brand.green} />
+              <Text style={styles.linkBtnText}>Üretilmiş İş Emri: {quote.generatedWorkOrderId}</Text>
+            </TouchableOpacity>
+          )}
+
           {quote.status !== 'Reddedildi' && quote.status !== 'Faturalandırıldı' && (
             <TouchableOpacity
               style={styles.rejectBtn}
@@ -321,4 +413,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteBtnText: { color: colors.rose.default, fontWeight: '700', fontSize: typography.xs },
+  emailBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: colors.indigo.default,
+    paddingVertical: 11,
+    borderRadius: radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emailBtnText: { color: '#fff', fontWeight: '700', fontSize: typography.xs },
+  linkBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: brand.green,
+    borderRadius: radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  linkBtnText: { color: brand.green, fontWeight: '700', fontSize: typography.xs },
 });

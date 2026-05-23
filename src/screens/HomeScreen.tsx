@@ -59,10 +59,17 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>Merhaba 👋</Text>
             <Text style={styles.name}>{displayName}</Text>
             <Text style={styles.role}>
-              KOBINERJI · {profile?.role === 'admin' ? 'Yönetici' : profile?.role === 'manager' ? 'Müdür' : profile?.role === 'engineer' ? 'Mühendis' : profile?.role === 'field' ? 'Saha Personeli' : 'Servis Mühendisi'}
+              SahaTakip · {profile?.role === 'admin' ? 'Yönetici' : profile?.role === 'manager' ? 'Müdür' : profile?.role === 'engineer' ? 'Mühendis' : profile?.role === 'field' ? 'Saha Personeli' : 'Servis Mühendisi'}
               {isDemoMode && '  ·  DEMO'}
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ChangePassword')}
+            style={styles.logoutBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="key-outline" size={22} color={colors.text.muted} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={signOut} style={styles.logoutBtn} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={22} color={colors.text.muted} />
           </TouchableOpacity>
@@ -145,6 +152,17 @@ export default function HomeScreen() {
               <Ionicons name="map-outline" size={26} color={colors.emerald.default} />
             </View>
             <Text style={styles.gridLabel}>Saha Haritası</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('Shift')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+              <Ionicons name="time-outline" size={26} color={colors.emerald.default} />
+            </View>
+            <Text style={styles.gridLabel}>Mesai</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

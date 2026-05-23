@@ -71,7 +71,7 @@ export default function LoginScreen() {
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="ornek@kobinerji.com"
+                placeholder="ornek@SahaTakip.com"
                 placeholderTextColor={colors.text.faint}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -150,7 +150,7 @@ export default function LoginScreen() {
             )}
           </View>
 
-          <Text style={styles.footer}>KOBİNERJİ Mühendislik © 2025</Text>
+          <Text style={styles.footer}>SahaTakipMühendislik © 2025</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

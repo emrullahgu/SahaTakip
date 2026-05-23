@@ -7,6 +7,7 @@ import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'reac
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { requestAndGetPosition, GeoPosition } from '../services/location';
+import { locationsRepo, LocationRow } from '../services/data/locationsRepo';
 
 // İzmir merkez varsayılan
 const DEFAULT_REGION: Region = {
@@ -37,10 +38,12 @@ function getMockCoord(client: string, idx: number): { lat: number; lon: number }
 }
 
 export default function MapScreen() {
-  const { workOrders } = useAppContext();
+  const { workOrders, employees } = useAppContext();
   const mapRef = useRef<MapView | null>(null);
   const [me, setMe] = useState<GeoPosition | null>(null);
   const [loading, setLoading] = useState(true);
+  const [staffLocs, setStaffLocs] = useState<LocationRow[]>([]);
+  const [showStaff, setShowStaff] = useState(true);
 
   const ensureLocation = async () => {
     setLoading(true);
@@ -67,6 +70,25 @@ export default function MapScreen() {
 
   useEffect(() => {
     ensureLocation();
+  }, []);
+
+  // POZ-DEV-015 — Canlı personel konumları + realtime
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const list = await locationsRepo.latestAll();
+      if (alive) setStaffLocs(list);
+    })();
+    const unsub = locationsRepo.subscribeRealtime(loc => {
+      setStaffLocs(prev => {
+        const filtered = prev.filter(p => p.userId !== loc.userId);
+        return [loc, ...filtered];
+      });
+    });
+    return () => {
+      alive = false;
+      unsub();
+    };
   }, []);
 
   // Active orders (not completed)
@@ -110,6 +132,29 @@ export default function MapScreen() {
               />
             );
           })}
+
+          {/* POZ-DEV-015 — Canlı personel pinleri */}
+          {showStaff &&
+            staffLocs.map(loc => {
+              const emp = employees.find(e => e.id === loc.employeeId || e.id === loc.userId);
+              const label = emp?.name ?? 'Personel';
+              const now = Date.now();
+              const age = (now - new Date(loc.recordedAt).getTime()) / 60000; // dakika
+              const isFresh = age < 5;
+              return (
+                <Marker
+                  key={'staff-' + loc.userId}
+                  coordinate={{ latitude: loc.lat, longitude: loc.lng }}
+                  title={`👤 ${label}`}
+                  description={
+                    isFresh
+                      ? `Canlı · ${age.toFixed(0)} dk önce`
+                      : `${age.toFixed(0)} dk önce`
+                  }
+                  pinColor={isFresh ? '#10b981' : '#64748b'}
+                />
+              );
+            })}
         </MapView>
 
         {loading && (
@@ -122,6 +167,15 @@ export default function MapScreen() {
         {/* My location FAB */}
         <TouchableOpacity style={styles.fab} onPress={ensureLocation} activeOpacity={0.85}>
           <Ionicons name="locate" size={22} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Personel toggle FAB */}
+        <TouchableOpacity
+          style={[styles.fab, styles.fabStaff, !showStaff && styles.fabStaffOff]}
+          onPress={() => setShowStaff(s => !s)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name={showStaff ? 'people' : 'people-outline'} size={20} color="#fff" />
         </TouchableOpacity>
 
         {/* Legend */}
@@ -192,6 +246,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
+  fabStaff: {
+    bottom: spacing.lg + 60,
+    backgroundColor: brand.blueLight,
+    shadowColor: brand.blueLight,
+  },
+  fabStaffOff: { backgroundColor: colors.text.muted, shadowOpacity: 0 },
   legend: {
     position: 'absolute',
     top: spacing.md,

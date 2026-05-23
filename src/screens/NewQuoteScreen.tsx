@@ -28,6 +28,7 @@ import {
   DEFAULT_PROFIT,
   DEFAULT_VAT,
 } from '../data/pozCatalog';
+import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recentPozes';
 import Toast from '../components/Toast';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
@@ -40,12 +41,18 @@ export default function NewQuoteScreen() {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  const [recents, setRecents] = useState<RecentPoz[]>([]);
+  const [showRecents, setShowRecents] = useState(false);
 
   // Modal state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showPozModal, setShowPozModal] = useState(false);
   const [pozCategory, setPozCategory] = useState<PozCategory | 'Tümü'>('Tümü');
   const [pozSearch, setPozSearch] = useState('');
+
+  React.useEffect(() => {
+    listRecentPozes().then(setRecents);
+  }, []);
 
   const totals = useMemo(() => calcQuoteTotals(lines), [lines]);
 
@@ -108,6 +115,7 @@ export default function NewQuoteScreen() {
       grandTotal: totals.grandTotal,
     };
     addQuote(quote);
+    recordQuoteLines(lines);
     navigation.goBack();
   };
 
@@ -164,15 +172,70 @@ export default function NewQuoteScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>3. Kalemler ({lines.length})</Text>
-            <TouchableOpacity
-              style={styles.addLineBtn}
-              onPress={() => setShowPozModal(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add-circle" size={16} color={brand.green} />
-              <Text style={styles.addLineBtnText}>Poz Ekle</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                style={styles.addLineBtn}
+                onPress={() => navigation.navigate('QuoteTemplates')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="copy-outline" size={14} color={brand.green} />
+                <Text style={styles.addLineBtnText}>Şablon</Text>
+              </TouchableOpacity>
+              {recents.length > 0 && (
+                <TouchableOpacity
+                  style={styles.addLineBtn}
+                  onPress={() => setShowRecents(s => !s)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="time-outline" size={14} color={brand.green} />
+                  <Text style={styles.addLineBtnText}>Son ({recents.length})</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.addLineBtn}
+                onPress={() => setShowPozModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle" size={16} color={brand.green} />
+                <Text style={styles.addLineBtnText}>Poz Ekle</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+
+          {showRecents && (
+            <View style={{ gap: 6, marginBottom: 8 }}>
+              {recents.slice(0, 8).map(r => (
+                <TouchableOpacity
+                  key={r.pozId}
+                  style={styles.recentItem}
+                  onPress={() => {
+                    const newLine: QuoteLine = {
+                      lineNo: lines.length + 1,
+                      pozId: r.pozId,
+                      pozName: r.pozName,
+                      unit: r.unit,
+                      quantity: 1,
+                      materialPrice: r.materialPrice,
+                      installPrice: r.installPrice,
+                      dismantlePrice: r.dismantlePrice,
+                      withDismantle: false,
+                      overheadPct: 5,
+                      profitPct: 10,
+                      vatPct: 20,
+                      discountPct: 0,
+                    };
+                    setLines(prev => [...prev, newLine]);
+                  }}
+                >
+                  <Text style={styles.recentPoz}>{r.pozId}</Text>
+                  <Text style={styles.recentName} numberOfLines={1}>
+                    {r.pozName}
+                  </Text>
+                  <Text style={styles.recentCount}>x{r.count}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {lines.length === 0 ? (
             <View style={styles.emptyLines}>
@@ -728,6 +791,20 @@ const styles = StyleSheet.create({
     borderColor: colors.emerald.border,
   },
   addLineBtnText: { color: brand.green, fontSize: typography.xs, fontWeight: '800' },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  recentPoz: { color: brand.green, fontWeight: '800', fontSize: 11, width: 70 },
+  recentName: { flex: 1, color: colors.text.primary, fontSize: 12 },
+  recentCount: { color: colors.text.muted, fontSize: 11, fontWeight: '700' },
 
   pickerBtn: {
     flexDirection: 'row',

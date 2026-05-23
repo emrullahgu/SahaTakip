@@ -4,6 +4,7 @@
   "main": "App.tsx",
   "scripts": {
     "start": "expo start",
+    "dev": "expo start --web",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

@@ -92,7 +92,7 @@ export default function SignupScreen() {
               label="E-posta"
               value={email}
               onChangeText={setEmail}
-              placeholder="ornek@kobinerji.com"
+              placeholder="ornek@SahaTakip.com"
               keyboardType="email-address"
               autoCapitalize="none"
             />

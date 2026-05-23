@@ -3,7 +3,7 @@
 > **SAHADA · TAKİPTE · KONTROLDE**
 > Mobil + Web saha takip platformu (Android APK + iOS + PWA Web)
 
-KOBİNERJİ için geliştirilen saha mühendisleri, ekip yöneticileri ve müşteri portalı için
+SahaTakipiçin geliştirilen saha mühendisleri, ekip yöneticileri ve müşteri portalı için
 hibrit takip uygulaması. Expo / React Native ile yazılmıştır, tek kod tabanı 3 platforma
 çıkar: **Android APK, iOS IPA, Web (Netlify)**. Veriler **Supabase** (Postgres + Auth + Storage)
 üzerinde tutulur.
@@ -195,4 +195,4 @@ npx tsc --noEmit
 
 ## 📄 Lisans
 
-KOBİNERJİ Mühendislik © 2025 — Tüm hakları saklıdır.
+SahaTakipMühendislik © 2025 — Tüm hakları saklıdır.

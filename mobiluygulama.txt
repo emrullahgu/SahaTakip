@@ -385,7 +385,7 @@ export default function App() {
               
               <div className="flex items-center space-x-1">
                 <SahaTakipLogo />
-                <span className="text-xs font-black tracking-tight text-slate-800 uppercase">KOBİNERJİ</span>
+                <span className="text-xs font-black tracking-tight text-slate-800 uppercase">SahaTakip</span>
               </div>
 
               <button 
@@ -414,7 +414,7 @@ export default function App() {
                     </div>
                     <div>
                       <h4 className="font-extrabold text-base text-slate-100">Test MÜHENDİS</h4>
-                      <p className="text-xs text-emerald-400">KOBİNERJİ</p>
+                      <p className="text-xs text-emerald-400">SahaTakip</p>
                       <p className="text-[10px] text-slate-400">Servis Mühendisi</p>
                     </div>
                   </div>
@@ -661,7 +661,7 @@ export default function App() {
                       <span className="text-xl">🏢</span>
                       <div>
                         <p className="text-[10px] text-slate-400 font-bold uppercase">Firma</p>
-                        <p className="text-sm font-bold text-slate-800">KOBİNERJİ</p>
+                        <p className="text-sm font-bold text-slate-800">SahaTakip</p>
                       </div>
                     </div>
 

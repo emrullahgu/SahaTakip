@@ -7,7 +7,7 @@ const COMPANY_INFO = [
   {
     icon: 'business-outline' as const,
     label: 'Firma',
-    value: 'KOBİNERJİ',
+    value: 'SahaTakip',
     color: colors.indigo.default,
   },
   {
@@ -51,7 +51,7 @@ export default function CompanyScreen() {
         <View style={styles.logoCircle}>
           <Ionicons name="flash" size={32} color={colors.emerald.default} />
         </View>
-        <Text style={styles.brandName}>KOBİNERJİ</Text>
+        <Text style={styles.brandName}>SahaTakip</Text>
         <Text style={styles.brandTagline}>Elektrik Saha Mühendisliği & Servis</Text>
         <View style={styles.activeBadge}>
           <View style={styles.activeDot} />

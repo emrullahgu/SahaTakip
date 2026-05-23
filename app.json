@@ -13,14 +13,14 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.kobinerji.sahatakip"
+      "bundleIdentifier": "com.SahaTakip.sahatakip"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#020617"
       },
-      "package": "com.kobinerji.sahatakip",
+      "package": "com.SahaTakip.sahatakip",
       "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",

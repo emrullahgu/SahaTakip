@@ -5,6 +5,9 @@ export interface GeoPosition {
   longitude: number;
   accuracy: number | null;
   timestamp: number;
+  speed?: number | null;
+  heading?: number | null;
+  isMock?: boolean;
 }
 
 /**
@@ -24,6 +27,9 @@ export async function requestAndGetPosition(): Promise<GeoPosition | null> {
     longitude: pos.coords.longitude,
     accuracy: pos.coords.accuracy,
     timestamp: pos.timestamp,
+    speed: pos.coords.speed,
+    heading: pos.coords.heading,
+    isMock: (pos.coords as any).mocked ?? false,
   };
 }
 
@@ -63,4 +69,81 @@ export function distanceKm(a: GeoPosition, b: GeoPosition): number {
     Math.sin(dLat / 2) ** 2 +
     Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
   return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+/**
+ * Metre cinsinden mesafe — geofence için.
+ */
+export function distanceMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+): number {
+  return (
+    distanceKm(
+      { ...a, accuracy: null, timestamp: 0 },
+      { ...b, accuracy: null, timestamp: 0 }
+    ) * 1000
+  );
+}
+
+/**
+ * POZ-DEV-018 — Sahte konum (mock location) tespiti.
+ * Android: expo-location coords.mocked true gelirse → mock.
+ * iOS: native API yok; heuristic (accuracy 0, hız aşırı) ile kontrol.
+ */
+export function isMockLocation(pos: GeoPosition): boolean {
+  if (pos.isMock) return true;
+  // Heuristic — gerçekçi olmayan hız/doğruluk
+  if (pos.speed != null && pos.speed > 100) return true; // 360 km/h üstü
+  if (pos.accuracy === 0) return true; // gerçekçi değil
+  return false;
+}
+
+// =============================================================
+// POZ-DEV-014 — Canlı GPS takibi (foreground watch)
+// =============================================================
+let watchSub: Location.LocationSubscription | null = null;
+
+export type LocationListener = (pos: GeoPosition) => void;
+
+export async function startLiveTracking(
+  listener: LocationListener,
+  intervalMs = 15000,
+  minDistanceM = 25
+): Promise<boolean> {
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') return false;
+
+  // Aynı anda birden fazla watch açılmasın
+  if (watchSub) {
+    watchSub.remove();
+    watchSub = null;
+  }
+
+  watchSub = await Location.watchPositionAsync(
+    {
+      accuracy: Location.Accuracy.High,
+      timeInterval: intervalMs,
+      distanceInterval: minDistanceM,
+    },
+    pos => {
+      listener({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        timestamp: pos.timestamp,
+        speed: pos.coords.speed,
+        heading: pos.coords.heading,
+        isMock: (pos.coords as any).mocked ?? false,
+      });
+    }
+  );
+  return true;
+}
+
+export function stopLiveTracking() {
+  if (watchSub) {
+    watchSub.remove();
+    watchSub = null;
+  }
 }

@@ -95,9 +95,59 @@ export default function CustomerFormScreen() {
             <Ionicons name={isEdit ? 'save-outline' : 'add-circle-outline'} size={18} color="#fff" />
             <Text style={styles.saveBtnText}>{isEdit ? 'Güncelle' : 'Müşteri Ekle'}</Text>
           </TouchableOpacity>
+
+          {isEdit && (
+            <View style={styles.linksGrid}>
+              <LinkBtn
+                icon="map-outline"
+                label="Sahalar"
+                onPress={() =>
+                  navigation.navigate('CustomerSites', { customerId: form.id })
+                }
+              />
+              <LinkBtn
+                icon="attach-outline"
+                label="Belgeler"
+                onPress={() =>
+                  navigation.navigate('CustomerDocuments', { customerId: form.id })
+                }
+              />
+              <LinkBtn
+                icon="time-outline"
+                label="Geçmiş"
+                onPress={() =>
+                  navigation.navigate('CustomerHistory', { customerId: form.id })
+                }
+              />
+              <LinkBtn
+                icon="person-circle-outline"
+                label="Müşteri Portalı"
+                onPress={() =>
+                  navigation.navigate('CustomerPortal', { customerId: form.id })
+                }
+              />
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function LinkBtn({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.linkBtn} onPress={onPress} activeOpacity={0.85}>
+      <Ionicons name={icon} size={18} color={brand.green} />
+      <Text style={styles.linkBtnText}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -163,4 +213,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   saveBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  linksGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  linkBtn: {
+    flexBasis: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: brand.green,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+  },
+  linkBtnText: { color: brand.green, fontWeight: '800', fontSize: typography.xs },
 });

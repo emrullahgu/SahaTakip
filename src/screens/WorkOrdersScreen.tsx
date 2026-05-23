@@ -11,14 +11,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { CompositeNavigationProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
-import { TabParamList } from '../types';
+import { TabParamList, RootStackParamList } from '../types';
+import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
 
-type WorkOrdersNavProp = BottomTabNavigationProp<TabParamList, 'WorkOrders'>;
+type WorkOrdersNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<TabParamList, 'WorkOrders'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 const FILTERS = ['Tümü', 'Bekliyor', 'Tamamlandı', 'Gecikti'];
 
@@ -44,23 +50,38 @@ const ASSIGNED_ORDERS = [
 
 export default function WorkOrdersScreen() {
   const navigation = useNavigation<WorkOrdersNavProp>();
-  const { toast } = useAppContext();
+  const { toast, workOrders } = useAppContext();
   const [activeFilter, setActiveFilter] = useState('Tümü');
   const [searchText, setSearchText] = useState('');
 
-  const filtered = ASSIGNED_ORDERS.filter(o => {
+  // Gerçek iş emirleri varsa onları göster, yoksa demo verisi.
+  const realOrders = workOrders.map(w => ({
+    id: w.id,
+    title: w.serviceName,
+    location: w.client,
+    device: w.engineer || '-',
+    date: w.date || (w.plannedStart ? w.plannedStart.slice(0, 10) : ''),
+    status: w.status,
+    priority: w.priority,
+    breached: isSlaBreached(w),
+  }));
+  const source = realOrders.length > 0 ? realOrders : ASSIGNED_ORDERS.map(o => ({ ...o, priority: undefined, breached: false }));
+
+  const filtered = source.filter(o => {
     const matchFilter =
-      activeFilter === 'Tümü' || o.status === activeFilter;
+      activeFilter === 'Tümü' ||
+      o.status === activeFilter ||
+      (activeFilter === 'Gecikti' && o.breached);
     const matchSearch =
       o.title.toLowerCase().includes(searchText.toLowerCase()) ||
       o.location.toLowerCase().includes(searchText.toLowerCase());
     return matchFilter && matchSearch;
   });
 
-  const total = ASSIGNED_ORDERS.length;
-  const done = ASSIGNED_ORDERS.filter(o => o.status === 'Tamamlandı').length;
-  const waiting = ASSIGNED_ORDERS.filter(o => o.status === 'Bekliyor').length;
-  const late = ASSIGNED_ORDERS.filter(o => o.status === 'Gecikti').length;
+  const total = source.length;
+  const done = source.filter(o => o.status === 'Tamamlandı').length;
+  const waiting = source.filter(o => o.status === 'Bekliyor' || o.status === 'Atandı').length;
+  const late = source.filter(o => o.breached || o.status === 'Gecikti').length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -133,10 +154,18 @@ export default function WorkOrdersScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <View
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() =>
+                realOrders.find(r => r.id === item.id) &&
+                navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
+              }
               style={[
                 styles.card,
-                item.status === 'Gecikti' && { borderColor: colors.rose.default, borderWidth: 1.5 },
+                (item.breached || item.status === 'Gecikti') && {
+                  borderColor: colors.rose.default,
+                  borderWidth: 1.5,
+                },
               ]}
             >
               <View style={styles.cardTop}>
@@ -144,25 +173,36 @@ export default function WorkOrdersScreen() {
                   <Text style={styles.cardTitle}>{item.title}</Text>
                   <Text style={styles.cardSub}>{item.location}</Text>
                   <Text style={styles.cardDevice}>{item.device}</Text>
+                  {item.priority && (
+                    <View style={[styles.priorityChip, { backgroundColor: priorityColor(item.priority) }]}>
+                      <Text style={styles.priorityText}>{item.priority}</Text>
+                    </View>
+                  )}
                 </View>
-                <StatusBadge status={item.status} small />
+                <View style={[styles.statusPill, { backgroundColor: statusColor(item.status as any) }]}>
+                  <Text style={styles.statusPillText}>{item.status}</Text>
+                </View>
               </View>
               <View style={styles.cardBottom}>
                 <View style={styles.dateRow}>
                   <Ionicons name="calendar-outline" size={12} color={colors.text.faint} />
-                  <Text style={styles.dateText}>{item.date}</Text>
+                  <Text style={styles.dateText}>{item.date || '-'}</Text>
                 </View>
                 {item.status !== 'Tamamlandı' && (
                   <TouchableOpacity
                     style={styles.actionBtn}
-                    onPress={() => navigation.navigate('NewService')}
+                    onPress={() =>
+                      realOrders.find(r => r.id === item.id)
+                        ? navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
+                        : navigation.navigate('NewService')
+                    }
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.actionBtnText}>Rapor Başlat</Text>
+                    <Text style={styles.actionBtnText}>Aç</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -275,6 +315,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   actionBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
+  priorityChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    marginTop: 6,
+  },
+  priorityText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  statusPillText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   empty: { alignItems: 'center', paddingVertical: 60, gap: spacing.md },
   emptyText: { fontSize: typography.sm, color: colors.text.faint },
 });

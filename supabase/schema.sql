@@ -259,5 +259,489 @@ create index if not exists idx_wo_status       on public.work_orders(status);
 create index if not exists idx_attendance_date on public.attendance(date);
 
 -- ====================================================================
+-- FAZ 2 â€” KONUM & PERSONEL (POZ-DEV-014, 017, 019, 020)
+-- ====================================================================
+
+-- ========== LOCATIONS (canlÄ± + geÃ§miÅŸ GPS) ==========
+create table if not exists public.locations (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users on delete cascade,
+  employee_id uuid references public.employees,
+  lat numeric(10,7) not null,
+  lng numeric(10,7) not null,
+  accuracy numeric(8,2),
+  speed numeric(8,2),
+  heading numeric(6,2),
+  is_mock boolean not null default false,
+  battery numeric(5,2),
+  recorded_at timestamptz not null default now()
+);
+create index if not exists idx_locations_user_time on public.locations(user_id, recorded_at desc);
+create index if not exists idx_locations_recorded on public.locations(recorded_at desc);
+
+-- En son konum view'i (haritada hÄ±zlÄ± Ã§ekim)
+create or replace view public.latest_locations as
+select distinct on (user_id) *
+from public.locations
+order by user_id, recorded_at desc;
+
+-- ========== SHIFTS (Mesai baÅŸlat/bitir + mola) ==========
+create table if not exists public.shifts (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users on delete cascade,
+  employee_id uuid references public.employees,
+  start_at timestamptz not null default now(),
+  end_at timestamptz,
+  start_lat numeric(10,7),
+  start_lng numeric(10,7),
+  end_lat numeric(10,7),
+  end_lng numeric(10,7),
+  break_minutes int not null default 0,
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_shifts_user on public.shifts(user_id, start_at desc);
+
+-- ========== GEOFENCES (CoÄŸrafi Ã§it) ==========
+create table if not exists public.geofences (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  customer_id uuid references public.customers,
+  center_lat numeric(10,7) not null,
+  center_lng numeric(10,7) not null,
+  radius_m int not null default 100,
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.geofence_events (
+  id uuid primary key default uuid_generate_v4(),
+  geofence_id uuid references public.geofences on delete cascade,
+  user_id uuid references auth.users on delete cascade,
+  event text not null check (event in ('enter','exit')),
+  recorded_at timestamptz not null default now()
+);
+
+-- ========== QR/NFC LOCATION CHECK-IN ==========
+create table if not exists public.location_checkins (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users on delete cascade,
+  customer_id uuid references public.customers,
+  site_code text not null,
+  method text not null check (method in ('qr','nfc','manual')),
+  lat numeric(10,7),
+  lng numeric(10,7),
+  recorded_at timestamptz not null default now()
+);
+
+-- ========== FAZ 2 â€” RLS ==========
+alter table public.locations         enable row level security;
+alter table public.shifts            enable row level security;
+alter table public.geofences         enable row level security;
+alter table public.geofence_events   enable row level security;
+alter table public.location_checkins enable row level security;
+
+-- Kendi konumunu yazar; manager/admin herkesinkini okur
+create policy "locations_self_write" on public.locations
+  for insert with check (user_id = auth.uid());
+create policy "locations_self_or_manager_read" on public.locations
+  for select using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
+
+create policy "shifts_self_write" on public.shifts
+  for all using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
+
+create policy "geofences_manager_write" on public.geofences
+  for all using (public.user_role() in ('admin','manager'));
+create policy "geofences_all_read" on public.geofences
+  for select using (auth.uid() is not null);
+
+create policy "geofence_events_read" on public.geofence_events
+  for select using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
+create policy "geofence_events_write" on public.geofence_events
+  for insert with check (user_id = auth.uid());
+
+create policy "checkins_self_write" on public.location_checkins
+  for all using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
+
+-- ====================================================================
 -- BÄ°TTÄ°. Storage bucket'larÄ±nÄ± ve ilk admin kullanÄ±cÄ±sÄ±nÄ± oluÅŸturmayÄ± unutmayÄ±n.
 -- ====================================================================
+
+
+-- ============================================================
+-- POZ-DEV-008 & 010 — Faz 1 sonu ek migrasyonlar
+-- ============================================================
+-- work_orders status enum geniþlet (app 'Teklif Gönderildi' kullanýyor)
+alter table public.work_orders drop constraint if exists work_orders_status_check;
+alter table public.work_orders add constraint work_orders_status_check
+  check (status in ('Servis Açýldý','Devam Ediyor','Tamamlandý','Onay Bekliyor','Teklif Gönderildi','Müþteri Onayý','Faturalandýrýldý'));
+
+-- work_orders ek alanlar (mobil app þemasý)
+alter table public.work_orders add column if not exists service_name text;
+alter table public.work_orders add column if not exists materials_json jsonb default '[]'::jsonb;
+alter table public.work_orders add column if not exists other_cost numeric(12,2) default 0;
+alter table public.work_orders add column if not exists labor_cost numeric(12,2) default 0;
+alter table public.work_orders add column if not exists material_cost numeric(12,2) default 0;
+alter table public.work_orders add column if not exists quote_amount numeric(12,2) default 0;
+alter table public.work_orders add column if not exists profit numeric(12,2) default 0;
+alter table public.work_orders add column if not exists before_photo text;
+alter table public.work_orders add column if not exists after_photo text;
+alter table public.work_orders add column if not exists engineer text;
+alter table public.work_orders add column if not exists date date;
+alter table public.work_orders add column if not exists notes text;
+
+-- employees ek alanlar
+alter table public.employees add column if not exists monthly_wage numeric(12,2) default 0;
+alter table public.employees add column if not exists attendance_json jsonb default '{}'::jsonb;
+
+-- ============================================================
+-- AUDIT LOG (POZ-DEV-010)
+-- ============================================================
+create table if not exists public.audit_log (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users on delete set null,
+  action text not null,
+  table_name text,
+  ref_id text,
+  meta jsonb default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_audit_user on public.audit_log(user_id, created_at desc);
+create index if not exists idx_audit_action on public.audit_log(action);
+
+alter table public.audit_log enable row level security;
+
+drop policy if exists audit_log_insert_self on public.audit_log;
+create policy audit_log_insert_self on public.audit_log
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists audit_log_manager_read on public.audit_log;
+create policy audit_log_manager_read on public.audit_log
+  for select using (
+    exists(select 1 from public.profiles p
+           where p.id = auth.uid() and p.role in ('admin','manager'))
+  );
+
+-- ============================================================
+-- RLS SMOKE TEST (manuel — Supabase SQL Editor'da çalýþtýrýn)
+-- ============================================================
+-- 1. Demo bir auth.user oluþturun ve profiles satýrý ekleyin (role='field').
+-- 2. Bu user ile baþka birinin work_orders kaydýný UPDATE etmeyi deneyin.
+--    -> 0 row returned (RLS engelledi) beklenir.
+-- 3. SAME user ile audit_log satýrýna baþka user_id ile INSERT denenirse
+--    -> 'new row violates row-level security' hatasý beklenir.
+-- 4. Manager rolündeki user ile audit_log SELECT yapýn -> tüm kayýtlar gelir.
+
+
+-- =====================================================
+-- FAZ 3 â€” Ä°ÅŸ Emri AkÄ±ÅŸÄ± (POZ-DEV-024..035) Eklenen alanlar
+-- =====================================================
+ALTER TABLE work_orders
+  ADD COLUMN IF NOT EXISTS priority text,
+  ADD COLUMN IF NOT EXISTS planned_start timestamptz,
+  ADD COLUMN IF NOT EXISTS planned_end timestamptz,
+  ADD COLUMN IF NOT EXISTS sla_hours int,
+  ADD COLUMN IF NOT EXISTS assigned_to_id uuid,
+  ADD COLUMN IF NOT EXISTS assigned_to_name text,
+  ADD COLUMN IF NOT EXISTS assignment_status text,
+  ADD COLUMN IF NOT EXISTS reject_reason text,
+  ADD COLUMN IF NOT EXISTS time_logs_json jsonb DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS actual_labor_minutes int,
+  ADD COLUMN IF NOT EXISTS video_uri text,
+  ADD COLUMN IF NOT EXISTS audio_uri text,
+  ADD COLUMN IF NOT EXISTS signature_uri text,
+  ADD COLUMN IF NOT EXISTS template_id text;
+
+ALTER TABLE work_orders DROP CONSTRAINT IF EXISTS work_orders_status_check;
+ALTER TABLE work_orders ADD CONSTRAINT work_orders_status_check CHECK (
+  status IN (
+    'Onay Bekliyor','Teklif GÃ¶nderildi','FaturalandÄ±rÄ±ldÄ±',
+    'Bekliyor','AtandÄ±','Yolda','BaÅŸladÄ±','TamamlandÄ±','Ä°ptal'
+  )
+);
+
+CREATE TABLE IF NOT EXISTS recurring_templates (
+  id text PRIMARY KEY,
+  title text NOT NULL,
+  service_name text NOT NULL,
+  client text NOT NULL,
+  priority text DEFAULT 'Normal',
+  interval_days int NOT NULL DEFAULT 30,
+  next_run_date date NOT NULL,
+  default_engineer text,
+  active boolean DEFAULT true,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE recurring_templates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS rt_select ON recurring_templates;
+DROP POLICY IF EXISTS rt_write ON recurring_templates;
+CREATE POLICY rt_select ON recurring_templates FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY rt_write ON recurring_templates FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role IN ('admin','manager'))
+);
+
+-- ============================================================
+-- FAZ 4 — Teklif Geliþmiþ (POZ-DEV-036..043)
+-- ============================================================
+
+create table if not exists quote_revisions (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid references quotes(id) on delete cascade,
+  revision int not null,
+  snapshot jsonb not null,
+  reason text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_qrev_qid on quote_revisions(quote_id);
+
+alter table quotes add column if not exists revision int default 0;
+alter table quotes add column if not exists accepted_at timestamptz;
+alter table quotes add column if not exists accepted_by text;
+alter table quotes add column if not exists accept_signature text;
+alter table quotes add column if not exists generated_work_order_id text;
+alter table quotes add column if not exists template_id text;
+alter table quotes add column if not exists share_token text;
+
+
+-- ============================================================
+-- FAZ 5 â€” MÃ¼ÅŸteri & Lokasyon (POZ-DEV-044..048)
+-- ============================================================
+create table if not exists customer_sites (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  name text not null,
+  address text, city text, lat double precision, lng double precision,
+  contact_person text, contact_phone text, notes text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_sites_cust on customer_sites(customer_id);
+
+create table if not exists customer_documents (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  name text not null, category text,
+  uri text not null, storage_path text,
+  size_bytes int, mime_type text,
+  uploaded_at timestamptz default now(),
+  uploaded_by text, notes text
+);
+create index if not exists idx_docs_cust on customer_documents(customer_id);
+
+create table if not exists customer_ratings (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  work_order_id text,
+  score int not null check (score between 1 and 5),
+  comment text, rated_by text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_ratings_cust on customer_ratings(customer_id);
+
+-- Supabase Storage: 'customer-docs' bucket'Ä± manuel oluÅŸturulmalÄ± (private).
+
+
+-- ============================================================
+-- FAZ 6 â€” Form & Kontrol Listeleri (POZ-DEV-049..053)
+-- ============================================================
+create table if not exists form_templates (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text,
+  description text,
+  fields jsonb not null default '[]'::jsonb,
+  is_seed boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists form_responses (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid references form_templates(id) on delete set null,
+  template_name text not null,
+  work_order_id text,
+  customer_id uuid references customers(id) on delete set null,
+  filled_by text,
+  values jsonb not null default '{}'::jsonb,
+  revision int not null default 1,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_form_responses_wo on form_responses(work_order_id);
+create index if not exists idx_form_responses_cust on form_responses(customer_id);
+
+create table if not exists form_response_revisions (
+  id uuid primary key default gen_random_uuid(),
+  response_id uuid references form_responses(id) on delete cascade,
+  revision int not null,
+  edited_at timestamptz default now(),
+  edited_by text,
+  reason text,
+  values jsonb not null default '{}'::jsonb
+);
+create index if not exists idx_form_revs_resp on form_response_revisions(response_id);
+
+-- =============================================================
+-- FAZ 7 â€” Stok, Malzeme & Zimmet (POZ-DEV-054..059)
+-- =============================================================
+
+create table if not exists public.warehouses (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  kind text not null check (kind in ('depo','arac','personel')),
+  responsible_id uuid,
+  responsible_name text,
+  code text,
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.materials (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  unit text not null default 'adet',
+  price numeric,
+  min_stock numeric,
+  category text,
+  barcode text,
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists materials_barcode_idx on public.materials(barcode);
+
+create table if not exists public.stock_balances (
+  material_id uuid not null references public.materials(id) on delete cascade,
+  warehouse_id uuid not null references public.warehouses(id) on delete cascade,
+  qty numeric not null default 0,
+  primary key (material_id, warehouse_id)
+);
+create index if not exists stock_balances_warehouse_idx on public.stock_balances(warehouse_id);
+
+create table if not exists public.stock_movements (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('giris','cikis','transfer','is-emri','sayim')),
+  material_id uuid not null references public.materials(id) on delete cascade,
+  material_name text not null,
+  material_unit text not null,
+  from_warehouse_id uuid references public.warehouses(id) on delete set null,
+  to_warehouse_id uuid references public.warehouses(id) on delete set null,
+  qty numeric not null,
+  unit_price numeric,
+  work_order_id uuid,
+  user_id uuid,
+  user_name text,
+  note text,
+  created_at timestamptz default now()
+);
+create index if not exists stock_movements_material_idx on public.stock_movements(material_id);
+create index if not exists stock_movements_workorder_idx on public.stock_movements(work_order_id);
+create index if not exists stock_movements_created_idx on public.stock_movements(created_at desc);
+
+-- ============================================================
+-- FAZ 8 â€” AraÃ§ Takibi (POZ-DEV-060..063)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS vehicles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plate text NOT NULL UNIQUE,
+  brand text,
+  model text,
+  year int,
+  color text,
+  driver_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  driver_name text,
+  km_total numeric DEFAULT 0,
+  fuel_type text CHECK (fuel_type IN ('benzin','dizel','lpg','elektrik','hibrit')),
+  inspection_due_at date,
+  insurance_due_at date,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id uuid NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  kind text NOT NULL CHECK (kind IN ('km','fuel','maintenance','inspection','insurance')),
+  km numeric,
+  liters numeric,
+  unit_price numeric,
+  total_cost numeric,
+  service_type text,
+  due_at date,
+  note text,
+  performed_by text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_logs_vehicle ON vehicle_logs(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_logs_kind ON vehicle_logs(kind);
+CREATE INDEX IF NOT EXISTS idx_vehicle_logs_created ON vehicle_logs(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS vehicle_damages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id uuid NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  description text NOT NULL,
+  severity text NOT NULL CHECK (severity IN ('low','medium','high')),
+  status text NOT NULL CHECK (status IN ('open','in-progress','repaired')) DEFAULT 'open',
+  photos jsonb DEFAULT '[]'::jsonb,
+  km_at numeric,
+  reported_by text,
+  reported_at timestamptz DEFAULT now(),
+  repaired_at timestamptz,
+  repair_cost numeric,
+  notes text
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_damages_vehicle ON vehicle_damages(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_damages_status ON vehicle_damages(status);
+
+CREATE TABLE IF NOT EXISTS vehicle_route_points (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id uuid NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  lat numeric NOT NULL,
+  lng numeric NOT NULL,
+  speed numeric,
+  recorded_at timestamptz DEFAULT now(),
+  work_order_id uuid REFERENCES work_orders(id) ON DELETE SET NULL,
+  user_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  user_name text
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_route_points_vehicle ON vehicle_route_points(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_route_points_recorded ON vehicle_route_points(recorded_at DESC);
+
+-- ============================================================
+-- FAZ 9 â€” Raporlama & Dashboard (POZ-DEV-064..071)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  period text NOT NULL CHECK (period IN ('daily','weekly','monthly')),
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  generated_at timestamptz DEFAULT now(),
+  kpi jsonb NOT NULL,
+  by_status jsonb DEFAULT '[]'::jsonb,
+  by_engineer jsonb DEFAULT '[]'::jsonb,
+  by_customer jsonb DEFAULT '[]'::jsonb,
+  notes text,
+  created_by uuid REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_reports_period ON reports(period);
+CREATE INDEX IF NOT EXISTS idx_reports_start ON reports(start_date DESC);
+
+CREATE TABLE IF NOT EXISTS report_preferences (
+  user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  daily_reminder_hour int DEFAULT 18,
+  daily_reminder_minute int DEFAULT 0,
+  daily_reminder_enabled boolean DEFAULT false,
+  weekly_email text,
+  updated_at timestamptz DEFAULT now()
+);
+
+-- POZ-DEV-071 Edge Function placeholder:
+-- supabase functions deploy weekly-report-email
+-- Body: { email, reportId } â†’ Resend / SMTP Ã¼zerinden gÃ¶nderim.

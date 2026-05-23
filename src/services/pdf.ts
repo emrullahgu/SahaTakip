@@ -10,6 +10,7 @@ function buildQuoteHtml(quote: Quote): string {
   const lineRows = quote.lines
     .map((line, idx) => {
       const calc = calcLineTotal(line);
+      const overheadAmt = calc.withOverhead - calc.afterDiscount;
       return `
         <tr>
           <td class="center">${idx + 1}</td>
@@ -18,6 +19,7 @@ function buildQuoteHtml(quote: Quote): string {
           <td class="right">${fmt(line.materialPrice)} ₺</td>
           <td class="right">${fmt(line.installPrice)} ₺</td>
           <td class="right">${line.withDismantle ? fmt(line.dismantlePrice) + ' ₺' : '<span class="muted">—</span>'}</td>
+          <td class="right">${overheadAmt > 0 ? fmt(overheadAmt) + ' ₺' : '<span class="muted">—</span>'}</td>
           <td class="right"><strong>${fmt(calc.withProfit)} ₺</strong></td>
         </tr>
       `;
@@ -150,9 +152,9 @@ function buildQuoteHtml(quote: Quote): string {
 <body>
   <div class="header">
     <div class="company">
-      <div class="name">KOBINERJI</div>
+      <div class="name">SahaTakip</div>
       <div class="slogan">SAHADA · TAKİPTE · KONTROLDE</div>
-      <div class="info">Mühendislik Hizmetleri · İzmir<br/>info@kobinerji.com · 0xxx xxx xx xx</div>
+      <div class="info">Mühendislik Hizmetleri · İzmir<br/>info@SahaTakip.com · 0xxx xxx xx xx</div>
     </div>
     <div class="doc-info">
       <div class="label">Teklif No</div>
@@ -185,6 +187,7 @@ function buildQuoteHtml(quote: Quote): string {
         <th style="width:80px">Malzeme B.F.</th>
         <th style="width:80px">Montaj B.F.</th>
         <th style="width:80px">Demontaj B.F.</th>
+        <th style="width:80px">Genel Gider</th>
         <th style="width:90px">Tutar (KDV Hariç)</th>
       </tr>
     </thead>
@@ -206,7 +209,7 @@ function buildQuoteHtml(quote: Quote): string {
 
   <div class="footer">
     <div>Bu teklif sistem tarafından üretilmiştir.</div>
-    <div>SahaTakip · KOBINERJI Mühendislik © 2025</div>
+    <div>SahaTakip · SahaTakip Mühendislik © 2025</div>
   </div>
 </body>
 </html>`;
@@ -246,4 +249,155 @@ export async function generateQuotePdf(quote: Quote): Promise<string> {
   const html = buildQuoteHtml(quote);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
   return uri;
+}
+
+// ====================================================================
+// POZ-DEV-022 — Puantaj (Attendance) Raporu (PDF + CSV)
+// ====================================================================
+
+import * as FileSystem from 'expo-file-system';
+import type { Employee } from '../types';
+
+/** YYYY-MM ay anahtarı için ayın tüm günlerini gez ve attendance['YYYY-MM-DD'] değerini kullan */
+function monthDays(yyyyMm: string): string[] {
+  const [y, m] = yyyyMm.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  return Array.from({ length: last }).map(
+    (_, i) => `${y}-${String(m).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`
+  );
+}
+
+function buildAttendanceHtml(employees: Employee[], yyyyMm: string): string {
+  const days = monthDays(yyyyMm);
+  const headDates = days
+    .map(d => `<th class="center">${d.slice(8)}</th>`)
+    .join('');
+  const rows = employees
+    .map(e => {
+      const cells = days
+        .map(d => {
+          const s = e.attendance?.[d] ?? '';
+          const cls =
+            s === 'Tam' ? 'ok' : s === 'Yarım' ? 'half' : s === 'Yok' ? 'no' : 'empty';
+          const letter = s === 'Tam' ? 'T' : s === 'Yarım' ? 'Y' : s === 'Yok' ? '–' : '';
+          return `<td class="center ${cls}">${letter}</td>`;
+        })
+        .join('');
+      const tam = Object.values(e.attendance ?? {}).filter(v => v === 'Tam').length;
+      const yarim = Object.values(e.attendance ?? {}).filter(v => v === 'Yarım').length;
+      const total = tam + yarim * 0.5;
+      const ucret = total * e.dailyRate;
+      return `
+        <tr>
+          <td><strong>${escapeHtml(e.name)}</strong><br/><small>${escapeHtml(e.role)}</small></td>
+          ${cells}
+          <td class="center"><strong>${total}</strong></td>
+          <td class="right"><strong>${fmt(ucret)} ₺</strong></td>
+        </tr>`;
+    })
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8" />
+<title>Puantaj ${yyyyMm}</title>
+<style>
+  body { font-family: Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 24px; font-size: 9px; }
+  .header { border-bottom: 3px solid #1e40af; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end;}
+  .title { font-size: 18px; font-weight: 900; color: #1e40af;}
+  .sub { font-size: 10px; color: #6b7280; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #1e40af; color: #fff; padding: 6px 3px; font-size: 8px; font-weight: 800; }
+  td { padding: 5px 3px; border-bottom: 1px solid #e5e7eb; font-size: 9px; }
+  td.center { text-align: center; }
+  td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  td.ok { background: #ecfdf5; color: #15803d; font-weight: 800; }
+  td.half { background: #fffbeb; color: #92400e; font-weight: 800; }
+  td.no { background: #fef2f2; color: #991b1b; font-weight: 800; }
+  td.empty { color: #d1d5db; }
+  .legend { margin-top: 14px; font-size: 9px; color: #6b7280; }
+  .legend span { display: inline-block; margin-right: 16px; }
+  .legend .box { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 4px; border-radius: 2px;}
+</style></head><body>
+  <div class="header">
+    <div>
+      <div class="title">PUANTAJ RAPORU</div>
+      <div class="sub">SahaTakip Mühendislik · ${escapeHtml(yyyyMm)}</div>
+    </div>
+    <div class="sub">Hazırlanma: ${new Date().toLocaleDateString('tr-TR')}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left">Personel</th>
+        ${headDates}
+        <th class="center">Toplam</th>
+        <th class="right">Hakediş</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="legend">
+    <span><span class="box" style="background:#ecfdf5;border:1px solid #15803d"></span> T = Tam gün</span>
+    <span><span class="box" style="background:#fffbeb;border:1px solid #92400e"></span> Y = Yarım gün</span>
+    <span><span class="box" style="background:#fef2f2;border:1px solid #991b1b"></span> – = Gelmedi</span>
+  </div>
+</body></html>`;
+}
+
+/** Puantajı PDF olarak üret + paylaş */
+export async function generateAndShareAttendancePdf(
+  employees: Employee[],
+  yyyyMm: string
+): Promise<{ uri: string }> {
+  const html = buildAttendanceHtml(employees, yyyyMm);
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: 'application/pdf',
+      dialogTitle: `Puantaj ${yyyyMm}`,
+      UTI: 'com.adobe.pdf',
+    });
+  }
+  return { uri };
+}
+
+/** Puantajı CSV olarak üret + paylaş (Excel'de açılır) */
+export async function generateAndShareAttendanceCsv(
+  employees: Employee[],
+  yyyyMm: string
+): Promise<{ uri: string }> {
+  const days = monthDays(yyyyMm);
+  const header = ['Personel', 'Rol', ...days, 'Toplam Gün', 'Hakediş (TL)'].join(';');
+  const lines = employees.map(e => {
+    const cells = days.map(d => {
+      const s = e.attendance?.[d] ?? '';
+      return s === 'Tam' ? 'T' : s === 'Yarım' ? 'Y' : s === 'Yok' ? 'X' : '';
+    });
+    const tam = Object.values(e.attendance ?? {}).filter(v => v === 'Tam').length;
+    const yarim = Object.values(e.attendance ?? {}).filter(v => v === 'Yarım').length;
+    const total = tam + yarim * 0.5;
+    const ucret = total * e.dailyRate;
+    return [
+      `"${e.name}"`,
+      `"${e.role}"`,
+      ...cells,
+      String(total),
+      String(ucret.toFixed(2)),
+    ].join(';');
+  });
+  // BOM ile Excel Türkçe karakterleri doğru okur
+  const csv = '\ufeff' + [header, ...lines].join('\r\n');
+
+  const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
+  const uri = `${dir}puantaj-${yyyyMm}.csv`;
+  await FileSystem.writeAsStringAsync(uri, csv, { encoding: FileSystem.EncodingType.UTF8 });
+
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: 'text/csv',
+      dialogTitle: `Puantaj ${yyyyMm} (CSV)`,
+      UTI: 'public.comma-separated-values-text',
+    });
+  }
+  return { uri };
 }
