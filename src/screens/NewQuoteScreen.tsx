@@ -1,0 +1,909 @@
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Modal,
+  FlatList,
+  Alert,
+  Switch,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { colors, spacing, radius, typography, brand } from '../theme';
+import { useAppContext, calcLineTotal, calcQuoteTotals } from '../context/AppContext';
+import { Quote, QuoteLine, Customer, RootStackParamList } from '../types';
+import {
+  POZ_CATALOG,
+  POZ_CATEGORIES,
+  PozItem,
+  PozCategory,
+  DEFAULT_OVERHEAD,
+  DEFAULT_PROFIT,
+  DEFAULT_VAT,
+} from '../data/pozCatalog';
+import Toast from '../components/Toast';
+
+type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
+
+export default function NewQuoteScreen() {
+  const navigation = useNavigation<NavProp>();
+  const { customers, addQuote, generateQuoteNumber, toast } = useAppContext();
+
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
+  const [lines, setLines] = useState<QuoteLine[]>([]);
+
+  // Modal state
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showPozModal, setShowPozModal] = useState(false);
+  const [pozCategory, setPozCategory] = useState<PozCategory | 'Tümü'>('Tümü');
+  const [pozSearch, setPozSearch] = useState('');
+
+  const totals = useMemo(() => calcQuoteTotals(lines), [lines]);
+
+  const addPozLine = (poz: PozItem) => {
+    const newLine: QuoteLine = {
+      lineNo: lines.length + 1,
+      pozId: poz.id,
+      pozName: poz.name,
+      unit: poz.unit,
+      quantity: 1,
+      materialPrice: poz.materialPrice,
+      installPrice: poz.installPrice,
+      dismantlePrice: poz.dismantlePrice ?? 0,
+      withDismantle: false,
+      overheadPct: poz.defaultOverhead,
+      profitPct: poz.defaultProfit,
+      vatPct: poz.vatRate,
+      discountPct: 0,
+    };
+    setLines(prev => [...prev, newLine]);
+    setShowPozModal(false);
+    setPozSearch('');
+  };
+
+  const updateLine = (idx: number, patch: Partial<QuoteLine>) => {
+    setLines(prev => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  };
+
+  const removeLine = (idx: number) => {
+    setLines(prev => prev.filter((_, i) => i !== idx).map((l, i) => ({ ...l, lineNo: i + 1 })));
+  };
+
+  const handleSave = () => {
+    if (!customer) {
+      Alert.alert('Eksik bilgi', 'Lütfen müşteri seçiniz.');
+      return;
+    }
+    if (!title.trim()) {
+      Alert.alert('Eksik bilgi', 'Lütfen teklif başlığı giriniz.');
+      return;
+    }
+    if (lines.length === 0) {
+      Alert.alert('Eksik bilgi', 'En az bir kalem ekleyiniz.');
+      return;
+    }
+    const number = generateQuoteNumber();
+    const quote: Quote = {
+      id: `Q-${Date.now()}`,
+      number,
+      customerName: customer.shortName,
+      customerTitle: customer.title,
+      title,
+      date: new Date().toISOString().slice(0, 10),
+      engineer: 'Test MÜHENDİS',
+      lines,
+      status: 'Taslak',
+      notes,
+      subtotal: totals.subtotal,
+      vatTotal: totals.vatTotal,
+      grandTotal: totals.grandTotal,
+    };
+    addQuote(quote);
+    navigation.goBack();
+  };
+
+  const filteredPoz = useMemo(
+    () =>
+      POZ_CATALOG.filter(p => {
+        const matchCat = pozCategory === 'Tümü' || p.category === pozCategory;
+        const matchSearch =
+          p.name.toLowerCase().includes(pozSearch.toLowerCase()) ||
+          p.id.toLowerCase().includes(pozSearch.toLowerCase());
+        return matchCat && matchSearch;
+      }),
+    [pozCategory, pozSearch]
+  );
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {toast && <Toast toast={toast} />}
+
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* === MÜŞTERİ === */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>1. Müşteri</Text>
+          <TouchableOpacity
+            style={styles.pickerBtn}
+            onPress={() => setShowCustomerModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="business-outline" size={18} color={brand.green} />
+            <Text style={[styles.pickerText, !customer && { color: colors.text.faint }]} numberOfLines={1}>
+              {customer ? customer.shortName : 'Müşteri seçiniz...'}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.text.faint} />
+          </TouchableOpacity>
+          {customer && (
+            <Text style={styles.customerSub} numberOfLines={2}>{customer.title}</Text>
+          )}
+        </View>
+
+        {/* === BAŞLIK === */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>2. Teklif Başlığı</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Örn: S.NO.0184 Kompanzasyon Panosu Revizyon İşleri"
+            placeholderTextColor={colors.text.faint}
+            value={title}
+            onChangeText={setTitle}
+            multiline
+          />
+        </View>
+
+        {/* === KALEMLER === */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>3. Kalemler ({lines.length})</Text>
+            <TouchableOpacity
+              style={styles.addLineBtn}
+              onPress={() => setShowPozModal(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={16} color={brand.green} />
+              <Text style={styles.addLineBtnText}>Poz Ekle</Text>
+            </TouchableOpacity>
+          </View>
+
+          {lines.length === 0 ? (
+            <View style={styles.emptyLines}>
+              <Ionicons name="list-outline" size={32} color={colors.text.faint} />
+              <Text style={styles.emptyLinesText}>Henüz kalem yok. "Poz Ekle" ile başlayın.</Text>
+            </View>
+          ) : (
+            lines.map((line, idx) => (
+              <LineCard
+                key={`${line.pozId}-${idx}`}
+                line={line}
+                onUpdate={patch => updateLine(idx, patch)}
+                onRemove={() => removeLine(idx)}
+              />
+            ))
+          )}
+        </View>
+
+        {/* === NOTLAR === */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>4. Notlar</Text>
+          <TextInput
+            style={[styles.input, { minHeight: 70 }]}
+            placeholder="Ödeme koşulları, geçerlilik süresi, ek bilgiler..."
+            placeholderTextColor={colors.text.faint}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+          />
+        </View>
+
+        {/* === TOPLAM === */}
+        <View style={styles.totalsCard}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalRowLabel}>Ara Toplam (KDV Hariç)</Text>
+            <Text style={styles.totalRowValue}>
+              ₺{totals.subtotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalRowLabel}>KDV Toplamı</Text>
+            <Text style={styles.totalRowValue}>
+              ₺{totals.vatTotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <View style={[styles.totalRow, styles.grandTotalRow]}>
+            <Text style={styles.grandLabel}>GENEL TOPLAM</Text>
+            <Text style={styles.grandValue}>
+              ₺{totals.grandTotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* SAVE BAR */}
+      <View style={styles.saveBar}>
+        <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <Text style={styles.cancelBtnText}>İptal</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+          <Ionicons name="save-outline" size={18} color="#fff" />
+          <Text style={styles.saveBtnText}>Teklifi Kaydet</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* CUSTOMER MODAL */}
+      <Modal
+        visible={showCustomerModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCustomerModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Müşteri Seç</Text>
+              <TouchableOpacity onPress={() => setShowCustomerModal(false)}>
+                <Ionicons name="close" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={customers}
+              keyExtractor={c => c.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.customerItem}
+                  onPress={() => {
+                    setCustomer(item);
+                    setShowCustomerModal(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.customerName}>{item.shortName}</Text>
+                    <Text style={styles.customerTitle} numberOfLines={1}>{item.title}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.text.faint} />
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* POZ MODAL */}
+      <Modal
+        visible={showPozModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPozModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { height: '85%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Poz Seç ({POZ_CATALOG.length} kalem)</Text>
+              <TouchableOpacity onPress={() => setShowPozModal(false)}>
+                <Ionicons name="close" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search */}
+            <View style={styles.modalSearch}>
+              <Ionicons name="search-outline" size={16} color={colors.text.faint} />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Poz adı veya numarası..."
+                placeholderTextColor={colors.text.faint}
+                value={pozSearch}
+                onChangeText={setPozSearch}
+              />
+            </View>
+
+            {/* Category chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40 }}>
+              <View style={styles.catRow}>
+                {(['Tümü', ...POZ_CATEGORIES] as const).map(c => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.catChip, pozCategory === c && styles.catChipActive]}
+                    onPress={() => setPozCategory(c)}
+                  >
+                    <Text style={[styles.catChipText, pozCategory === c && styles.catChipTextActive]}>
+                      {c}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            <FlatList
+              data={filteredPoz}
+              keyExtractor={p => p.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.pozItem}
+                  onPress={() => addPozLine(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.pozItemLeft}>
+                    <Text style={styles.pozItemId}>{item.id}</Text>
+                    <Text style={styles.pozItemName} numberOfLines={2}>{item.name}</Text>
+                    <View style={styles.pozPriceRow}>
+                      <Text style={styles.pozPriceTxt}>
+                        Malz: ₺{item.materialPrice.toLocaleString('tr-TR')}
+                      </Text>
+                      <Text style={styles.pozPriceTxt}>
+                        Montaj: ₺{item.installPrice.toLocaleString('tr-TR')}
+                      </Text>
+                      {item.dismantlePrice ? (
+                        <Text style={[styles.pozPriceTxt, { color: colors.amber.default }]}>
+                          Dem: ₺{item.dismantlePrice.toLocaleString('tr-TR')}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  <View style={styles.pozAddBtn}>
+                    <Ionicons name="add" size={20} color={brand.green} />
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.noResults}>Sonuç bulunamadı.</Text>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+// ====================================================================
+// LINE CARD — 4 sütunlu fiyat editörü
+// ====================================================================
+function LineCard({
+  line,
+  onUpdate,
+  onRemove,
+}: {
+  line: QuoteLine;
+  onUpdate: (patch: Partial<QuoteLine>) => void;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const calc = calcLineTotal(line);
+
+  const updateNum = (key: keyof QuoteLine, v: string) => {
+    const n = parseFloat(v.replace(',', '.')) || 0;
+    onUpdate({ [key]: n } as Partial<QuoteLine>);
+  };
+
+  return (
+    <View style={lineStyles.card}>
+      {/* HEADER */}
+      <View style={lineStyles.header}>
+        <View style={lineStyles.lineNoCircle}>
+          <Text style={lineStyles.lineNoText}>{line.lineNo}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={lineStyles.pozId}>{line.pozId}</Text>
+          <Text style={lineStyles.pozName} numberOfLines={2}>{line.pozName}</Text>
+        </View>
+        <TouchableOpacity onPress={onRemove} style={lineStyles.removeBtn}>
+          <Ionicons name="trash-outline" size={14} color={colors.rose.default} />
+        </TouchableOpacity>
+      </View>
+
+      {/* MIKTAR */}
+      <View style={lineStyles.qtyRow}>
+        <Text style={lineStyles.qtyLabel}>Miktar:</Text>
+        <TextInput
+          style={lineStyles.qtyInput}
+          value={String(line.quantity)}
+          onChangeText={v => updateNum('quantity', v)}
+          keyboardType="decimal-pad"
+        />
+        <Text style={lineStyles.qtyUnit}>{line.unit}</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={lineStyles.subTotalLabel}>Satır Top:</Text>
+        <Text style={lineStyles.subTotalValue}>
+          ₺{calc.total.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+        </Text>
+      </View>
+
+      {/* 4 SÜTUN — KOMPAKT GÖRÜNÜM */}
+      <View style={lineStyles.columnsGrid}>
+        <PriceCol
+          label="Malzeme B.F."
+          value={line.materialPrice}
+          onChange={v => updateNum('materialPrice', v)}
+          color={colors.text.secondary}
+        />
+        <PriceCol
+          label="Montaj B.F."
+          value={line.installPrice}
+          onChange={v => updateNum('installPrice', v)}
+          color={brand.green}
+        />
+        <PriceCol
+          label="Demontaj B.F."
+          value={line.dismantlePrice}
+          onChange={v => updateNum('dismantlePrice', v)}
+          color={colors.amber.default}
+          disabled={!line.withDismantle}
+        />
+        <PercentCol
+          label="G. Gider %"
+          value={line.overheadPct}
+          onChange={v => updateNum('overheadPct', v)}
+        />
+      </View>
+
+      {/* DEMONTAJ TOGGLE */}
+      <View style={lineStyles.dismantleRow}>
+        <View style={lineStyles.dismantleLeft}>
+          <Ionicons
+            name={line.withDismantle ? 'checkbox' : 'square-outline'}
+            size={18}
+            color={line.withDismantle ? brand.green : colors.text.faint}
+          />
+          <TouchableOpacity onPress={() => onUpdate({ withDismantle: !line.withDismantle })} activeOpacity={0.7}>
+            <Text style={lineStyles.dismantleLabel}>Demontaj dahil mi?</Text>
+          </TouchableOpacity>
+        </View>
+        <Switch
+          value={line.withDismantle}
+          onValueChange={v => onUpdate({ withDismantle: v })}
+          trackColor={{ false: colors.bg.card, true: brand.green }}
+          thumbColor="#fff"
+        />
+      </View>
+
+      {/* EXPANDABLE — Kâr / KDV / İskonto */}
+      <TouchableOpacity onPress={() => setExpanded(!expanded)} style={lineStyles.expandBtn} activeOpacity={0.7}>
+        <Text style={lineStyles.expandText}>
+          {expanded ? '▼ Detayları gizle' : '▶ Kâr / KDV / İskonto'}
+        </Text>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={lineStyles.expandSection}>
+          <View style={lineStyles.columnsGrid}>
+            <PercentCol
+              label="Kâr %"
+              value={line.profitPct}
+              onChange={v => updateNum('profitPct', v)}
+              color={colors.emerald.default}
+            />
+            <PercentCol
+              label="KDV %"
+              value={line.vatPct}
+              onChange={v => updateNum('vatPct', v)}
+              color={colors.indigo.light}
+            />
+            <PercentCol
+              label="İskonto %"
+              value={line.discountPct}
+              onChange={v => updateNum('discountPct', v)}
+              color={colors.rose.default}
+            />
+            <View style={lineStyles.col} />
+          </View>
+
+          {/* Breakdown */}
+          <View style={lineStyles.breakdown}>
+            <BreakRow label="Birim toplam (Mlz+Mnt+Dem)" value={calc.unitBase} />
+            <BreakRow label={`× Miktar (${line.quantity})`} value={calc.lineRaw} />
+            {line.discountPct > 0 && <BreakRow label={`İskonto sonrası`} value={calc.afterDiscount} />}
+            <BreakRow label="Genel gider sonrası" value={calc.withOverhead} />
+            <BreakRow label="Kâr sonrası (KDV Hariç)" value={calc.withProfit} highlight />
+            <BreakRow label={`KDV (%${line.vatPct})`} value={calc.vat} />
+            <BreakRow label="KDV DAHİL TOPLAM" value={calc.total} bold />
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function PriceCol({
+  label,
+  value,
+  onChange,
+  color,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: string) => void;
+  color?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={lineStyles.col}>
+      <Text style={lineStyles.colLabel}>{label}</Text>
+      <TextInput
+        style={[
+          lineStyles.colInput,
+          { color: color || colors.text.primary, opacity: disabled ? 0.4 : 1 },
+        ]}
+        value={String(value)}
+        onChangeText={onChange}
+        keyboardType="decimal-pad"
+        editable={!disabled}
+      />
+      <Text style={lineStyles.colSub}>₺</Text>
+    </View>
+  );
+}
+
+function PercentCol({
+  label,
+  value,
+  onChange,
+  color,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: string) => void;
+  color?: string;
+}) {
+  return (
+    <View style={lineStyles.col}>
+      <Text style={lineStyles.colLabel}>{label}</Text>
+      <TextInput
+        style={[lineStyles.colInput, { color: color || colors.text.primary }]}
+        value={String(value)}
+        onChangeText={onChange}
+        keyboardType="decimal-pad"
+      />
+      <Text style={lineStyles.colSub}>%</Text>
+    </View>
+  );
+}
+
+function BreakRow({
+  label,
+  value,
+  bold,
+  highlight,
+}: {
+  label: string;
+  value: number;
+  bold?: boolean;
+  highlight?: boolean;
+}) {
+  return (
+    <View style={lineStyles.breakRow}>
+      <Text
+        style={[
+          lineStyles.breakLabel,
+          bold && { color: colors.text.primary, fontWeight: '800' },
+          highlight && { color: colors.emerald.default, fontWeight: '700' },
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[
+          lineStyles.breakValue,
+          bold && { color: colors.emerald.default, fontWeight: '900', fontSize: typography.sm },
+          highlight && { color: colors.emerald.default, fontWeight: '800' },
+        ]}
+      >
+        ₺{value.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+      </Text>
+    </View>
+  );
+}
+
+const lineStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  header: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm, alignItems: 'flex-start' },
+  lineNoCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: brand.green,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lineNoText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  pozId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
+  pozName: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2, lineHeight: 15 },
+  removeBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.rose.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
+  qtyLabel: { fontSize: 10, color: colors.text.muted, fontWeight: '600' },
+  qtyInput: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: colors.text.primary,
+    fontSize: typography.xs,
+    fontWeight: '700',
+    width: 60,
+    textAlign: 'right',
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+  },
+  qtyUnit: { fontSize: 10, color: colors.text.faint, marginLeft: 2 },
+  subTotalLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '600' },
+  subTotalValue: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '900', marginLeft: 4 },
+
+  columnsGrid: { flexDirection: 'row', gap: 4 },
+  col: { flex: 1 },
+  colLabel: { fontSize: 8, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  colInput: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+  },
+  colSub: { fontSize: 8, color: colors.text.faint, textAlign: 'right', marginTop: 1 },
+
+  dismantleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.primary,
+  },
+  dismantleLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dismantleLabel: { fontSize: typography.xs, color: colors.text.secondary, fontWeight: '600' },
+
+  expandBtn: { marginTop: spacing.sm, alignSelf: 'center' },
+  expandText: { fontSize: 10, color: brand.green, fontWeight: '700' },
+
+  expandSection: { marginTop: spacing.sm },
+  breakdown: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    gap: 4,
+  },
+  breakRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  breakLabel: { fontSize: 10, color: colors.text.muted },
+  breakValue: { fontSize: 10, color: colors.text.secondary, fontVariant: ['tabular-nums'] },
+});
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg.primary },
+  scroll: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: 100 },
+
+  section: { marginBottom: spacing.lg },
+  sectionLabel: {
+    fontSize: typography.xs,
+    color: colors.text.muted,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  addLineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.emerald.bg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.emerald.border,
+  },
+  addLineBtnText: { color: brand.green, fontSize: typography.xs, fontWeight: '800' },
+
+  pickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+  },
+  pickerText: { flex: 1, color: colors.text.primary, fontWeight: '700', fontSize: typography.sm },
+  customerSub: { fontSize: typography.xs, color: colors.text.muted, marginTop: 4, paddingHorizontal: 4 },
+
+  input: {
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    minHeight: 48,
+  },
+
+  emptyLines: {
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderStyle: 'dashed',
+    gap: spacing.sm,
+  },
+  emptyLinesText: { color: colors.text.faint, fontSize: typography.xs, textAlign: 'center' },
+
+  totalsCard: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.emerald.border,
+    marginTop: spacing.md,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  totalRowLabel: { fontSize: typography.xs, color: colors.text.muted, fontWeight: '600' },
+  totalRowValue: { fontSize: typography.sm, color: colors.text.secondary, fontWeight: '700' },
+  grandTotalRow: {
+    paddingTop: spacing.sm,
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.primary,
+  },
+  grandLabel: { fontSize: typography.sm, color: colors.text.primary, fontWeight: '800' },
+  grandValue: { fontSize: typography.xl, color: colors.emerald.default, fontWeight: '900' },
+
+  saveBar: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.bg.secondary,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.primary,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+  },
+  cancelBtnText: { color: colors.text.muted, fontWeight: '700' },
+  saveBtn: {
+    flex: 2,
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: brand.green,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+
+  // === MODAL ===
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: colors.bg.secondary,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    height: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.primary,
+  },
+  modalTitle: { fontSize: typography.md, color: colors.text.primary, fontWeight: '800' },
+
+  customerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.primary,
+  },
+  customerName: { fontSize: typography.sm, color: colors.text.primary, fontWeight: '700' },
+  customerTitle: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },
+
+  modalSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    marginBottom: spacing.sm,
+  },
+  modalSearchInput: { flex: 1, color: colors.text.primary, fontSize: typography.sm, paddingVertical: 2 },
+
+  catRow: { flexDirection: 'row', gap: 6, paddingVertical: 4 },
+  catChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg.card,
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+  },
+  catChipActive: { backgroundColor: brand.blue, borderColor: brand.blue },
+  catChipText: { fontSize: 10, color: colors.text.muted, fontWeight: '600' },
+  catChipTextActive: { color: '#fff', fontWeight: '800' },
+
+  pozItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.primary,
+  },
+  pozItemLeft: { flex: 1 },
+  pozItemId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
+  pozItemName: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2, lineHeight: 15 },
+  pozPriceRow: { flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' },
+  pozPriceTxt: { fontSize: 9, color: colors.text.muted, fontWeight: '600' },
+  pozAddBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.emerald.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.emerald.border,
+  },
+
+  noResults: { textAlign: 'center', padding: spacing.xl, color: colors.text.faint, fontSize: typography.xs },
+});

@@ -1,0 +1,76 @@
+{
+  "expo": {
+    "name": "SahaTakip",
+    "slug": "sahatakip",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#020617"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kobinerji.sahatakip"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020617"
+      },
+      "package": "com.kobinerji.sahatakip",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SahaTakip saha fotoğrafı çekmek için kamera iznine ihtiyaç duyuyor."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SahaTakip servis raporlarınıza fotoğraf eklemek için galeri iznine ihtiyaç duyuyor."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SahaTakip saha personelinin konumunu takip etmek için GPS iznine ihtiyaç duyuyor."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#22c55e"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "cad3cb4e-646d-46f3-844b-2205971bf805"
+      }
+    }
+  }
+}

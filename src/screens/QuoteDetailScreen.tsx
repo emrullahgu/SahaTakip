@@ -1,0 +1,324 @@
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+
+import { colors, spacing, radius, typography, brand } from '../theme';
+import { useAppContext, calcLineTotal } from '../context/AppContext';
+import { RootStackParamList, QuoteStatus } from '../types';
+import Toast from '../components/Toast';
+import { generateAndShareQuotePdf } from '../services/pdf';
+
+type DetailRoute = RouteProp<RootStackParamList, 'QuoteDetail'>;
+
+const NEXT_STATUS: Record<QuoteStatus, QuoteStatus | null> = {
+  'Taslak': 'Onay Bekliyor',
+  'Onay Bekliyor': 'Müşteriye Gönderildi',
+  'Müşteriye Gönderildi': 'Kabul Edildi',
+  'Kabul Edildi': 'Faturalandırıldı',
+  'Reddedildi': null,
+  'Faturalandırıldı': null,
+};
+
+export default function QuoteDetailScreen() {
+  const navigation = useNavigation();
+  const route = useRoute<DetailRoute>();
+  const { quotes, setQuoteStatus, deleteQuote, toast, showToast } = useAppContext();
+  const quote = quotes.find(q => q.id === route.params.quoteId);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  if (!quote) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>Teklif bulunamadı.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const nextStatus = NEXT_STATUS[quote.status];
+
+  const handleDelete = () => {
+    Alert.alert('Teklifi Sil', 'Bu teklifi silmek istediğinize emin misiniz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: () => {
+          deleteQuote(quote.id);
+          navigation.goBack();
+        },
+      },
+    ]);
+  };
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {toast && <Toast toast={toast} />}
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.card}>
+          <Text style={styles.number}>{quote.number}</Text>
+          <Text style={styles.title}>{quote.title}</Text>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusText}>{quote.status}</Text>
+          </View>
+          <View style={styles.metaGrid}>
+            <Meta label="Müşteri" value={quote.customerName} />
+            <Meta label="Tarih" value={quote.date} />
+            <Meta label="Mühendis" value={quote.engineer} />
+            <Meta label="Kalem Sayısı" value={String(quote.lines.length)} />
+          </View>
+        </View>
+
+        {/* Lines */}
+        <Text style={styles.sectionLabel}>Kalemler</Text>
+        {quote.lines.map((line, idx) => {
+          const calc = calcLineTotal(line);
+          return (
+            <View key={idx} style={styles.lineCard}>
+              <View style={styles.lineHeader}>
+                <View style={styles.lineNoCircle}>
+                  <Text style={styles.lineNoText}>{line.lineNo}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linePozId}>{line.pozId}</Text>
+                  <Text style={styles.linePozName}>{line.pozName}</Text>
+                </View>
+              </View>
+              <View style={styles.lineMeta}>
+                <Text style={styles.lineMetaTxt}>
+                  {line.quantity} {line.unit} × ₺{(line.materialPrice + line.installPrice + (line.withDismantle ? line.dismantlePrice : 0)).toLocaleString('tr-TR')}
+                </Text>
+                <Text style={styles.lineTotal}>
+                  ₺{calc.total.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+
+        {/* Totals */}
+        <View style={[styles.card, { marginTop: spacing.lg }]}>
+          <Row label="Ara Toplam (KDV Hariç)" value={quote.subtotal} />
+          <Row label="KDV Toplamı" value={quote.vatTotal} />
+          <View style={styles.divider} />
+          <Row label="GENEL TOPLAM" value={quote.grandTotal} bold />
+        </View>
+
+        {quote.notes ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Notlar</Text>
+            <Text style={styles.notes}>{quote.notes}</Text>
+          </View>
+        ) : null}
+
+        {/* Actions */}
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.pdfBtn, pdfLoading && { opacity: 0.6 }]}
+            onPress={async () => {
+              if (!quote) return;
+              setPdfLoading(true);
+              try {
+                await generateAndShareQuotePdf(quote);
+                showToast('PDF oluşturuldu');
+              } catch (e: any) {
+                Alert.alert('PDF hatası', e?.message ?? 'PDF oluşturulamadı.');
+              } finally {
+                setPdfLoading(false);
+              }
+            }}
+            disabled={pdfLoading}
+            activeOpacity={0.85}
+          >
+            {pdfLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="document-text-outline" size={18} color="#fff" />
+                <Text style={styles.pdfBtnText}>PDF Oluştur & Paylaş</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {nextStatus && (
+            <TouchableOpacity
+              style={styles.advanceBtn}
+              onPress={() => setQuoteStatus(quote.id, nextStatus)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="arrow-forward-circle" size={18} color="#fff" />
+              <Text style={styles.advanceBtnText}>{nextStatus}'e Geçir</Text>
+            </TouchableOpacity>
+          )}
+          {quote.status !== 'Reddedildi' && quote.status !== 'Faturalandırıldı' && (
+            <TouchableOpacity
+              style={styles.rejectBtn}
+              onPress={() => setQuoteStatus(quote.id, 'Reddedildi')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.rejectBtnText}>Reddedildi olarak işaretle</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.85}>
+            <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+            <Text style={styles.deleteBtnText}>Teklifi Sil</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function Meta({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metaItem}>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={styles.metaValue} numberOfLines={1}>{value}</Text>
+    </View>
+  );
+}
+
+function Row({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
+  return (
+    <View style={styles.row}>
+      <Text style={[styles.rowLabel, bold && { color: colors.text.primary, fontWeight: '800' }]}>
+        {label}
+      </Text>
+      <Text
+        style={[
+          styles.rowValue,
+          bold && { color: colors.emerald.default, fontSize: typography.lg, fontWeight: '900' },
+        ]}
+      >
+        ₺{value.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg.primary },
+  content: { padding: spacing.lg, paddingBottom: 40 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: colors.text.muted },
+
+  card: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  number: { fontSize: 11, color: colors.text.faint, fontWeight: '700', letterSpacing: 0.5 },
+  title: { fontSize: typography.lg, color: colors.text.primary, fontWeight: '900', marginTop: 4 },
+  statusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.emerald.bg,
+    borderColor: colors.emerald.border,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    marginTop: spacing.sm,
+  },
+  statusText: { fontSize: 10, color: colors.emerald.default, fontWeight: '800' },
+
+  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.md, gap: spacing.md },
+  metaItem: { minWidth: '45%' },
+  metaLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase' },
+  metaValue: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2 },
+
+  sectionLabel: {
+    fontSize: typography.xs,
+    color: colors.text.muted,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+  },
+
+  lineCard: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  lineHeader: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  lineNoCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: brand.green,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lineNoText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  linePozId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
+  linePozName: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2 },
+  lineMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.primary,
+  },
+  lineMetaTxt: { fontSize: 10, color: colors.text.muted },
+  lineTotal: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '900' },
+
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
+  rowLabel: { fontSize: typography.xs, color: colors.text.muted, fontWeight: '600' },
+  rowValue: { fontSize: typography.sm, color: colors.text.secondary, fontWeight: '700' },
+  divider: { height: 1, backgroundColor: colors.border.primary, marginVertical: spacing.sm },
+
+  notes: { fontSize: typography.xs, color: colors.text.secondary, lineHeight: 18 },
+
+  actions: { gap: spacing.sm, marginTop: spacing.md },
+  pdfBtn: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: brand.blue,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pdfBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  advanceBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: brand.green,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  advanceBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  rejectBtn: {
+    backgroundColor: colors.rose.bg,
+    borderColor: colors.rose.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  rejectBtnText: { color: colors.rose.default, fontWeight: '700', fontSize: typography.xs },
+  deleteBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteBtnText: { color: colors.rose.default, fontWeight: '700', fontSize: typography.xs },
+});
