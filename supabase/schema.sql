@@ -191,10 +191,13 @@ alter table public.attendance          enable row level security;
 alter table public.expenses            enable row level security;
 
 -- YardÄ±mcÄ±: kullanÄ±cÄ± rolÃ¼nÃ¼ al
+-- SECURITY DEFINER + search_path: RLS'i bypass eder â†’ profiles politikasÄ± ile sonsuz dÃ¶ngÃ¼yÃ¼ Ã¶nler
 create or replace function public.user_role()
-returns text language sql stable as $$
+returns text language sql stable security definer set search_path = public as $$
   select role from public.profiles where id = auth.uid();
 $$;
+revoke all on function public.user_role() from public;
+grant execute on function public.user_role() to anon, authenticated;
 
 -- Profil: kendi profilini gÃ¶rÃ¼r ve gÃ¼nceller; admin/manager hepsini gÃ¶rÃ¼r
 create policy "profiles_select_own_or_manager" on public.profiles
@@ -369,14 +372,14 @@ create policy "checkins_self_write" on public.location_checkins
 
 
 -- ============================================================
--- POZ-DEV-008 & 010 — Faz 1 sonu ek migrasyonlar
+-- POZ-DEV-008 & 010 ï¿½ Faz 1 sonu ek migrasyonlar
 -- ============================================================
--- work_orders status enum geniþlet (app 'Teklif Gönderildi' kullanýyor)
+-- work_orders status enum geniï¿½let (app 'Teklif Gï¿½nderildi' kullanï¿½yor)
 alter table public.work_orders drop constraint if exists work_orders_status_check;
 alter table public.work_orders add constraint work_orders_status_check
-  check (status in ('Servis Açýldý','Devam Ediyor','Tamamlandý','Onay Bekliyor','Teklif Gönderildi','Müþteri Onayý','Faturalandýrýldý'));
+  check (status in ('Servis Aï¿½ï¿½ldï¿½','Devam Ediyor','Tamamlandï¿½','Onay Bekliyor','Teklif Gï¿½nderildi','Mï¿½ï¿½teri Onayï¿½','Faturalandï¿½rï¿½ldï¿½'));
 
--- work_orders ek alanlar (mobil app þemasý)
+-- work_orders ek alanlar (mobil app ï¿½emasï¿½)
 alter table public.work_orders add column if not exists service_name text;
 alter table public.work_orders add column if not exists materials_json jsonb default '[]'::jsonb;
 alter table public.work_orders add column if not exists other_cost numeric(12,2) default 0;
@@ -423,14 +426,14 @@ create policy audit_log_manager_read on public.audit_log
   );
 
 -- ============================================================
--- RLS SMOKE TEST (manuel — Supabase SQL Editor'da çalýþtýrýn)
+-- RLS SMOKE TEST (manuel ï¿½ Supabase SQL Editor'da ï¿½alï¿½ï¿½tï¿½rï¿½n)
 -- ============================================================
--- 1. Demo bir auth.user oluþturun ve profiles satýrý ekleyin (role='field').
--- 2. Bu user ile baþka birinin work_orders kaydýný UPDATE etmeyi deneyin.
+-- 1. Demo bir auth.user oluï¿½turun ve profiles satï¿½rï¿½ ekleyin (role='field').
+-- 2. Bu user ile baï¿½ka birinin work_orders kaydï¿½nï¿½ UPDATE etmeyi deneyin.
 --    -> 0 row returned (RLS engelledi) beklenir.
--- 3. SAME user ile audit_log satýrýna baþka user_id ile INSERT denenirse
---    -> 'new row violates row-level security' hatasý beklenir.
--- 4. Manager rolündeki user ile audit_log SELECT yapýn -> tüm kayýtlar gelir.
+-- 3. SAME user ile audit_log satï¿½rï¿½na baï¿½ka user_id ile INSERT denenirse
+--    -> 'new row violates row-level security' hatasï¿½ beklenir.
+-- 4. Manager rolï¿½ndeki user ile audit_log SELECT yapï¿½n -> tï¿½m kayï¿½tlar gelir.
 
 
 -- =====================================================
@@ -483,7 +486,7 @@ CREATE POLICY rt_write ON recurring_templates FOR ALL USING (
 );
 
 -- ============================================================
--- FAZ 4 — Teklif Geliþmiþ (POZ-DEV-036..043)
+-- FAZ 4 ï¿½ Teklif Geliï¿½miï¿½ (POZ-DEV-036..043)
 -- ============================================================
 
 create table if not exists quote_revisions (
