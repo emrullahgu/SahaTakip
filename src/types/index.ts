@@ -196,6 +196,14 @@ export interface Customer {
   address?: string;
   city?: string;
   contactPerson?: string;
+  // Gelişmiş Alanlar
+  type?: 'Potansiyel' | 'Aktif' | 'Pasif' | 'Bayi' | 'Tedarikçi';
+  sector?: string;
+  region?: string;
+  assignedStaffId?: string;
+  source?: string;
+  riskLimit?: number;
+  currentBalance?: number;
 }
 
 // FAZ 5 — POZ-DEV-044 Müşteri sahaları
@@ -3845,6 +3853,7 @@ export type RootStackParamList = {
   Anomalies: undefined;
   WebAdmin: undefined;
   UsersAdmin: undefined;
+  UserApprovals: undefined;
   LiveTracking: undefined;
   IntegrationsHub: undefined;
   ApiKeys: undefined;

@@ -14,6 +14,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography } from '../theme';
+import { useTheme } from '../themeMode';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
@@ -29,6 +30,11 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeNavProp>();
   const { workOrders, toast } = useAppContext();
   const { profile, user, signOut, isDemoMode } = useAuth();
+  const { mode, setMode } = useTheme();
+
+  const toggleTheme = () => {
+    setMode(mode === 'dark' ? 'light' : 'dark');
+  };
 
   const displayName =
     profile?.full_name ||
@@ -229,6 +235,28 @@ export default function HomeScreen() {
               <Ionicons name="sparkles-outline" size={26} color={colors.indigo.default} />
             </View>
             <Text style={styles.gridLabel}>AI Asistan</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('FieldOpsHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+              <Ionicons name="rocket-outline" size={26} color={colors.emerald.default} />
+            </View>
+            <Text style={styles.gridLabel}>Saha Ops</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('OrdHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
+              <Ionicons name="bag-handle-outline" size={26} color={colors.rose.default} />
+            </View>
+            <Text style={styles.gridLabel}>Siparişler</Text>
           </TouchableOpacity>
         </View>
 

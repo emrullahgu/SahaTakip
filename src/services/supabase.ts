@@ -16,6 +16,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const isWeb = Platform.OS === 'web';
 
+/**
+ * Supabase env değişkenleri tanımlıysa true; aksi halde uygulama "demo / offline" modda
+ * çalışır ve tüm auth/CRUD çağrıları kısa devre yapılır.
+ */
+export const SUPABASE_CONFIGURED: boolean = !!(supabaseUrl && supabaseAnonKey);
+
 export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder', {
   auth: {
     // Native'de AsyncStorage; web'de tarayıcının localStorage'ı default kullanılır.

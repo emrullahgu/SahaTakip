@@ -56,6 +56,17 @@ export default function CustomerFormScreen() {
       Alert.alert('Eksik bilgi', 'Kısa ad ve resmi ünvan zorunludur.');
       return;
     }
+    // Mükerrer kontrolü
+    const isDuplicate = customers.some(c =>
+      c.id !== form.id &&
+      (c.shortName.toLowerCase() === form.shortName.toLowerCase() ||
+       (form.taxNumber && c.taxNumber === form.taxNumber))
+    );
+    if (isDuplicate) {
+      Alert.alert('Uyarı', 'Bu kısa ad veya vergi numarası ile eşleşen başka bir müşteri zaten var.');
+      return;
+    }
+
     if (isEdit) {
       updateCustomer(form);
     } else {
@@ -75,6 +86,31 @@ export default function CustomerFormScreen() {
 
           <Field label="Kısa Ad *" value={form.shortName} onChangeText={v => set('shortName', v)} placeholder="EGEBORU" />
           <Field label="Resmi Ünvan *" value={form.title} onChangeText={v => set('title', v)} placeholder="ABC SANAYİ VE TİCARET A.Ş." multiline />
+
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Müşteri Tipi</Text>
+              <TouchableOpacity
+                style={styles.inputWrap}
+                onPress={() => {
+                  Alert.alert('Tip Seç', '', [
+                    { text: 'Potansiyel', onPress: () => set('type', 'Potansiyel') },
+                    { text: 'Aktif', onPress: () => set('type', 'Aktif') },
+                    { text: 'Pasif', onPress: () => set('type', 'Pasif') },
+                    { text: 'Bayi', onPress: () => set('type', 'Bayi') },
+                  ]);
+                }}
+              >
+                <Text style={{ color: form.type ? colors.text.primary : colors.text.faint }}>
+                  {form.type || 'Seçiniz...'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label="Sektör" value={form.sector ?? ''} onChangeText={v => set('sector', v)} placeholder="Enerji" />
+            </View>
+          </View>
+
           <Field label="İlgili Kişi" value={form.contactPerson ?? ''} onChangeText={v => set('contactPerson', v)} placeholder="Ahmet Yılmaz" />
 
           <Text style={styles.section}>İletişim</Text>
@@ -90,6 +126,16 @@ export default function CustomerFormScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Field label="Vergi Dairesi" value={form.taxOffice ?? ''} onChangeText={v => set('taxOffice', v)} placeholder="Konak" />
+            </View>
+          </View>
+
+          <Text style={styles.section}>Finansal Bilgiler</Text>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Field label="Risk Limiti" value={String(form.riskLimit ?? '')} onChangeText={v => set('riskLimit', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label="Mevcut Bakiye" value={String(form.currentBalance ?? '')} onChangeText={v => set('currentBalance', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
             </View>
           </View>
 

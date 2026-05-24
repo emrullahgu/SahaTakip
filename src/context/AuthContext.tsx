@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase, getAuthRedirectUrl } from '../services/supabase';
+import { supabase, getAuthRedirectUrl, SUPABASE_CONFIGURED } from '../services/supabase';
 
 export type UserRole = 'admin' | 'manager' | 'engineer' | 'field';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface UserProfile {
   id: string;
@@ -10,6 +11,10 @@ export interface UserProfile {
   role: UserRole;
   phone: string | null;
   avatar_url: string | null;
+  approval_status?: ApprovalStatus;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  rejection_reason?: string | null;
 }
 
 interface AuthContextValue {
@@ -120,8 +125,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!SUPABASE_CONFIGURED) {
       return { error: 'Supabase yapılandırılmamış. Demo modda devam edin.' };
     }
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+
+    // E-posta onayı + admin onayı kontrolü
+    const uid = data.user?.id;
+    if (!uid) return { error: 'Oturum açılamadı.' };
+
+    // E-posta henüz doğrulanmamışsa Supabase zaten engeller; ek olarak profil onayı da gerekli.
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('approval_status, rejection_reason')
+      .eq('id', uid)
+      .single();
+
+    const status: ApprovalStatus | undefined = prof?.approval_status;
+    if (status === 'pending') {
+      await supabase.auth.signOut();
+      return { error: 'Hesabınız yönetici onayı bekliyor. Lütfen sistem yöneticinizle iletişime geçin.' };
+    }
+    if (status === 'rejected') {
+      const reason = prof?.rejection_reason ? ` Neden: ${prof.rejection_reason}` : '';
+      await supabase.auth.signOut();
+      return { error: `Hesap erişim talebiniz reddedildi.${reason}` };
+    }
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {

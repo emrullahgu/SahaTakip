@@ -104,6 +104,7 @@ import RouteOptimizerScreen from '../screens/RouteOptimizerScreen';
 import AnomaliesScreen from '../screens/AnomaliesScreen';
 import WebAdminScreen from '../screens/WebAdminScreen';
 import UsersAdminScreen from '../screens/UsersAdminScreen';
+import UserApprovalsScreen from '../screens/UserApprovalsScreen';
 import LiveTrackingScreen from '../screens/LiveTrackingScreen';
 import IntegrationsHubScreen from '../screens/IntegrationsHubScreen';
 import ApiKeysScreen from '../screens/ApiKeysScreen';
@@ -1380,6 +1381,7 @@ function MainStack() {
       <Stack.Screen name="Anomalies" component={AnomaliesScreen} options={{ headerShown: true, title: 'Anomali Tespiti', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="WebAdmin" component={WebAdminScreen} options={{ headerShown: true, title: 'Web Admin', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="UsersAdmin" component={UsersAdminScreen} options={{ headerShown: true, title: 'Kullanıcılar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="UserApprovals" component={UserApprovalsScreen} options={{ headerShown: true, title: 'Kullanıcı Onayları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="LiveTracking" component={LiveTrackingScreen} options={{ headerShown: true, title: 'Canlı Takip', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="IntegrationsHub" component={IntegrationsHubScreen} options={{ headerShown: true, title: 'Entegrasyon & Güvenlik', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ApiKeys" component={ApiKeysScreen} options={{ headerShown: true, title: 'API Anahtarları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

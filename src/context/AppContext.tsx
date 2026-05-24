@@ -18,6 +18,7 @@ import {
   WorkOrderPriority,
   WorkOrderAssignmentStatus,
   WorkOrderTimeLog,
+  Order,
 } from '../types';
 import { recomputeWorkOrderCosts, canTransition } from '../services/workOrderFlow';
 import { runDueTemplates } from '../services/recurringTasks';
@@ -75,6 +76,7 @@ interface AppContextType {
   employees: Employee[];
   quotes: Quote[];
   customers: Customer[];
+  orders: Order[];
   toast: ToastMessage | null;
   syncState: SyncState;
   showToast: (message: string, type?: 'success' | 'error') => void;
@@ -107,6 +109,8 @@ interface AppContextType {
   addCustomer: (c: Customer) => void;
   updateCustomer: (c: Customer) => void;
   deleteCustomer: (id: string) => void;
+  addOrder: (o: Order) => void;
+  deleteOrder: (id: string) => void;
   refresh: () => Promise<void>;
 }
 
@@ -131,6 +135,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(
     isOnlineMode() ? 'idle' : 'offline'
@@ -403,6 +408,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (cust) showToast(`${cust.shortName} silindi.`, 'error');
   };
 
+  const addOrder = (o: Order) => {
+    setOrders(prev => [o, ...prev]);
+    showToast(`Sipariş ${o.code} oluşturuldu.`);
+  };
+
+  const deleteOrder = (id: string) => {
+    setOrders(prev => prev.filter(o => o.id !== id));
+    showToast('Sipariş silindi.', 'error');
+  };
+
   // =====================================================
   // FAZ 3 — İş Emri Akışı (POZ-DEV-024..035)
   // =====================================================
@@ -617,6 +632,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         employees,
         quotes,
         customers,
+        orders,
         toast,
         syncState,
         showToast,
@@ -647,6 +663,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addCustomer,
         updateCustomer,
         deleteCustomer,
+        addOrder,
+        deleteOrder,
         refresh,
       }}
     >

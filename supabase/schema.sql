@@ -1168,3 +1168,86 @@ CREATE INDEX IF NOT EXISTS idx_erp_active ON erp_adapters(active);
 CREATE INDEX IF NOT EXISTS idx_kvkk_user ON kvkk_consents(user_id);
 CREATE INDEX IF NOT EXISTS idx_backups_at ON backups(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_access_rules_kind ON access_rules(kind, active);
+
+-- =============================================================
+-- USER APPROVAL FLOW (yeni kayıtlar için admin onayı zorunlu)
+-- =============================================================
+
+-- 1) profiles tablosuna onay alanları
+alter table public.profiles
+  add column if not exists approval_status text
+    not null default 'pending'
+    check (approval_status in ('pending','approved','rejected'));
+
+alter table public.profiles
+  add column if not exists approved_at      timestamptz;
+alter table public.profiles
+  add column if not exists approved_by      uuid references public.profiles(id) on delete set null;
+alter table public.profiles
+  add column if not exists rejection_reason text;
+
+-- Mevcut kullanıcıları geriye dönük olarak onaylı say (ilk göç için)
+update public.profiles
+   set approval_status = 'approved',
+       approved_at     = coalesce(approved_at, now())
+ where approval_status = 'pending'
+   and created_at < now() - interval '1 minute';
+
+-- 2) handle_new_user trigger'ı güncelle: yeni kayıt 'pending' başlar
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, full_name, approval_status)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', new.email),
+    'pending'
+  );
+  return new;
+end;
+$$;
+
+-- 3) Bekleyen kullanıcıları çekmek için view (RLS uygulanır)
+create or replace view public.pending_user_approvals as
+  select p.id,
+         p.full_name,
+         p.role,
+         p.approval_status,
+         p.rejection_reason,
+         p.created_at,
+         u.email
+    from public.profiles p
+    join auth.users u on u.id = p.id
+   where p.approval_status = 'pending'
+   order by p.created_at desc;
+
+-- 4) Onay/red işlemi için RPC (admin/manager check'i fonksiyon içinde)
+create or replace function public.set_user_approval(
+  target_id uuid,
+  new_status text,
+  reason text default null
+) returns void language plpgsql security definer set search_path = public as $$
+declare
+  caller_role text;
+begin
+  if new_status not in ('approved','rejected','pending') then
+    raise exception 'Geçersiz onay durumu: %', new_status;
+  end if;
+
+  select role into caller_role from public.profiles where id = auth.uid();
+  if caller_role is null or caller_role not in ('admin','manager') then
+    raise exception 'Bu işlem için admin/manager yetkisi gerekli.';
+  end if;
+
+  update public.profiles
+     set approval_status   = new_status,
+         approved_at       = case when new_status = 'approved' then now() else approved_at end,
+         approved_by       = case when new_status = 'approved' then auth.uid() else approved_by end,
+         rejection_reason  = case when new_status = 'rejected' then reason else null end,
+         updated_at        = now()
+   where id = target_id;
+end;
+$$;
+
+grant execute on function public.set_user_approval(uuid, text, text) to authenticated;
+grant select on public.pending_user_approvals to authenticated;
