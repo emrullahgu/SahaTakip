@@ -40,12 +40,12 @@ export default function QaModulesScreen() {
           />
         }
         renderItem={({ item: m }) => (
-          <View key={m.id} style={[s.card, { borderLeftColor: COH_COLOR[m.cohesion] }]}>
+          <View key={m.id} style={[s.card, { borderLeftColor: COH_COLOR[m.cohesion as keyof typeof COH_COLOR] }]}>
             <View style={s.headRow}>
-              <Ionicons name="folder-open" size={20} color={COH_COLOR[m.cohesion]} />
+              <Ionicons name="folder-open" size={20} color={COH_COLOR[m.cohesion as keyof typeof COH_COLOR]} />
               <Text style={s.folder}>{m.folder}</Text>
-              <View style={[s.pill, { backgroundColor: COH_COLOR[m.cohesion] + '33', borderColor: COH_COLOR[m.cohesion] }]}>
-                <Text style={[s.pillT, { color: COH_COLOR[m.cohesion] }]}>{COH_LABEL[m.cohesion]}</Text>
+              <View style={[s.pill, { backgroundColor: COH_COLOR[m.cohesion as keyof typeof COH_COLOR] + '33', borderColor: COH_COLOR[m.cohesion as keyof typeof COH_COLOR] }]}>
+                <Text style={[s.pillT, { color: COH_COLOR[m.cohesion as keyof typeof COH_COLOR] }]}>{COH_LABEL[m.cohesion as keyof typeof COH_LABEL]}</Text>
               </View>
             </View>
             <View style={s.metaRow}>

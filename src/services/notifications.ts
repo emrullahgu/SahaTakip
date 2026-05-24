@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { effectiveChannels, loadPrefs } from './notificationPrefs';
 import { sendLocalPush } from './pushNotifications';
-import { supabase } from './supabase';
+import { supabase, SUPABASE_CONFIGURED, getCurrentUser } from './supabase';
 
 const KEY = '@SahaTakip:notifications';
 const MAX = 200;
@@ -21,7 +21,39 @@ function rid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function notifFromRow(r: any): AppNotification {
+  return {
+    id: r.id,
+    type: r.type,
+    title: r.title,
+    message: r.message,
+    channels: r.channels || [],
+    relatedId: r.related_id || undefined,
+    recipient: r.recipient || undefined,
+    read: !!r.read,
+    createdAt: r.created_at,
+  } as AppNotification;
+}
+
 export async function listNotifications(): Promise<AppNotification[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(MAX);
+        if (!error && data) {
+          const list = data.map(notifFromRow);
+          await AsyncStorage.setItem(KEY, JSON.stringify(list));
+          return list;
+        }
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return [];
@@ -40,32 +72,64 @@ export async function addNotification(
   n: Omit<AppNotification, 'id' | 'createdAt' | 'read'>,
 ): Promise<AppNotification> {
   const all = await listNotifications();
-  const created: AppNotification = {
+  let created: AppNotification = {
     id: rid(),
     createdAt: new Date().toISOString(),
     read: false,
     ...n,
   };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        const { data, error } = await supabase.from('notifications').insert({
+          user_id: user.id,
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          channels: n.channels || [],
+          related_id: n.relatedId || null,
+          recipient: n.recipient || null,
+          read: false,
+        }).select().single();
+        if (!error && data) created = notifFromRow(data);
+      }
+    } catch { /* offline */ }
+  }
   await saveAll([created, ...all]);
   return created;
 }
 
 export async function markRead(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED) { try { await supabase.from('notifications').update({ read: true }).eq('id', id); } catch { /* offline */ } }
   const all = await listNotifications();
   await saveAll(all.map(n => (n.id === id ? { ...n, read: true } : n)));
 }
 
 export async function markAllRead(): Promise<void> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false);
+    } catch { /* offline */ }
+  }
   const all = await listNotifications();
   await saveAll(all.map(n => ({ ...n, read: true })));
 }
 
 export async function deleteNotification(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED) { try { await supabase.from('notifications').delete().eq('id', id); } catch { /* offline */ } }
   const all = await listNotifications();
   await saveAll(all.filter(n => n.id !== id));
 }
 
 export async function clearAll(): Promise<void> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) await supabase.from('notifications').delete().eq('user_id', user.id);
+    } catch { /* offline */ }
+  }
   await AsyncStorage.removeItem(KEY);
 }
 

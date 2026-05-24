@@ -60,7 +60,7 @@ export default function QaPerformanceScreen() {
               {r.technique && (
                 <View style={s.techRow}>
                   <Ionicons name="flash" size={12} color="#a855f7" />
-                  <Text style={s.tech}>Teknik: {TECH_LABEL[r.technique]}</Text>
+                  <Text style={s.tech}>Teknik: {TECH_LABEL[r.technique as keyof typeof TECH_LABEL]}</Text>
                 </View>
               )}
             </View>

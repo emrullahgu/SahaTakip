@@ -7,6 +7,7 @@ import {
   NotificationEventType,
   NotificationPreferences,
 } from '../types';
+import { supabase, SUPABASE_CONFIGURED, getCurrentUser } from './supabase';
 
 const KEY = '@SahaTakip:notif_prefs';
 
@@ -38,6 +39,34 @@ const DEFAULTS: NotificationPreferences = {
 };
 
 export async function loadPrefs(): Promise<NotificationPreferences> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!error && data) {
+          const remote: NotificationPreferences = {
+            ...DEFAULTS,
+            channelEnabled: { ...DEFAULTS.channelEnabled, ...(data.channel_enabled || {}) },
+            eventChannels: { ...DEFAULTS.eventChannels, ...(data.event_channels || {}) },
+            pushToken: data.push_token || undefined,
+            email: data.email || undefined,
+            phone: data.phone || undefined,
+            whatsapp: data.whatsapp || undefined,
+            quietHoursStart: data.quiet_hours_start || undefined,
+            quietHoursEnd: data.quiet_hours_end || undefined,
+            updatedAt: data.updated_at || undefined,
+          } as NotificationPreferences;
+          await AsyncStorage.setItem(KEY, JSON.stringify(remote));
+          return remote;
+        }
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
@@ -55,6 +84,25 @@ export async function loadPrefs(): Promise<NotificationPreferences> {
 
 export async function savePrefs(prefs: NotificationPreferences): Promise<void> {
   const next = { ...prefs, updatedAt: new Date().toISOString() };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        await supabase.from('notification_preferences').upsert({
+          user_id: user.id,
+          channel_enabled: next.channelEnabled,
+          event_channels: next.eventChannels,
+          push_token: next.pushToken || null,
+          email: next.email || null,
+          phone: next.phone || null,
+          whatsapp: next.whatsapp || null,
+          quiet_hours_start: (next as any).quietHoursStart || null,
+          quiet_hours_end: (next as any).quietHoursEnd || null,
+          updated_at: next.updatedAt,
+        });
+      }
+    } catch { /* offline */ }
+  }
   await AsyncStorage.setItem(KEY, JSON.stringify(next));
 }
 

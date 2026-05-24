@@ -40,7 +40,7 @@ export default function ProductItemsScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>
         <Tab label="Tümü" active={status === 'all'} onPress={() => setStatus('all')} count={items.length} />
         {STATUSES.map(st => (
-          <Tab key={st} label={PRODUCT_ITEM_STATUS_LABEL[st]} color={PRODUCT_ITEM_STATUS_COLOR[st]} active={status === st} onPress={() => setStatus(st)} count={items.filter(x => x.status === st).length} />
+          <Tab key={st} label={PRODUCT_ITEM_STATUS_LABEL[st as keyof typeof PRODUCT_ITEM_STATUS_LABEL]} color={PRODUCT_ITEM_STATUS_COLOR[st as keyof typeof PRODUCT_ITEM_STATUS_COLOR]} active={status === st} onPress={() => setStatus(st)} count={items.filter(x => x.status === st).length} />
         ))}
       </ScrollView>
       <FlatList
@@ -59,12 +59,12 @@ export default function ProductItemsScreen() {
         }
         renderItem={({ item: p }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('ProductItemDetail', { itemId: p.id })}>
-            <View style={[s.statusStripe, { backgroundColor: PRODUCT_ITEM_STATUS_COLOR[p.status] }]} />
+            <View style={[s.statusStripe, { backgroundColor: PRODUCT_ITEM_STATUS_COLOR[p.status as keyof typeof PRODUCT_ITEM_STATUS_COLOR] }]} />
             <View style={{ flex: 1 }}>
               <View style={s.cardHead}>
                 <Text style={s.cardTitle}>{p.name}</Text>
-                <View style={[s.badge, { backgroundColor: PRODUCT_ITEM_STATUS_COLOR[p.status] + '33', borderColor: PRODUCT_ITEM_STATUS_COLOR[p.status] }]}>
-                  <Text style={[s.badgeText, { color: PRODUCT_ITEM_STATUS_COLOR[p.status] }]}>{PRODUCT_ITEM_STATUS_LABEL[p.status]}</Text>
+                <View style={[s.badge, { backgroundColor: PRODUCT_ITEM_STATUS_COLOR[p.status as keyof typeof PRODUCT_ITEM_STATUS_COLOR] + '33', borderColor: PRODUCT_ITEM_STATUS_COLOR[p.status as keyof typeof PRODUCT_ITEM_STATUS_COLOR] }]}>
+                  <Text style={[s.badgeText, { color: PRODUCT_ITEM_STATUS_COLOR[p.status as keyof typeof PRODUCT_ITEM_STATUS_COLOR] }]}>{PRODUCT_ITEM_STATUS_LABEL[p.status as keyof typeof PRODUCT_ITEM_STATUS_LABEL]}</Text>
                 </View>
               </View>
               <Text style={s.cardMeta}>Kod: {p.code}{p.serialNo ? ` · SN: ${p.serialNo}` : ''}</Text>

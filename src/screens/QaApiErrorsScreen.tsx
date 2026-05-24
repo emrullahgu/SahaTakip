@@ -41,10 +41,10 @@ export default function QaApiErrorsScreen() {
           />
         }
         renderItem={({ item: r }) => (
-          <View key={r.id} style={[s.card, { borderLeftColor: CAT_COLOR[r.category], opacity: r.enabled ? 1 : 0.55 }]}>
+          <View key={r.id} style={[s.card, { borderLeftColor: CAT_COLOR[r.category as keyof typeof CAT_COLOR], opacity: r.enabled ? 1 : 0.55 }]}>
             <View style={s.headRow}>
-              <View style={[s.pill, { backgroundColor: CAT_COLOR[r.category] + '33', borderColor: CAT_COLOR[r.category] }]}>
-                <Text style={[s.pillT, { color: CAT_COLOR[r.category] }]}>{CAT_LABEL[r.category]}</Text>
+              <View style={[s.pill, { backgroundColor: CAT_COLOR[r.category as keyof typeof CAT_COLOR] + '33', borderColor: CAT_COLOR[r.category as keyof typeof CAT_COLOR] }]}>
+                <Text style={[s.pillT, { color: CAT_COLOR[r.category as keyof typeof CAT_COLOR] }]}>{CAT_LABEL[r.category as keyof typeof CAT_LABEL]}</Text>
               </View>
               <View style={{ flex: 1 }} />
               <Switch value={r.enabled} onValueChange={() => toggleQaApiRule(r.id).then(load)} />

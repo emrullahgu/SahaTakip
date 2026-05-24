@@ -47,15 +47,15 @@ export default function QaConsoleScreen() {
           />
         }
         renderItem={({ item: l }) => (
-          <View key={l.id} style={[s.card, { borderLeftColor: QA_STATUS_COLOR[l.status], opacity: l.status === 'ignored' ? 0.55 : 1 }]}>
+          <View key={l.id} style={[s.card, { borderLeftColor: QA_STATUS_COLOR[l.status as keyof typeof QA_STATUS_COLOR], opacity: l.status === 'ignored' ? 0.55 : 1 }]}>
             <View style={s.headRow}>
-              <Ionicons name={LEVEL_ICON[l.level] as any} size={20} color={LEVEL_COLOR[l.level]} />
+              <Ionicons name={LEVEL_ICON[l.level as keyof typeof LEVEL_ICON] as any} size={20} color={LEVEL_COLOR[l.level as keyof typeof LEVEL_COLOR]} />
               <View style={{ flex: 1 }}>
                 <Text style={s.msg}>{l.message}</Text>
                 <Text style={s.source}>{l.source}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: QA_STATUS_COLOR[l.status] + '33', borderColor: QA_STATUS_COLOR[l.status] }]}>
-                <Text style={[s.pillT, { color: QA_STATUS_COLOR[l.status] }]}>{QA_STATUS_LABEL[l.status]}</Text>
+              <View style={[s.pill, { backgroundColor: QA_STATUS_COLOR[l.status as keyof typeof QA_STATUS_COLOR] + '33', borderColor: QA_STATUS_COLOR[l.status as keyof typeof QA_STATUS_COLOR] }]}>
+                <Text style={[s.pillT, { color: QA_STATUS_COLOR[l.status as keyof typeof QA_STATUS_COLOR] }]}>{QA_STATUS_LABEL[l.status as keyof typeof QA_STATUS_LABEL]}</Text>
               </View>
             </View>
             <View style={s.metaRow}>
