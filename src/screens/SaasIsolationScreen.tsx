@@ -63,13 +63,13 @@ export default function SaasIsolationScreen() {
               <Ionicons name={i.ok ? 'checkmark-circle' : 'alert-circle'} size={20} color={i.ok ? '#22c55e' : '#ef4444'} />
               <Text style={s.tableT}>{i.table}</Text>
               <View style={{ flex: 1 }} />
-              <View style={[s.pill, { backgroundColor: SCOPE_COLOR[i.scope] + '33', borderColor: SCOPE_COLOR[i.scope] }]}>
-                <Text style={[s.pillT, { color: SCOPE_COLOR[i.scope] }]}>{SCOPE_LABEL[i.scope]}</Text>
+              <View style={[s.pill, { backgroundColor: SCOPE_COLOR[i.scope as keyof typeof SCOPE_COLOR] + '33', borderColor: SCOPE_COLOR[i.scope as keyof typeof SCOPE_COLOR] }]}>
+                <Text style={[s.pillT, { color: SCOPE_COLOR[i.scope as keyof typeof SCOPE_COLOR] }]}>{SCOPE_LABEL[i.scope as keyof typeof SCOPE_LABEL]}</Text>
               </View>
             </View>
             <View style={s.metaRow}>
-              <View style={[s.pill, { backgroundColor: POLICY_COLOR[i.policy] + '33', borderColor: POLICY_COLOR[i.policy] }]}>
-                <Text style={[s.pillT, { color: POLICY_COLOR[i.policy] }]}>{POLICY_LABEL[i.policy]}</Text>
+              <View style={[s.pill, { backgroundColor: POLICY_COLOR[i.policy as keyof typeof POLICY_COLOR] + '33', borderColor: POLICY_COLOR[i.policy as keyof typeof POLICY_COLOR] }]}>
+                <Text style={[s.pillT, { color: POLICY_COLOR[i.policy as keyof typeof POLICY_COLOR] }]}>{POLICY_LABEL[i.policy as keyof typeof POLICY_LABEL]}</Text>
               </View>
               <Text style={[s.metaT, i.rowsLeaked > 0 && { color: '#ef4444', fontWeight: '700' }]}>
                 Sızıntı: {i.rowsLeaked} satır

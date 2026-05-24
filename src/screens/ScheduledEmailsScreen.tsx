@@ -211,8 +211,8 @@ export default function ScheduledEmailsScreen() {
                   </View>
                 </View>
                 <View style={[styles.row, { marginTop: 4, flexWrap: 'wrap' }]}>
-                  <Tag icon="calendar-outline" text={KIND_LABEL[s.kind]} />
-                  <Tag icon="document-text-outline" text={REPORT_TYPE_LABEL[s.report_type]} />
+                  <Tag icon="calendar-outline" text={KIND_LABEL[s.kind as keyof typeof KIND_LABEL]} />
+                  <Tag icon="document-text-outline" text={REPORT_TYPE_LABEL[s.report_type as keyof typeof REPORT_TYPE_LABEL]} />
                   <Tag icon="time-outline" text={`${String(s.hour_utc).padStart(2, '0')}:00 UTC`} />
                 </View>
               </View>

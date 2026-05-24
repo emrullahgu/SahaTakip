@@ -53,19 +53,19 @@ export default function SaasLicensesScreen() {
         renderItem={({ item: l }) => {
           const d = daysUntil(l.endsAt);
           return (
-            <View key={l.id} style={[s.card, { borderLeftColor: SAAS_STATUS_COLOR[l.status] }]}>
+            <View key={l.id} style={[s.card, { borderLeftColor: SAAS_STATUS_COLOR[l.status as keyof typeof SAAS_STATUS_COLOR] }]}>
               <View style={s.headRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={s.title}>{l.tenantName}</Text>
                   <Text style={s.range}>{fmtDate(l.startsAt)} → {fmtDate(l.endsAt)}</Text>
                 </View>
-                <View style={[s.pill, { backgroundColor: SAAS_PLAN_COLOR[l.plan] + '33', borderColor: SAAS_PLAN_COLOR[l.plan] }]}>
-                  <Text style={[s.pillT, { color: SAAS_PLAN_COLOR[l.plan] }]}>{SAAS_PLAN_LABEL[l.plan]}</Text>
+                <View style={[s.pill, { backgroundColor: SAAS_PLAN_COLOR[l.plan as keyof typeof SAAS_PLAN_COLOR] + '33', borderColor: SAAS_PLAN_COLOR[l.plan as keyof typeof SAAS_PLAN_COLOR] }]}>
+                  <Text style={[s.pillT, { color: SAAS_PLAN_COLOR[l.plan as keyof typeof SAAS_PLAN_COLOR] }]}>{SAAS_PLAN_LABEL[l.plan as keyof typeof SAAS_PLAN_LABEL]}</Text>
                 </View>
               </View>
               <View style={s.metaRow}>
-                <View style={[s.pill, { backgroundColor: SAAS_STATUS_COLOR[l.status] + '33', borderColor: SAAS_STATUS_COLOR[l.status] }]}>
-                  <Text style={[s.pillT, { color: SAAS_STATUS_COLOR[l.status] }]}>{SAAS_STATUS_LABEL[l.status]}</Text>
+                <View style={[s.pill, { backgroundColor: SAAS_STATUS_COLOR[l.status as keyof typeof SAAS_STATUS_COLOR] + '33', borderColor: SAAS_STATUS_COLOR[l.status as keyof typeof SAAS_STATUS_COLOR] }]}>
+                  <Text style={[s.pillT, { color: SAAS_STATUS_COLOR[l.status as keyof typeof SAAS_STATUS_COLOR] }]}>{SAAS_STATUS_LABEL[l.status as keyof typeof SAAS_STATUS_LABEL]}</Text>
                 </View>
                 <Text style={s.metaT}><Ionicons name="people" size={11} color={colors.text.muted} /> {l.seats} koltuk</Text>
                 <Text style={s.metaT}><Ionicons name="calendar" size={11} color={colors.text.muted} /> {l.cycle === 'monthly' ? 'Aylık' : 'Yıllık'}</Text>

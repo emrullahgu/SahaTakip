@@ -48,15 +48,15 @@ export default function QaSharedScreen() {
         renderItem={({ item: c }) => (
           <View key={c.id} style={[s.card, { borderLeftColor: c.refactored ? '#22c55e' : '#f59e0b' }]}>
             <View style={s.headRow}>
-              <View style={[s.iconBox, { backgroundColor: CAT_COLOR[c.category] + '33' }]}>
-                <Ionicons name="cube-outline" size={20} color={CAT_COLOR[c.category]} />
+              <View style={[s.iconBox, { backgroundColor: CAT_COLOR[c.category as keyof typeof CAT_COLOR] + '33' }]}>
+                <Ionicons name="cube-outline" size={20} color={CAT_COLOR[c.category as keyof typeof CAT_COLOR]} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.name}>{c.name}</Text>
                 <Text style={s.desc}>{c.description}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: CAT_COLOR[c.category] + '33', borderColor: CAT_COLOR[c.category] }]}>
-                <Text style={[s.pillT, { color: CAT_COLOR[c.category] }]}>{CAT_LABEL[c.category]}</Text>
+              <View style={[s.pill, { backgroundColor: CAT_COLOR[c.category as keyof typeof CAT_COLOR] + '33', borderColor: CAT_COLOR[c.category as keyof typeof CAT_COLOR] }]}>
+                <Text style={[s.pillT, { color: CAT_COLOR[c.category as keyof typeof CAT_COLOR] }]}>{CAT_LABEL[c.category as keyof typeof CAT_LABEL]}</Text>
               </View>
             </View>
             <View style={s.statsRow}>

@@ -49,13 +49,13 @@ export default function QaUnusedScreen() {
         renderItem={({ item: f }) => (
           <View key={f.id} style={[s.card, { borderLeftColor: f.removable ? '#ef4444' : '#f59e0b' }]}>
             <View style={s.headRow}>
-              <Ionicons name={KIND_ICON[f.kind] as any} size={20} color={KIND_COLOR[f.kind]} />
+              <Ionicons name={KIND_ICON[f.kind as keyof typeof KIND_ICON] as any} size={20} color={KIND_COLOR[f.kind as keyof typeof KIND_COLOR]} />
               <View style={{ flex: 1 }}>
                 <Text style={s.path}>{f.path}</Text>
                 <Text style={s.meta}>{f.sizeKb.toFixed(1)} KB • Son değişiklik: {new Date(f.lastModified).toLocaleDateString('tr-TR')}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: KIND_COLOR[f.kind] + '33', borderColor: KIND_COLOR[f.kind] }]}>
-                <Text style={[s.pillT, { color: KIND_COLOR[f.kind] }]}>{KIND_LABEL[f.kind]}</Text>
+              <View style={[s.pill, { backgroundColor: KIND_COLOR[f.kind as keyof typeof KIND_COLOR] + '33', borderColor: KIND_COLOR[f.kind as keyof typeof KIND_COLOR] }]}>
+                <Text style={[s.pillT, { color: KIND_COLOR[f.kind as keyof typeof KIND_COLOR] }]}>{KIND_LABEL[f.kind as keyof typeof KIND_LABEL]}</Text>
               </View>
             </View>
             <View style={[s.tag, { borderColor: f.removable ? '#ef4444' : '#f59e0b' }]}>

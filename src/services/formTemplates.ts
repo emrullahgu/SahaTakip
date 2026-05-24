@@ -5,9 +5,35 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FormTemplate, FormField, FormTemplateCategory } from '../types';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
 const KEY = '@SahaTakip:form_templates';
 const SEED_FLAG = '@SahaTakip:form_templates_seeded_v1';
+
+function tplFromRow(r: any): FormTemplate {
+  return {
+    id: r.id,
+    name: r.name,
+    category: r.category,
+    description: r.description || '',
+    fields: r.fields || [],
+    isSeed: !!r.is_seed,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  } as FormTemplate;
+}
+function tplToRow(t: FormTemplate) {
+  return {
+    id: t.id,
+    name: t.name,
+    category: t.category,
+    description: t.description || null,
+    fields: t.fields || [],
+    is_seed: !!t.isSeed,
+    created_at: t.createdAt,
+    updated_at: t.updatedAt,
+  };
+}
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -147,6 +173,16 @@ function seedTemplates(): FormTemplate[] {
 // ---------------- CRUD ----------------
 
 export async function listTemplates(): Promise<FormTemplate[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('form_templates').select('*').order('updated_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(tplFromRow);
+        await AsyncStorage.setItem(KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     return raw ? (JSON.parse(raw) as FormTemplate[]) : [];
@@ -172,15 +208,21 @@ export async function saveTemplates(list: FormTemplate[]) {
 }
 
 export async function upsertTemplate(tpl: FormTemplate) {
+  const updated: FormTemplate = { ...tpl, updatedAt: nowISO() };
+  if (SUPABASE_CONFIGURED) {
+    try { await supabase.from('form_templates').upsert(tplToRow(updated)); } catch { /* offline */ }
+  }
   const all = await listTemplates();
   const idx = all.findIndex(x => x.id === tpl.id);
-  const updated: FormTemplate = { ...tpl, updatedAt: nowISO() };
   if (idx >= 0) all[idx] = updated;
   else all.unshift(updated);
   await saveTemplates(all);
 }
 
 export async function deleteTemplate(id: string) {
+  if (SUPABASE_CONFIGURED) {
+    try { await supabase.from('form_templates').delete().eq('id', id); } catch { /* offline */ }
+  }
   const all = await listTemplates();
   await saveTemplates(all.filter(t => t.id !== id));
 }
@@ -190,7 +232,11 @@ export async function ensureSeeded() {
   if (flag) return;
   const existing = await listTemplates();
   if (existing.length === 0) {
-    await saveTemplates(seedTemplates());
+    const seeded = seedTemplates();
+    if (SUPABASE_CONFIGURED) {
+      try { await supabase.from('form_templates').insert(seeded.map(tplToRow)); } catch { /* offline */ }
+    }
+    await saveTemplates(seeded);
   }
   await AsyncStorage.setItem(SEED_FLAG, '1');
 }

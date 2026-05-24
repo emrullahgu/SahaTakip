@@ -45,10 +45,10 @@ export default function QaTypesScreen() {
           />
         }
         renderItem={({ item: t }) => (
-          <View key={t.id} style={[s.card, { borderLeftColor: t.fixed ? '#22c55e' : KIND_COLOR[t.kind] }]}>
+          <View key={t.id} style={[s.card, { borderLeftColor: t.fixed ? '#22c55e' : KIND_COLOR[t.kind as keyof typeof KIND_COLOR] }]}>
             <View style={s.headRow}>
-              <View style={[s.pill, { backgroundColor: KIND_COLOR[t.kind] + '33', borderColor: KIND_COLOR[t.kind] }]}>
-                <Text style={[s.pillT, { color: KIND_COLOR[t.kind] }]}>{KIND_LABEL[t.kind]}</Text>
+              <View style={[s.pill, { backgroundColor: KIND_COLOR[t.kind as keyof typeof KIND_COLOR] + '33', borderColor: KIND_COLOR[t.kind as keyof typeof KIND_COLOR] }]}>
+                <Text style={[s.pillT, { color: KIND_COLOR[t.kind as keyof typeof KIND_COLOR] }]}>{KIND_LABEL[t.kind as keyof typeof KIND_LABEL]}</Text>
               </View>
               <Text style={s.fileLine}>{t.file}:{t.line}</Text>
               {t.fixed && <Ionicons name="checkmark-circle" size={18} color="#22c55e" style={{ marginLeft: 'auto' }} />}
