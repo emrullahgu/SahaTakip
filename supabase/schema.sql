@@ -1281,7 +1281,8 @@ $$;
 grant execute on function public.list_pending_user_approvals() to authenticated;
 
 -- Geriye uyum için view'i de tutuyoruz (auth.users join'ı kaldırarak)
-create or replace view public.pending_user_approvals as
+drop view if exists public.pending_user_approvals;
+create view public.pending_user_approvals as
   select p.id,
          p.full_name,
          p.role,
