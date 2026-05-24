@@ -374,6 +374,13 @@ drop policy if exists "shifts_self_write" on public.shifts;
 create policy "shifts_self_write" on public.shifts
   for all using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
 
+-- TÃ¼m kimliÄŸi doÄŸrulanmÄ±ÅŸ kullanÄ±cÄ±lar mesai listesini okuyabilir.
+-- Admin/manager canlÄ± paneli iÃ§in kritik (user_role() null dÃ¶nerse bile Ã§alÄ±ÅŸÄ±r).
+-- Uygulama tarafÄ±nda AdminShiftDashboardScreen RoleGuard ile korunur.
+drop policy if exists "shifts_all_read" on public.shifts;
+create policy "shifts_all_read" on public.shifts
+  for select using (auth.uid() is not null);
+
 drop policy if exists "geofences_manager_write" on public.geofences;
 create policy "geofences_manager_write" on public.geofences
   for all using (public.user_role() in ('admin','manager'));
@@ -1566,9 +1573,9 @@ grant execute on function public.complete_email_dispatch(uuid, text[], text, tex
 
 
 -- =============================================================
--- app_settings — Paylaþýmlý uygulama ayarlarý (örn. AI API anahtarlarý)
--- Tüm authenticated kullanýcýlar OKUYABÝLÝR; yalnýzca admin YAZABÝLÝR.
--- Bu sayede admin bir kere anahtarlarý girer, herkes uygulamadan kullanýr.
+-- app_settings ï¿½ Paylaï¿½ï¿½mlï¿½ uygulama ayarlarï¿½ (ï¿½rn. AI API anahtarlarï¿½)
+-- Tï¿½m authenticated kullanï¿½cï¿½lar OKUYABï¿½Lï¿½R; yalnï¿½zca admin YAZABï¿½Lï¿½R.
+-- Bu sayede admin bir kere anahtarlarï¿½ girer, herkes uygulamadan kullanï¿½r.
 -- =============================================================
 create table if not exists public.app_settings (
   key text primary key,

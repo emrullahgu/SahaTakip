@@ -1,8 +1,11 @@
-// ChatbotFAB — POZ-DEV-320 Sahada anlık yardım (kural tabanlı + opsiyonel AI)
+// ChatbotFAB — POZ-DEV-320 Sahada anlık yardım (Copilot LLM + kural tabanlı fallback)
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
+import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { askCopilot, type CopilotMessage } from '../services/aiCopilot';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string }
 
@@ -25,22 +28,43 @@ function getReply(text: string): string {
 export default function ChatbotFAB() {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: 'bot', text: 'Merhaba! Ben SahaTakip asistanıyım. Size nasıl yardımcı olabilirim?', ts: new Date().toISOString() },
+    { role: 'bot', text: 'Merhaba! Ben SahaTakip asistanıyım (Copilot AI). Size nasıl yardımcı olabilirim?', ts: new Date().toISOString() },
   ]);
   const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const { workOrders, customers, quotes, employees } = useAppContext();
+  const { profile, user } = useAuth();
+  const userName = profile?.full_name || profile?.email || user?.email || 'Kullanıcı';
 
   useEffect(() => {
     if (open) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [open, msgs.length]);
 
-  const onSend = () => {
+  const onSend = async () => {
     const t = input.trim();
-    if (!t) return;
+    if (!t || busy) return;
     const userMsg: Msg = { role: 'user', text: t, ts: new Date().toISOString() };
-    const botMsg: Msg = { role: 'bot', text: getReply(t), ts: new Date().toISOString() };
-    setMsgs(m => [...m, userMsg, botMsg]);
+    setMsgs(m => [...m, userMsg]);
     setInput('');
+    setBusy(true);
+    try {
+      const history: CopilotMessage[] = msgs.slice(-6).map(m => ({
+        id: m.ts, role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text, createdAt: m.ts,
+      }));
+      const { reply, provider } = await askCopilot(
+        t,
+        { workOrders, customers, quotes, employees, currentUserName: userName },
+        history,
+      );
+      const text = provider === 'mock' ? getReply(t) : (reply || getReply(t));
+      setMsgs(m => [...m, { role: 'bot', text, ts: new Date().toISOString() }]);
+    } catch {
+      setMsgs(m => [...m, { role: 'bot', text: getReply(t), ts: new Date().toISOString() }]);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -73,9 +97,10 @@ export default function ChatbotFAB() {
                 placeholder="Sorunuzu yazın..."
                 placeholderTextColor={colors.text.faint}
                 onSubmitEditing={onSend}
+                editable={!busy}
               />
-              <TouchableOpacity style={s.sendBtn} onPress={onSend}>
-                <Ionicons name="send" size={18} color="#fff" />
+              <TouchableOpacity style={[s.sendBtn, busy && { opacity: 0.5 }]} onPress={onSend} disabled={busy}>
+                {busy ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={18} color="#fff" />}
               </TouchableOpacity>
             </View>
           </View>

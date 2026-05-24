@@ -121,8 +121,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('*')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => {
-        if (data) setProfile(data as UserProfile);
+      .then(async ({ data, error }) => {
+        if (data) {
+          setProfile(data as UserProfile);
+          return;
+        }
+        // Profil satırı yoksa (eski kullanıcı, trigger çalışmamış vb.) güvenli
+        // varsayılanlarla upsert et — yoksa user_role() RLS'te null dönüp
+        // admin'in mesai/onay panellerini kırıyor.
+        if (error) {
+          const { data: created } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              full_name: (user.user_metadata as any)?.full_name || user.email,
+              role: 'engineer',
+            })
+            .select()
+            .single();
+          if (created) setProfile(created as UserProfile);
+        }
       });
     // Kullanıcı giriş yaptığında paylaşımlı AI ayarlarını arka planda senkronize et.
     import('../services/ai')

@@ -80,6 +80,9 @@ function AdminShiftDashboardInner() {
     setLoading(true);
     try {
       const raw = await shiftsRepo.listActive();
+      if (__DEV__) {
+        console.log('[AdminShiftDashboard] listActive ->', raw.length, 'kayıt');
+      }
       const now = Date.now();
       const rows: ActiveRow[] = raw.map((s) => {
         const name =

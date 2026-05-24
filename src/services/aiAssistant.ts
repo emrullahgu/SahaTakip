@@ -73,13 +73,46 @@ export async function sendMessage(sessionId: string, content: string): Promise<A
   const msgs = await load<AiMessage>(K.messages);
   const user: AiMessage = { id: uid(), sessionId, role: 'user', content, createdAt: now() };
   msgs.push(user);
-  // Mock assistant reply
+  // Önce gerçek Copilot LLM'ini dene; başarısız olursa mock'a düş.
+  let replyText = '';
+  let tokens = 0;
+  try {
+    const { askCopilot } = await import('./aiCopilot');
+    // Bu katmanda canlı snapshot yok — boş snapshot ile gönderiyoruz; KB ve
+    // sistem promptu yine de zenginleştirme yapacak.
+    const prevMsgs = msgs
+      .filter(m => m.sessionId === sessionId)
+      .slice(-8)
+      .map(m => ({
+        id: m.id,
+        role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.content,
+        createdAt: m.createdAt,
+      }));
+    const res = await askCopilot(content, {
+      workOrders: [],
+      customers: [],
+      quotes: [],
+      employees: [],
+      currentUserName: 'Kullanıcı',
+    }, prevMsgs);
+    if (res.provider !== 'mock' && res.reply) {
+      replyText = res.reply;
+      tokens = Math.max(60, Math.floor(res.reply.length / 4));
+    }
+  } catch {
+    /* askCopilot başarısız → mock'a düş */
+  }
+  if (!replyText) {
+    replyText = mockReply(content);
+    tokens = 80 + Math.floor(Math.random() * 200);
+  }
   const reply: AiMessage = {
     id: uid(), sessionId, role: 'assistant',
-    content: mockReply(content),
+    content: replyText,
     createdAt: now(),
-    tokens: 80 + Math.floor(Math.random() * 200),
-    sources: ['POZ Kataloğu'],
+    tokens,
+    sources: ['Copilot KB'],
   };
   msgs.push(reply); await save(K.messages, msgs);
   // Update session
