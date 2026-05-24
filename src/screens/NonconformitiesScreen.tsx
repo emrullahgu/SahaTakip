@@ -140,10 +140,10 @@ export default function NonconformitiesScreen() {
                     return (
                       <TouchableOpacity
                         key={s}
-                        style={[styles.btn, { borderColor: SEVERITY_COLOR[s] }, active && { backgroundColor: SEVERITY_COLOR[s] }]}
+                        style={[styles.btn, { borderColor: SEVERITY_COLOR[s as keyof typeof SEVERITY_COLOR] }, active && { backgroundColor: SEVERITY_COLOR[s as keyof typeof SEVERITY_COLOR] }]}
                         onPress={() => setSeverity(s)}
                       >
-                        <Text style={[styles.btnText, active && styles.btnTextActive]}>{SEVERITY_LABEL[s]}</Text>
+                        <Text style={[styles.btnText, active && styles.btnTextActive]}>{SEVERITY_LABEL[s as keyof typeof SEVERITY_LABEL]}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -202,11 +202,11 @@ export default function NonconformitiesScreen() {
         }
         renderItem={({ item: n }) => (
           <TouchableOpacity key={n.id} style={styles.ncCard} onPress={() => onChangeStatus(n)} onLongPress={() => onDelete(n)}>
-            <View style={[styles.sevBar, { backgroundColor: SEVERITY_COLOR[n.severity] }]} />
+            <View style={[styles.sevBar, { backgroundColor: SEVERITY_COLOR[n.severity as keyof typeof SEVERITY_COLOR] }]} />
             <View style={{ flex: 1 }}>
               <Text style={styles.ncDesc} numberOfLines={2}>{n.description}</Text>
               <Text style={styles.ncSub}>
-                {SEVERITY_LABEL[n.severity]} · {fmt(n.createdAt)}
+                {SEVERITY_LABEL[n.severity as keyof typeof SEVERITY_LABEL]} · {fmt(n.createdAt)}
                 {n.assignedToName ? ` · ${n.assignedToName}` : ''}
               </Text>
               {n.customerName ? <Text style={styles.ncFaint}>{n.customerName}</Text> : null}
@@ -216,7 +216,7 @@ export default function NonconformitiesScreen() {
             </View>
             <View style={[styles.statusPill, n.status === 'closed' ? { backgroundColor: colors.emerald.bg } : n.status === 'in_progress' ? { backgroundColor: 'rgba(245,158,11,0.12)' } : { backgroundColor: colors.rose.bg }]}>
               <Text style={[styles.statusText, n.status === 'closed' ? { color: brand.green } : n.status === 'in_progress' ? { color: '#f59e0b' } : { color: colors.rose.default }]}>
-                {NC_STATUS_LABEL[n.status]}
+                {NC_STATUS_LABEL[n.status as keyof typeof NC_STATUS_LABEL]}
               </Text>
             </View>
           </TouchableOpacity>

@@ -59,7 +59,7 @@ export default function SmartRouteSuggestScreen() {
               <View style={s.met}><Text style={s.mv}>{item.totalMin}</Text><Text style={s.ml}>dk</Text></View>
               <View style={s.met}><Text style={s.mv}>{item.stops.length}</Text><Text style={s.ml}>durak</Text></View>
             </View>
-            {item.stops.map((st, i) => (
+            {item.stops.map((st: any, i: number) => (
               <View key={`${item.id}-${i}`} style={s.stop}>
                 <View style={s.stopNum}><Text style={s.stopNumT}>{i + 1}</Text></View>
                 <View style={{ flex: 1 }}>

@@ -216,8 +216,8 @@ export default function NotificationsScreen() {
           />
         }
         renderItem={({ item: n }) => {
-          const color = COLORS[n.type] ?? colors.text.muted;
-          const icon = ICONS[n.type] ?? 'notifications-outline';
+          const color = COLORS[n.type as keyof typeof COLORS] ?? colors.text.muted;
+          const icon = ICONS[n.type as keyof typeof ICONS] ?? 'notifications-outline';
           return (
             <TouchableOpacity
               style={[styles.card, !n.read && styles.cardUnread]}

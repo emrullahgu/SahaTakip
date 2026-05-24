@@ -53,7 +53,7 @@ export default function SaasUsageLimitsScreen() {
           return (
             <View key={m.id} style={[s.card, { borderLeftColor: c }]}>
               <View style={s.headRow}>
-                <Ionicons name={ICON[m.metric] as any} size={20} color={c} />
+                <Ionicons name={ICON[m.metric as keyof typeof ICON] as any} size={20} color={c} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.title}>{m.label}</Text>
                   <Text style={s.value}>{fmt(m)}</Text>
