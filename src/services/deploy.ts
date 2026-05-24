@@ -23,11 +23,11 @@ export const DEP_STATUS_LABEL: Record<DepCheckStatus, string> = { ok: 'Hazır', 
 export const DEP_STATUS_COLOR: Record<DepCheckStatus, string> = { ok: '#22c55e', warn: '#f59e0b', fail: '#ef4444', pending: '#64748b' };
 export const DEP_STATUS_ICON: Record<DepCheckStatus, string> = { ok: 'checkmark-circle', warn: 'warning', fail: 'close-circle', pending: 'time' };
 
-async function getOrSeed<T>(key: string, seed: T): Promise<T> {
+async function getOrSeed<T>(key: string, fallback: T): Promise<T> {
   const raw = await AsyncStorage.getItem(key);
   if (raw) return JSON.parse(raw) as T;
-  await AsyncStorage.setItem(key, JSON.stringify(seed));
-  return seed;
+  // Sahte/seed veri yok — diziler boş döner, nesneler fallback olarak verilir.
+  return Array.isArray(fallback) ? (([] as unknown) as T) : fallback;
 }
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
 

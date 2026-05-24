@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listRfmCustomers, RFM_SEGMENT_LABEL, RFM_SEGMENT_COLOR, RFM_SEGMENT_ICON } from '../services/advanced';
 import type { AdvRfmCustomer, AdvRfmSegment } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const SEGMENTS: AdvRfmSegment[] = ['champions', 'loyal', 'potential', 'new', 'at_risk', 'hibernating', 'lost'];
 
@@ -20,27 +23,42 @@ export default function AdvRfmScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.intro}>
-          <Ionicons name="people-circle" size={48} color="#ec4899" />
-          <Text style={s.introT}>RFM Segmentasyon</Text>
-          <Text style={s.introD}>Recency (Tazelik) · Frequency (Sıklık) · Monetary (Tutar) skorlaması</Text>
-        </View>
-
-        <Text style={s.sectionT}>Segment Dağılımı</Text>
-        <View style={s.segGrid}>
-          {SEGMENTS.map(seg => (
-            <View key={seg} style={[s.segCard, { borderColor: RFM_SEGMENT_COLOR[seg] }]}>
-              <Ionicons name={RFM_SEGMENT_ICON[seg] as any} size={24} color={RFM_SEGMENT_COLOR[seg]} />
-              <Text style={[s.segN, { color: RFM_SEGMENT_COLOR[seg] }]}>{counts[seg]}</Text>
-              <Text style={s.segL}>{RFM_SEGMENT_LABEL[seg]}</Text>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={c => c.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.intro}>
+              <Ionicons name="people-circle" size={48} color="#ec4899" />
+              <Text style={s.introT}>RFM Segmentasyon</Text>
+              <Text style={s.introD}>Recency (Tazelik) · Frequency (Sıklık) · Monetary (Tutar) skorlaması</Text>
             </View>
-          ))}
-        </View>
 
-        <Text style={s.sectionT}>Müşteriler</Text>
-        {items.map(c => (
-          <View key={c.id} style={[s.card, { borderLeftColor: RFM_SEGMENT_COLOR[c.segment] }]}>
+            <Text style={s.sectionT}>Segment Dağılımı</Text>
+            <View style={s.segGrid}>
+              {SEGMENTS.map(seg => (
+                <View key={seg} style={[s.segCard, { borderColor: RFM_SEGMENT_COLOR[seg] }]}>
+                  <Ionicons name={RFM_SEGMENT_ICON[seg] as any} size={24} color={RFM_SEGMENT_COLOR[seg]} />
+                  <Text style={[s.segN, { color: RFM_SEGMENT_COLOR[seg] }]}>{counts[seg]}</Text>
+                  <Text style={s.segL}>{RFM_SEGMENT_LABEL[seg]}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Text style={s.sectionT}>Müşteriler</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="people-outline"
+            title="Segmentasyon verisi yok"
+            subtitle="Müşteri davranışlarını analiz etmek için henüz yeterli veri birikmedi."
+          />
+        }
+        renderItem={({ item: c }) => (
+          <View key={c.id} style={[s.card, { borderLeftColor: RFM_SEGMENT_COLOR[c.segment], marginBottom: spacing.sm }]}>
             <View style={s.cardHead}>
               <Ionicons name={RFM_SEGMENT_ICON[c.segment] as any} size={20} color={RFM_SEGMENT_COLOR[c.segment]} />
               <View style={{ flex: 1 }}>
@@ -59,8 +77,8 @@ export default function AdvRfmScreen() {
               <Text style={s.actionT}>{c.recommendedAction}</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

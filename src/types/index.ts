@@ -494,6 +494,7 @@ export interface ReportKpi {
 export interface ReportBucket {
   label: string;
   value: number;
+  color?: string;
 }
 
 export interface Report {

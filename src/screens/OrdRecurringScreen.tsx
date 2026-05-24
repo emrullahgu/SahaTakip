@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listRecurringOrders, ORD_RECURRING_FREQ_LABEL } from '../services/orders';
 import type { OrdRecurringTemplate } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const FREQ_COLOR: Record<OrdRecurringTemplate['frequency'], string> = {
   weekly: '#3b82f6', biweekly: '#06b6d4', monthly: '#8b5cf6', quarterly: '#f59e0b',
@@ -21,33 +24,50 @@ export default function OrdRecurringScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.intro}>
-          <Ionicons name="repeat" size={48} color="#8b5cf6" />
-          <Text style={s.introT}>Tekrarlayan Siparişler</Text>
-          <Text style={s.introD}>Sözleşmeli müşteriler için otomatik sipariş şablonları</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={t => t.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.intro}>
+              <Ionicons name="repeat" size={48} color="#8b5cf6" />
+              <Text style={s.introT}>Tekrarlayan Siparişler</Text>
+              <Text style={s.introD}>Sözleşmeli müşteriler için otomatik sipariş şablonları</Text>
+            </View>
 
-        <View style={s.kpiRow}>
-          <Kpi label="Toplam Şablon" value={items.length.toString()} color="#8b5cf6" />
-          <Kpi label="Aktif" value={active.toString()} color="#22c55e" />
-          <Kpi label="Aylık Beklenen" value={`₺${(totalEst / 1000).toFixed(0)}K`} color="#f97316" />
-        </View>
+            <View style={s.kpiRow}>
+              <Kpi label="Toplam Şablon" value={items.length.toString()} color="#8b5cf6" />
+              <Kpi label="Aktif" value={active.toString()} color="#22c55e" />
+              <Kpi label="Aylık Beklenen" value={`₺${(totalEst / 1000).toFixed(0)}K`} color="#f97316" />
+            </View>
 
-        <View style={s.actionRow}>
-          <TouchableOpacity style={s.btnSec} activeOpacity={0.85} onPress={() => Alert.alert('Yeni Şablon', 'Tekrarlayan sipariş şablonu oluştur (demo).')}>
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={s.btnT}>Yeni Şablon</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.btnSec, { backgroundColor: '#06b6d4' }]} activeOpacity={0.85} onPress={() => Alert.alert('Tetikle', 'Bekleyen tüm şablonlar şimdi çalıştırıldı (demo).')}>
-            <Ionicons name="play" size={16} color="#fff" />
-            <Text style={s.btnT}>Şimdi Tetikle</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={s.actionRow}>
+              <TouchableOpacity style={s.btnSec} activeOpacity={0.85} onPress={() => Alert.alert('Yeni Şablon', 'Tekrarlayan sipariş şablonu oluştur (demo).')}>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={s.btnT}>Yeni Şablon</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.btnSec, { backgroundColor: '#06b6d4' }]} activeOpacity={0.85} onPress={() => Alert.alert('Tetikle', 'Bekleyen tüm şablonlar şimdi çalıştırıldı (demo).')}>
+                <Ionicons name="play" size={16} color="#fff" />
+                <Text style={s.btnT}>Şimdi Tetikle</Text>
+              </TouchableOpacity>
+            </View>
 
-        <Text style={s.sectionT}>Şablonlar</Text>
-        {items.map(t => (
-          <View key={t.id} style={[s.card, { borderLeftColor: FREQ_COLOR[t.frequency], opacity: t.active ? 1 : 0.55 }]}>
+            <Text style={s.sectionT}>Şablonlar</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="repeat-outline"
+            title="Şablon yok"
+            subtitle="Henüz periyodik bir sipariş şablonu tanımlanmadı."
+            actionLabel="+ Yeni Şablon"
+            onAction={() => Alert.alert('Yeni Şablon', 'Tıklanabilir (demo)')}
+          />
+        }
+        renderItem={({ item: t }) => (
+          <View key={t.id} style={[s.card, { borderLeftColor: FREQ_COLOR[t.frequency], opacity: t.active ? 1 : 0.55, marginBottom: spacing.sm }]}>
             <View style={s.cardHead}>
               <View style={[s.iconBox, { backgroundColor: FREQ_COLOR[t.frequency] + '22' }]}>
                 <Ionicons name="repeat" size={20} color={FREQ_COLOR[t.frequency]} />
@@ -79,8 +99,8 @@ export default function OrdRecurringScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -8,6 +8,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { listOrders, ORD_STATUS_LABEL, ORD_STATUS_COLOR, ORD_STATUS_ICON, ORD_CHANNEL_LABEL } from '../services/orders';
 import type { RootStackParamList, Order, OrdStatus } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -44,7 +47,7 @@ export default function OrdListScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow} style={{ maxHeight: 50 }}>
         {FILTERS.map(f => (
           <TouchableOpacity
             key={f}
@@ -59,14 +62,21 @@ export default function OrdListScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={s.list}>
-        {filtered.length === 0 && (
-          <View style={s.empty}>
-            <Ionicons name="bag-handle-outline" size={48} color={colors.text.muted} />
-            <Text style={s.emptyT}>Sipariş bulunamadı</Text>
-          </View>
-        )}
-        {filtered.map(o => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={o => o.id}
+        contentContainerStyle={s.list}
+        ListEmptyComponent={
+          <EmptyState
+            icon="bag-handle-outline"
+            title="Sipariş yok"
+            subtitle="Bu filtreye uygun herhangi bir sipariş kaydı bulunamadı."
+            actionLabel="+ Yeni Sipariş"
+            onAction={() => nav.navigate('OrdForm')}
+          />
+        }
+        renderItem={({ item: o }) => (
           <TouchableOpacity
             key={o.id}
             style={[s.card, { borderLeftColor: ORD_STATUS_COLOR[o.status] }]}
@@ -104,8 +114,8 @@ export default function OrdListScreen() {
               <Text style={s.foot}>{o.items.length} kalem</Text>
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

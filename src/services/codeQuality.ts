@@ -23,11 +23,11 @@ export const QA_STATUS_LABEL: Record<QaStatus, string> = { open: 'Açık', fixed
 export const QA_STATUS_COLOR: Record<QaStatus, string> = { open: '#ef4444', fixed: '#22c55e', ignored: '#64748b' };
 export const QA_SEV_COLOR: Record<QaSeverity, string> = { error: '#ef4444', warning: '#f59e0b', info: '#0ea5e9' };
 
-async function getOrSeed<T>(key: string, seed: T): Promise<T> {
+async function getOrSeed<T>(key: string, fallback: T): Promise<T> {
   const raw = await AsyncStorage.getItem(key);
   if (raw) return JSON.parse(raw) as T;
-  await AsyncStorage.setItem(key, JSON.stringify(seed));
-  return seed;
+  // Sahte/seed veri yok — diziler boş, nesneler s�f�r alanl� fallback ile döner.
+  return Array.isArray(fallback) ? (([] as unknown) as T) : fallback;
 }
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
 
@@ -147,17 +147,17 @@ export async function listQaQueries(): Promise<QaQueryAudit[]> {
 
 export async function getQaKpi(): Promise<QaQualityKpi> {
   return getOrSeed<QaQualityKpi>(K.kpi, {
-    totalFiles: 248,
-    totalLines: 64820,
-    anyUsages: 14,
-    consoleIssues: 8,
-    unusedFiles: 7,
-    duplicateComponents: 3,
-    testCoverage: 62,
-    lintWarnings: 18,
-    buildTimeSec: 142,
-    bundleSizeMb: 4.8,
-    techDebtHours: 28,
+    totalFiles: 0,
+    totalLines: 0,
+    anyUsages: 0,
+    consoleIssues: 0,
+    unusedFiles: 0,
+    duplicateComponents: 0,
+    testCoverage: 0,
+    lintWarnings: 0,
+    buildTimeSec: 0,
+    bundleSizeMb: 0,
+    techDebtHours: 0,
     lastAuditAt: daysAgo(0),
   });
 }

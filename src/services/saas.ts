@@ -33,11 +33,11 @@ export const SAAS_STATUS_COLOR: Record<string, string> = {
 export const SAAS_PLAN_LABEL: Record<SaasPlanCode, string> = { basic: 'Basic', pro: 'Pro', enterprise: 'Enterprise' };
 export const SAAS_PLAN_COLOR: Record<SaasPlanCode, string> = { basic: '#64748b', pro: '#0ea5e9', enterprise: '#a855f7' };
 
-async function getOrSeed<T>(key: string, seed: T): Promise<T> {
+async function getOrSeed<T>(key: string, fallback: T): Promise<T> {
   const raw = await AsyncStorage.getItem(key);
   if (raw) return JSON.parse(raw) as T;
-  await AsyncStorage.setItem(key, JSON.stringify(seed));
-  return seed;
+  // Sahte/seed veri yok — diziler boş döner, nesneler fallback olarak verilir.
+  return Array.isArray(fallback) ? (([] as unknown) as T) : fallback;
 }
 
 const now = () => new Date().toISOString();
