@@ -5,6 +5,8 @@ npm-debug.*
 build-info.json
 build-log.txt
 build-log-decoded.txt
+build-log*.txt
+build-log*.gz
 eas-build-start.log
 *.jks
 *.p8
