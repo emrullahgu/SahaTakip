@@ -21,6 +21,8 @@ import {
   deleteWarehouse,
 } from '../services/warehouses';
 import { Warehouse, WarehouseKind, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Warehouses'>;
 
@@ -94,54 +96,59 @@ export default function WarehousesScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="business-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Henüz depo/zimmet noktası yok.</Text>
-          </View>
-        ) : (
-          filtered.map(w => {
-            const meta = KIND_META[w.kind];
-            return (
-              <TouchableOpacity
-                key={w.id}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() =>
-                  navigation.navigate('WarehouseDetail', { warehouseId: w.id })
-                }
-                onLongPress={() => onDelete(w)}
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => {
+          const meta = KIND_META[item.kind];
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() =>
+                navigation.navigate('WarehouseDetail', { warehouseId: item.id })
+              }
+              onLongPress={() => onDelete(item)}
+            >
+              <View
+                style={[
+                  styles.iconBox,
+                  { borderColor: meta.color, backgroundColor: meta.color + '22' },
+                ]}
               >
-                <View
-                  style={[
-                    styles.iconBox,
-                    { borderColor: meta.color, backgroundColor: meta.color + '22' },
-                  ]}
-                >
-                  <Ionicons name={meta.icon} size={18} color={meta.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardName}>{w.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {meta.label}
-                    {w.responsibleName ? ` · ${w.responsibleName}` : ''}
-                    {w.code ? ` · ${w.code}` : ''}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  onPress={() =>
-                    navigation.navigate('WarehouseForm', { warehouseId: w.id })
-                  }
-                >
-                  <Ionicons name="create-outline" size={16} color={colors.text.muted} />
-                </TouchableOpacity>
+                <Ionicons name={meta.icon} size={18} color={meta.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <Text style={styles.cardMeta}>
+                  {meta.label}
+                  {item.responsibleName ? ` · ${item.responsibleName}` : ''}
+                  {item.code ? ` · ${item.code}` : ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                onPress={() =>
+                  navigation.navigate('WarehouseForm', { warehouseId: item.id })
+                }
+              >
+                <Ionicons name="create-outline" size={16} color={colors.text.muted} />
               </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="business-outline"
+            title="Nokta bulunamadı"
+            subtitle="Filtreyi değiştirerek tekrar deneyebilir veya yeni bir zimmet noktası ekleyebilirsiniz."
+            actionLabel="+ Yeni Depo/Zimmet"
+            onAction={() => navigation.navigate('WarehouseForm')}
+          />
+        }
+      />
     </SafeAreaView>
   );
 }

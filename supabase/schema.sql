@@ -1294,3 +1294,167 @@ $$;
 
 grant execute on function public.set_user_approval(uuid, text, text) to authenticated;
 grant select on public.pending_user_approvals to authenticated;
+
+-- =============================================================
+-- SCHEDULED EMAIL REPORTS (günlük/haftalık/aylık/yıllık rapor maili)
+-- =============================================================
+
+create table if not exists public.email_schedules (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  kind text not null check (kind in ('daily','weekly','monthly','yearly')),
+  report_type text not null default 'summary'
+    check (report_type in ('summary','kpi','workorders','collections','custom')),
+  recipients text[] not null default '{}'::text[],
+  role_filter text[],                                       -- bu roldeki kullanıcılara gönder (admin/manager/...)
+  subject_template text,
+  body_template text,                                       -- markdown veya HTML; placeholder'lar destekler
+  hour_utc int not null default 6 check (hour_utc between 0 and 23),
+  day_of_week int check (day_of_week between 0 and 6),     -- weekly (0=Pazar)
+  day_of_month int check (day_of_month between 1 and 31),  -- monthly/yearly
+  month_of_year int check (month_of_year between 1 and 12),-- yearly
+  active boolean not null default true,
+  last_run_at timestamptz,
+  last_status text check (last_status in ('success','failed','partial')),
+  last_error text,
+  next_run_at timestamptz,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_email_sched_next on public.email_schedules(active, next_run_at);
+
+create table if not exists public.email_dispatch_log (
+  id uuid primary key default gen_random_uuid(),
+  schedule_id uuid references public.email_schedules(id) on delete cascade,
+  recipients text[] not null,
+  subject text,
+  status text not null check (status in ('success','failed','partial')),
+  error text,
+  sent_at timestamptz default now()
+);
+create index if not exists idx_email_log_sched on public.email_dispatch_log(schedule_id, sent_at desc);
+
+-- next_run_at hesaplayıcı (UTC)
+create or replace function public.compute_next_run(
+  p_kind text,
+  p_hour_utc int,
+  p_day_of_week int,
+  p_day_of_month int,
+  p_month_of_year int,
+  p_from timestamptz default now()
+) returns timestamptz language plpgsql stable as $$
+declare
+  base timestamptz;
+  candidate timestamptz;
+begin
+  base := date_trunc('hour', p_from) + make_interval(hours => 0);
+
+  if p_kind = 'daily' then
+    candidate := date_trunc('day', p_from) + make_interval(hours => p_hour_utc);
+    if candidate <= p_from then
+      candidate := candidate + interval '1 day';
+    end if;
+    return candidate;
+
+  elsif p_kind = 'weekly' then
+    -- 0=Pazar..6=Cumartesi (Postgres dow ile uyumlu)
+    candidate := date_trunc('day', p_from)
+                 + make_interval(hours => p_hour_utc)
+                 + ((p_day_of_week - extract(dow from p_from)::int + 7) % 7) * interval '1 day';
+    if candidate <= p_from then
+      candidate := candidate + interval '7 days';
+    end if;
+    return candidate;
+
+  elsif p_kind = 'monthly' then
+    candidate := date_trunc('month', p_from)
+                 + make_interval(days => coalesce(p_day_of_month,1) - 1, hours => p_hour_utc);
+    if candidate <= p_from then
+      candidate := candidate + interval '1 month';
+    end if;
+    return candidate;
+
+  elsif p_kind = 'yearly' then
+    candidate := make_timestamptz(
+      extract(year from p_from)::int,
+      coalesce(p_month_of_year, 1),
+      coalesce(p_day_of_month, 1),
+      p_hour_utc, 0, 0, 'UTC'
+    );
+    if candidate <= p_from then
+      candidate := candidate + interval '1 year';
+    end if;
+    return candidate;
+  end if;
+
+  return null;
+end;
+$$;
+
+-- Trigger: schedule eklenirken/değiştirilirken next_run_at'i otomatik doldur
+create or replace function public.set_schedule_next_run()
+returns trigger language plpgsql as $$
+begin
+  if new.next_run_at is null or
+     new.kind is distinct from old.kind or
+     new.hour_utc is distinct from old.hour_utc or
+     new.day_of_week is distinct from old.day_of_week or
+     new.day_of_month is distinct from old.day_of_month or
+     new.month_of_year is distinct from old.month_of_year then
+    new.next_run_at := public.compute_next_run(
+      new.kind, new.hour_utc, new.day_of_week, new.day_of_month, new.month_of_year, now()
+    );
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_email_schedule_next on public.email_schedules;
+create trigger trg_email_schedule_next
+  before insert or update on public.email_schedules
+  for each row execute function public.set_schedule_next_run();
+
+-- RLS
+alter table public.email_schedules enable row level security;
+alter table public.email_dispatch_log enable row level security;
+
+drop policy if exists "sched_admin_all" on public.email_schedules;
+create policy "sched_admin_all" on public.email_schedules
+  for all using (public.user_role() in ('admin','manager'))
+  with check (public.user_role() in ('admin','manager'));
+
+drop policy if exists "sched_log_admin_read" on public.email_dispatch_log;
+create policy "sched_log_admin_read" on public.email_dispatch_log
+  for select using (public.user_role() in ('admin','manager'));
+
+-- Vadesi gelen tüm scheduleları döndürür (Edge Function için)
+create or replace function public.due_email_schedules()
+returns setof public.email_schedules language sql security definer set search_path = public as $$
+  select * from public.email_schedules
+   where active = true and next_run_at <= now();
+$$;
+grant execute on function public.due_email_schedules() to service_role;
+
+-- Schedule bitişinde Edge Function'ın çağıracağı RPC: state günceller + log basar
+create or replace function public.complete_email_dispatch(
+  p_schedule_id uuid,
+  p_recipients text[],
+  p_subject text,
+  p_status text,
+  p_error text default null
+) returns void language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.email_dispatch_log(schedule_id, recipients, subject, status, error)
+  values (p_schedule_id, p_recipients, p_subject, p_status, p_error);
+
+  update public.email_schedules
+     set last_run_at = now(),
+         last_status = p_status,
+         last_error  = p_error,
+         next_run_at = public.compute_next_run(kind, hour_utc, day_of_week, day_of_month, month_of_year, now())
+   where id = p_schedule_id;
+end;
+$$;
+grant execute on function public.complete_email_dispatch(uuid, text[], text, text, text) to service_role;

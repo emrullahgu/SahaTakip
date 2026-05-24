@@ -24,6 +24,8 @@ import {
 } from '../services/materials';
 import { totalQtyOfMaterial } from '../services/stock';
 import { Material, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Materials'>;
 
@@ -109,59 +111,64 @@ export default function MaterialsScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="cube-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Malzeme yok.</Text>
-          </View>
-        ) : (
-          filtered.map(m => {
-            const total = totals[m.id] ?? 0;
-            const low = m.minStock && total < m.minStock;
-            return (
-              <TouchableOpacity
-                key={m.id}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() =>
-                  navigation.navigate('MaterialForm', { materialId: m.id })
-                }
-                onLongPress={() => onDelete(m)}
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => {
+          const total = totals[item.id] ?? 0;
+          const low = item.minStock && total < item.minStock;
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() =>
+                navigation.navigate('MaterialForm', { materialId: item.id })
+              }
+              onLongPress={() => onDelete(item)}
+            >
+              <View
+                style={[
+                  styles.iconBox,
+                  low
+                    ? { backgroundColor: colors.rose.bg, borderColor: colors.rose.border }
+                    : { backgroundColor: colors.indigo.bg, borderColor: colors.indigo.border },
+                ]}
               >
-                <View
-                  style={[
-                    styles.iconBox,
-                    low
-                      ? { backgroundColor: colors.rose.bg, borderColor: colors.rose.border }
-                      : { backgroundColor: colors.indigo.bg, borderColor: colors.indigo.border },
-                  ]}
-                >
-                  <Ionicons
-                    name={low ? 'alert-circle-outline' : 'cube-outline'}
-                    size={18}
-                    color={low ? colors.rose.default : brand.blueLight}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardName}>{m.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {m.code}
-                    {m.category ? ` · ${m.category}` : ''}
-                    {m.barcode ? ` · ${m.barcode}` : ''}
-                  </Text>
-                </View>
-                <View style={styles.qtyBox}>
-                  <Text style={[styles.qty, low ? { color: colors.rose.default } : null]}>
-                    {total}
-                  </Text>
-                  <Text style={styles.unit}>{m.unit}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                <Ionicons
+                  name={low ? 'alert-circle-outline' : 'cube-outline'}
+                  size={18}
+                  color={low ? colors.rose.default : brand.blueLight}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <Text style={styles.cardMeta}>
+                  {item.code}
+                  {item.category ? ` · ${item.category}` : ''}
+                  {item.barcode ? ` · ${item.barcode}` : ''}
+                </Text>
+              </View>
+              <View style={styles.qtyBox}>
+                <Text style={[styles.qty, low ? { color: colors.rose.default } : null]}>
+                  {total}
+                </Text>
+                <Text style={styles.unit}>{item.unit}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="cube-outline"
+            title="Malzeme yok"
+            subtitle="Henüz malzeme eklenmemiş veya arama sonucu bulunamadı."
+            actionLabel="+ Yeni Malzeme"
+            onAction={() => navigation.navigate('MaterialForm')}
+          />
+        }
+      />
     </SafeAreaView>
   );
 }

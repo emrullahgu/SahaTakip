@@ -19,6 +19,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 import { RootStackParamList, TabParamList } from '../types';
 
 type HomeNavProp = CompositeNavigationProp<
@@ -320,11 +321,22 @@ export default function HomeScreen() {
         </View>
 
         {/* Recent Activity */}
-        {workOrders.length > 0 && (
-          <View>
-            <Text style={styles.sectionLabel}>Son Aktiviteler</Text>
-            {workOrders.slice(0, 4).map((order, idx) => (
-              <View key={idx} style={styles.activityRow}>
+        <View style={{ marginBottom: 20 }}>
+          <Text style={styles.sectionLabel}>Son Aktiviteler</Text>
+          {workOrders.length === 0 ? (
+            <EmptyState
+              icon="document-text-outline"
+              title="Aktivite yok"
+              subtitle="Henüz bir iş emri veya servis kaydı bulunmuyor."
+            />
+          ) : (
+            workOrders.slice(0, 4).map((order, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.activityRow}
+                onPress={() => navigation.navigate('WorkOrderDetail', { workOrderId: order.id })}
+                activeOpacity={0.7}
+              >
                 <View style={styles.activityIcon}>
                   <Ionicons name="document-text" size={18} color={colors.emerald.default} />
                 </View>
@@ -336,10 +348,10 @@ export default function HomeScreen() {
                   <Text style={styles.activityDate}>{order.date}</Text>
                 </View>
                 <StatusBadge status={order.status} small />
-              </View>
-            ))}
-          </View>
-        )}
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

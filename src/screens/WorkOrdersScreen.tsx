@@ -18,7 +18,9 @@ import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 import { TabParamList, RootStackParamList } from '../types';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
 
 type WorkOrdersNavProp = CompositeNavigationProp<
@@ -149,6 +151,7 @@ export default function WorkOrdersScreen() {
 
         {/* List */}
         <FlatList
+          {...FLATLIST_DEFAULTS}
           data={filtered}
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
@@ -205,10 +208,11 @@ export default function WorkOrdersScreen() {
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="clipboard-outline" size={48} color={colors.text.faint} />
-              <Text style={styles.emptyText}>İş emri bulunamadı</Text>
-            </View>
+            <EmptyState
+              icon="clipboard-outline"
+              title="İş emri bulunamadı"
+              subtitle="Filtreleri veya aramayı değiştirerek tekrar deneyebilirsiniz."
+            />
           }
         />
       </View>

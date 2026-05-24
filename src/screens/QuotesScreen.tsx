@@ -18,6 +18,8 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { Quote, QuoteStatus, RootStackParamList } from '../types';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -168,6 +170,7 @@ export default function QuotesScreen() {
 
       {/* List */}
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={q => q.id}
         contentContainerStyle={styles.list}
@@ -180,20 +183,13 @@ export default function QuotesScreen() {
           />
         )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={56} color={colors.text.faint} />
-            <Text style={styles.emptyTitle}>Henüz teklif yok</Text>
-            <Text style={styles.emptyDesc}>
-              Yeni bir teklif oluşturmak için sağ üstteki “Yeni Teklif” butonuna basın.
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyCta}
-              onPress={() => navigation.navigate('NewQuote')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.emptyCtaText}>+ İlk Teklifi Oluştur</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="document-text-outline"
+            title="Henüz teklif yok"
+            subtitle="Yeni bir teklif oluşturmak için sağ üstteki “Yeni Teklif” butonuna basın."
+            actionLabel="+ İlk Teklifi Oluştur"
+            onAction={() => navigation.navigate('NewQuote')}
+          />
         }
       />
     </SafeAreaView>

@@ -24,6 +24,8 @@ import {
   VehicleAlert,
 } from '../services/vehicles';
 import { Vehicle, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Vehicles'>;
 
@@ -102,54 +104,59 @@ export default function VehiclesScreen() {
         </View>
       )}
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="car-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Henüz araç yok.</Text>
-          </View>
-        ) : (
-          filtered.map(v => {
-            const vAlerts = alerts.filter(a => a.vehicle.id === v.id);
-            return (
-              <TouchableOpacity
-                key={v.id}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate('VehicleDetail', { vehicleId: v.id })}
-                onLongPress={() => onDelete(v)}
-              >
-                <View style={styles.iconBox}>
-                  <Ionicons name="car-outline" size={18} color={brand.blueLight} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.plate}>{v.plate || '—'}</Text>
-                  <Text style={styles.cardMeta}>
-                    {[v.brand, v.model].filter(Boolean).join(' ')}
-                    {v.year ? ` · ${v.year}` : ''}
-                    {v.driverName ? ` · ${v.driverName}` : ''}
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => {
+          const vAlerts = alerts.filter(a => a.vehicle.id === item.id);
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id })}
+              onLongPress={() => onDelete(item)}
+            >
+              <View style={styles.iconBox}>
+                <Ionicons name="car-outline" size={18} color={brand.blueLight} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.plate}>{item.plate || '—'}</Text>
+                <Text style={styles.cardMeta}>
+                  {[item.brand, item.model].filter(Boolean).join(' ')}
+                  {item.year ? ` · ${item.year}` : ''}
+                  {item.driverName ? ` · ${item.driverName}` : ''}
+                </Text>
+                {vAlerts.length > 0 && (
+                  <Text style={styles.warnText}>
+                    {vAlerts
+                      .map(a =>
+                        `${a.kind === 'inspection' ? 'Muayene' : 'Sigorta'}: ${a.daysLeft} gün`,
+                      )
+                      .join(' · ')}
                   </Text>
-                  {vAlerts.length > 0 && (
-                    <Text style={styles.warnText}>
-                      {vAlerts
-                        .map(a =>
-                          `${a.kind === 'inspection' ? 'Muayene' : 'Sigorta'}: ${a.daysLeft} gün`,
-                        )
-                        .join(' · ')}
-                    </Text>
-                  )}
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  {typeof v.kmTotal === 'number' && (
-                    <Text style={styles.km}>{v.kmTotal.toLocaleString('tr-TR')} km</Text>
-                  )}
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                )}
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                {typeof item.kmTotal === 'number' && (
+                  <Text style={styles.km}>{item.kmTotal.toLocaleString('tr-TR')} km</Text>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="car-outline"
+            title="Henüz araç yok"
+            subtitle="Filo takibine başlamak için araç ekleyin."
+            actionLabel="+ Yeni Araç"
+            onAction={() => navigation.navigate('VehicleForm')}
+          />
+        }
+      />
     </SafeAreaView>
   );
 }

@@ -278,14 +278,19 @@ function buildAttendanceHtml(employees: Employee[], yyyyMm: string): string {
         .map(d => {
           const s = e.attendance?.[d] ?? '';
           const cls =
-            s === 'Tam' ? 'ok' : s === 'Yarım' ? 'half' : s === 'Yok' ? 'no' : 'empty';
-          const letter = s === 'Tam' ? 'T' : s === 'Yarım' ? 'Y' : s === 'Yok' ? '–' : '';
+            s === 'Geldi' || s === 'Tam' ? 'ok' :
+            s === 'İzinli' || s === 'Yarım' ? 'half' :
+            s === 'Raporlu' || s === 'Yok' ? 'no' : 'empty';
+          const letter =
+            s === 'Geldi' || s === 'Tam' ? 'G' :
+            s === 'İzinli' || s === 'Yarım' ? 'İ' :
+            s === 'Raporlu' || s === 'Yok' ? 'R' : '';
           return `<td class="center ${cls}">${letter}</td>`;
         })
         .join('');
-      const tam = Object.values(e.attendance ?? {}).filter(v => v === 'Tam').length;
-      const yarim = Object.values(e.attendance ?? {}).filter(v => v === 'Yarım').length;
-      const total = tam + yarim * 0.5;
+      const geldi = Object.values(e.attendance ?? {}).filter(v => v === 'Geldi' || v === 'Tam').length;
+      const izinli = Object.values(e.attendance ?? {}).filter(v => v === 'İzinli' || v === 'Yarım').length;
+      const total = geldi + izinli * 0.5;
       const ucret = total * e.dailyRate;
       return `
         <tr>
@@ -337,9 +342,9 @@ function buildAttendanceHtml(employees: Employee[], yyyyMm: string): string {
     <tbody>${rows}</tbody>
   </table>
   <div class="legend">
-    <span><span class="box" style="background:#ecfdf5;border:1px solid #15803d"></span> T = Tam gün</span>
-    <span><span class="box" style="background:#fffbeb;border:1px solid #92400e"></span> Y = Yarım gün</span>
-    <span><span class="box" style="background:#fef2f2;border:1px solid #991b1b"></span> – = Gelmedi</span>
+    <span><span class="box" style="background:#ecfdf5;border:1px solid #15803d"></span> G = Geldi</span>
+    <span><span class="box" style="background:#fffbeb;border:1px solid #92400e"></span> İ = İzinli</span>
+    <span><span class="box" style="background:#fef2f2;border:1px solid #991b1b"></span> R = Raporlu</span>
   </div>
 </body></html>`;
 }
@@ -371,11 +376,13 @@ export async function generateAndShareAttendanceCsv(
   const lines = employees.map(e => {
     const cells = days.map(d => {
       const s = e.attendance?.[d] ?? '';
-      return s === 'Tam' ? 'T' : s === 'Yarım' ? 'Y' : s === 'Yok' ? 'X' : '';
+      return s === 'Geldi' || s === 'Tam' ? 'G' :
+             s === 'İzinli' || s === 'Yarım' ? 'I' :
+             s === 'Raporlu' || s === 'Yok' ? 'R' : '';
     });
-    const tam = Object.values(e.attendance ?? {}).filter(v => v === 'Tam').length;
-    const yarim = Object.values(e.attendance ?? {}).filter(v => v === 'Yarım').length;
-    const total = tam + yarim * 0.5;
+    const geldi = Object.values(e.attendance ?? {}).filter(v => v === 'Geldi' || v === 'Tam').length;
+    const izinli = Object.values(e.attendance ?? {}).filter(v => v === 'İzinli' || v === 'Yarım').length;
+    const total = geldi + izinli * 0.5;
     const ucret = total * e.dailyRate;
     return [
       `"${e.name}"`,

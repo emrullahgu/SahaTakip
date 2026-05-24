@@ -3855,6 +3855,7 @@ export type RootStackParamList = {
   UsersAdmin: undefined;
   UserApprovals: undefined;
   ExternalApiKeys: undefined;
+  ScheduledEmails: undefined;
   LiveTracking: undefined;
   IntegrationsHub: undefined;
   ApiKeys: undefined;

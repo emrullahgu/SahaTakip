@@ -17,6 +17,8 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 import type { Customer, RootStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Customers'>;
@@ -86,6 +88,7 @@ export default function CustomersScreen() {
       <Text style={styles.count}>{filtered.length} müşteri</Text>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={c => c.id}
         contentContainerStyle={styles.list}
@@ -131,17 +134,13 @@ export default function CustomersScreen() {
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="people-outline" size={40} color={colors.text.faint} />
-            <Text style={styles.emptyTitle}>Müşteri yok</Text>
-            <Text style={styles.emptySub}>İlk müşterinizi eklemek için + butonuna basın.</Text>
-            <TouchableOpacity
-              style={styles.emptyBtn}
-              onPress={() => navigation.navigate('CustomerForm')}
-            >
-              <Text style={styles.emptyBtnText}>+ Yeni Müşteri</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="people-outline"
+            title="Müşteri yok"
+            subtitle="İlk müşterinizi eklemek için + butonuna basın."
+            actionLabel="+ Yeni Müşteri"
+            onAction={() => navigation.navigate('CustomerForm')}
+          />
         }
       />
     </SafeAreaView>
@@ -213,15 +212,4 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   metaText: { color: colors.text.faint, fontSize: 10 },
   deleteBtn: { padding: spacing.xs },
-  empty: { alignItems: 'center', padding: spacing.xl, marginTop: spacing.xl },
-  emptyTitle: { color: colors.text.primary, fontSize: typography.md, fontWeight: '800', marginTop: spacing.md },
-  emptySub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4, textAlign: 'center' },
-  emptyBtn: {
-    backgroundColor: brand.green,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    borderRadius: radius.md,
-    marginTop: spacing.md,
-  },
-  emptyBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
 });
