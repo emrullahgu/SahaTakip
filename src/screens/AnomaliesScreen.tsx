@@ -13,12 +13,19 @@ import {
   ANOMALY_SEVERITY_COLOR, ANOMALY_SEVERITY_LABEL,
 } from '../services/anomalies';
 import { Anomaly, AnomalySeverity, Payment } from '../types';
+import { useHasRole } from '../components/RoleGuard';
 
 type KindFilter = 'all' | Anomaly['kind'];
 
 const KINDS: KindFilter[] = ['all', 'wo_overdue', 'wo_long_duration', 'payment_late', 'employee_inactive', 'quote_stale', 'cost_spike'];
 
 export default function AnomaliesScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) return null;
+  return <AnomaliesScreenInner />;
+}
+
+function AnomaliesScreenInner() {
   const { workOrders, employees, quotes } = useAppContext();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filter, setFilter] = useState<KindFilter>('all');

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
 import { Payment, PaymentMethod, PaymentStatus } from '../types';
 import { listPayments, PAYMENT_METHODS, PAYMENT_STATUS_LABEL } from '../services/payments';
+import { useHasRole } from '../components/RoleGuard';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -35,6 +36,12 @@ function rangeFor(period: Period): { start: Date; end: Date } {
 }
 
 export default function IncomeReportScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) return null;
+  return <IncomeReportScreenInner />;
+}
+
+function IncomeReportScreenInner() {
   const [period, setPeriod] = useState<Period>('weekly');
   const [rows, setRows] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);

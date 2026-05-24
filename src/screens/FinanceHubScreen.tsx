@@ -10,6 +10,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { computeCustomerBalances, listPayments } from '../services/payments';
+import { useHasRole } from '../components/RoleGuard';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -31,6 +32,12 @@ const TILES: Tile[] = [
 ];
 
 export default function FinanceHubScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) return null;
+  return <FinanceHubScreenInner />;
+}
+
+function FinanceHubScreenInner() {
   const nav = useNavigation<Nav>();
   const { width } = useWindowDimensions();
   const cols = width >= 900 ? 4 : 2;

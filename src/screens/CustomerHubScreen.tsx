@@ -12,6 +12,7 @@ import { useAppContext } from '../context/AppContext';
 import { listSites } from '../services/customerSites';
 import { listDocuments } from '../services/customerDocuments';
 import { listRatings } from '../services/customerRatings';
+import { useHasRole } from '../components/RoleGuard';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -22,13 +23,14 @@ interface Tile {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   poz?: string;
+  finance?: boolean;
 }
 
 const TILES: Tile[] = [
   { key: 'Customers',          label: 'Müşteriler',       desc: 'Liste / form / detay',         icon: 'people-outline',         color: '#0ea5e9', poz: 'POZ-DEV-043' },
   { key: 'CustomerSitesMap',   label: 'Saha Haritası',    desc: 'Tüm müşteri sahaları',         icon: 'map-outline',            color: '#22c55e', poz: 'POZ-DEV-143' },
   { key: 'CustomerRatingsAll', label: 'Memnuniyet',       desc: 'Tüm puanlar & ortalama',       icon: 'star-outline',           color: '#f59e0b', poz: 'POZ-DEV-142' },
-  { key: 'CustomerBalances',   label: 'Cari Bakiye',      desc: 'Borç / alacak',                icon: 'wallet-outline',         color: '#8b5cf6', poz: 'POZ-DEV-046' },
+  { key: 'CustomerBalances',   label: 'Cari Bakiye',      desc: 'Borç / alacak',                icon: 'wallet-outline',         color: '#8b5cf6', poz: 'POZ-DEV-046', finance: true },
   { key: 'SalesVisits',        label: 'Ziyaretler',       desc: 'Saha ziyaret kayıtları',       icon: 'walk-outline',           color: '#0ea5e9', poz: 'POZ-DEV-049' },
 ];
 
@@ -39,6 +41,8 @@ export default function CustomerHubScreen() {
   const tileWidth = (Math.min(width, 1200) - spacing.lg * 2 - (cols - 1) * spacing.md) / cols;
 
   const { customers } = useAppContext();
+  const canSeeFinance = useHasRole(['admin', 'manager']);
+  const visibleTiles = useMemo(() => TILES.filter(t => !t.finance || canSeeFinance), [canSeeFinance]);
   const [siteCount, setSiteCount] = useState(0);
   const [docCount, setDocCount] = useState(0);
   const [ratingAvg, setRatingAvg] = useState<number | null>(null);
@@ -92,7 +96,7 @@ export default function CustomerHubScreen() {
         )}
 
         <View style={[styles.grid, { maxWidth: 1200, alignSelf: 'center', width: '100%' }]}>
-          {TILES.map(t => (
+          {visibleTiles.map(t => (
             <TouchableOpacity
               key={String(t.key)}
               style={[styles.tile, { width: tileWidth }]}
