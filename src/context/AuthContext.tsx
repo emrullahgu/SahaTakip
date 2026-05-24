@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase, getAuthRedirectUrl, SUPABASE_CONFIGURED } from '../services/supabase';
+import { supabase, getAuthRedirectUrl } from '../services/supabase';
+
+// Env varsı burada lokal olarak kontrol et (cross-module ReferenceError’ı önlemek için).
+const SUPABASE_CONFIGURED: boolean = !!(
+  process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export type UserRole = 'admin' | 'manager' | 'engineer' | 'field';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';

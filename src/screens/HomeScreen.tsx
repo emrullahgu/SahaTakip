@@ -70,6 +70,13 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity
+            onPress={toggleTheme}
+            style={styles.logoutBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'} size={22} color={colors.text.muted} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => navigation.navigate('ChangePassword')}
             style={styles.logoutBtn}
             activeOpacity={0.7}
@@ -257,6 +264,39 @@ export default function HomeScreen() {
               <Ionicons name="bag-handle-outline" size={26} color={colors.rose.default} />
             </View>
             <Text style={styles.gridLabel}>Siparişler</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('CpHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.blue.bg }]}>
+              <Ionicons name="people-circle-outline" size={26} color={colors.blue.default} />
+            </View>
+            <Text style={styles.gridLabel}>Müşteri Portalı</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('InventoryHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+              <Ionicons name="cube-outline" size={26} color={colors.emerald.default} />
+            </View>
+            <Text style={styles.gridLabel}>Ürün & Envanter</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('GovernanceHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
+              <Ionicons name="shield-checkmark-outline" size={26} color={colors.rose.default} />
+            </View>
+            <Text style={styles.gridLabel}>Yetki & Denetim</Text>
           </TouchableOpacity>
         </View>
 

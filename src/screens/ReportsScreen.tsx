@@ -143,6 +143,13 @@ export default function ReportsScreen() {
             <Ionicons name="document-text-outline" size={16} color={brand.green} />
             <Text style={styles.linkText}>Aktivite PDF</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.linkBtn}
+            onPress={() => navigation.navigate('ExecutiveSummary')}
+          >
+            <Ionicons name="sparkles-outline" size={16} color="#a855f7" />
+            <Text style={styles.linkText}>Yönetim Özeti</Text>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.section}>Otomatik</Text>

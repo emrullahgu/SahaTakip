@@ -1,8 +1,12 @@
 // User approval service — admin/manager yeni kayıt başvurularını onaylar/reddeder.
 // SQL: supabase/schema.sql sonunda tanımlı `pending_user_approvals` view + `set_user_approval` RPC.
 
-import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { supabase } from './supabase';
 import type { ApprovalStatus, UserRole } from '../context/AuthContext';
+
+const SUPABASE_CONFIGURED: boolean = !!(
+  process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export interface PendingUser {
   id: string;
