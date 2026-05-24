@@ -13,6 +13,17 @@ export interface AuditEvent {
   meta?: Record<string, any>;
 }
 
+export interface AuditLogRow {
+  id: string;
+  user_id: string | null;
+  user_name?: string | null;
+  action: string;
+  table_name: string | null;
+  ref_id: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+}
+
 export const auditRepo = {
   async log(userId: string | null, e: AuditEvent): Promise<void> {
     if (!isOnlineMode() || !userId) return;
@@ -28,4 +39,19 @@ export const auditRepo = {
       /* sessiz */
     }
   },
+
+  async list(limit = 100): Promise<AuditLogRow[]> {
+    if (!isOnlineMode()) return [];
+    try {
+      const { data } = await supabase
+        .from('audit_log')
+        .select('id, user_id, action, table_name, ref_id, meta, created_at')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      return (data as AuditLogRow[] | null) ?? [];
+    } catch {
+      return [];
+    }
+  },
 };
+

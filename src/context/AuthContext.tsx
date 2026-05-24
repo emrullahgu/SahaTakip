@@ -21,6 +21,9 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
+  updateProfile: (patch: Partial<Omit<UserProfile, 'id'>>) => Promise<{ error: string | null }>;
   // Demo mode bypass — Supabase olmadan da uygulamayı kullanabilmek için
   enterDemoMode: () => void;
   isDemoMode: boolean;
@@ -110,6 +113,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const enterDemoMode = () => setIsDemoMode(true);
 
+  const resetPassword = async (email: string) => {
+    if (!SUPABASE_CONFIGURED) return { error: 'Supabase yapılandırılmamış.' };
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error: error?.message ?? null };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!SUPABASE_CONFIGURED) return { error: 'Supabase yapılandırılmamış.' };
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error?.message ?? null };
+  };
+
+  const updateProfile = async (patch: Partial<Omit<UserProfile, 'id'>>) => {
+    if (!user) return { error: 'Oturum yok' };
+    if (!SUPABASE_CONFIGURED) {
+      // Demo: yereldeki state'i güncelle
+      setProfile(p => p ? { ...p, ...patch } : p);
+      return { error: null };
+    }
+    const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
+    if (!error) setProfile(p => p ? { ...p, ...patch } as UserProfile : p);
+    return { error: error?.message ?? null };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -121,6 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signUp,
         signOut,
+        resetPassword,
+        updatePassword,
+        updateProfile,
         enterDemoMode,
         isDemoMode,
       }}

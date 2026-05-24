@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { addNotification } from '../services/notifications';
 import type { AuthStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -50,6 +51,13 @@ export default function SignupScreen() {
     if (error) {
       Alert.alert('Kayıt başarısız', error);
     } else {
+      await addNotification({
+        type: 'signup',
+        title: 'Yeni kullanıcı kaydı',
+        message: `${fullName.trim()} (${email.trim()}) hesabını oluşturdu`,
+        channels: ['email'],
+        recipient: 'admin',
+      });
       Alert.alert(
         'Başarılı',
         'E-posta adresinize doğrulama bağlantısı gönderildi. Lütfen kontrol edip aktivasyon yaptıktan sonra giriş yapın.',

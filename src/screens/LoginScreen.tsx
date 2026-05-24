@@ -123,6 +123,13 @@ export default function LoginScreen() {
             >
               <Text style={styles.secondaryBtnText}>Hesabınız yok mu? Kaydolun</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryBtn, { marginTop: 6 }]}
+              onPress={() => navigation.navigate('ForgotPassword')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.secondaryBtnText, { color: '#0ea5e9' }]}>Şifremi unuttum</Text>
+            </TouchableOpacity>
 
             {/* Offline / Demo */}
             <View style={styles.divider}>

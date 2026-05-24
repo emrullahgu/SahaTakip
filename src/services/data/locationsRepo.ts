@@ -121,4 +121,20 @@ export const locationsRepo = {
       supabase.removeChannel(ch);
     };
   },
+
+  /** Sahte konum kayıtları (POZ-DEV-119) */
+  async listMockRecent(limit = 100): Promise<LocationRow[]> {
+    if (!isOnlineMode()) return [];
+    const { data, error } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('is_mock', true)
+      .order('recorded_at', { ascending: false })
+      .limit(limit);
+    if (error) {
+      console.warn('[locations.listMockRecent]', error.message);
+      return [];
+    }
+    return (data ?? []).map(rowFrom);
+  },
 };

@@ -6,19 +6,25 @@ import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation';
 import ConnectionBanner from './src/components/ConnectionBanner';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import { installGlobalErrorHandler } from './src/services/crashReporter';
+
+installGlobalErrorHandler();
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AppProvider>
-          <View style={{ flex: 1 }}>
-            <ConnectionBanner />
-            <AppNavigator />
-          </View>
-          <StatusBar style="light" />
-        </AppProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppProvider>
+            <View style={{ flex: 1 }}>
+              <ConnectionBanner />
+              <AppNavigator />
+            </View>
+            <StatusBar style="light" />
+          </AppProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

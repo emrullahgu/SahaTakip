@@ -12,9 +12,11 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 
 import { colors, brand } from '../theme';
 import { RootStackParamList, WorkOrderPriority, WorkOrder } from '../types';
@@ -28,6 +30,12 @@ import {
   formatRemaining,
   totalLabourMinutes,
 } from '../services/workOrderFlow';
+import SignaturePad from '../components/SignaturePad';
+import {
+  isAudioSupported,
+  startAudioRecording,
+  stopAudioRecording,
+} from '../services/audioRecorder';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkOrderDetail'>;
 
@@ -46,6 +54,8 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
     setWorkOrderSchedule,
     startWorkTimer,
     stopWorkTimer,
+    attachWorkOrderMedia,
+    showToast,
   } = useAppContext();
 
   const wo = workOrders.find(w => w.id === workOrderId);
@@ -54,6 +64,8 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   const [plannedStart, setPlannedStart] = useState(wo?.plannedStart ?? '');
   const [plannedEnd, setPlannedEnd] = useState(wo?.plannedEnd ?? '');
   const [slaHours, setSlaHours] = useState(String(wo?.slaHours ?? ''));
+  const [signOpen, setSignOpen] = useState(false);
+  const [audioRecording, setAudioRecording] = useState(false);
 
   if (!wo) {
     return (
@@ -78,7 +90,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         {
           text: 'Reddet',
           style: 'destructive',
-          onPress: text => respondAssignment(wo.id, false, text || 'Belirtilmedi'),
+          onPress: (text?: string) => respondAssignment(wo.id, false, text || 'Belirtilmedi'),
         },
       ],
       'plain-text',
@@ -97,6 +109,102 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
       slaHours ? Number(slaHours) : undefined,
     );
     Alert.alert('Kaydedildi', 'Planlama güncellendi.');
+  };
+
+  // ---- FAZ 19 — POZ-DEV-031 Video kaydı ----
+  const recordVideo = async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('İzin gerekli', 'Kamera izni verilmedi.');
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        videoMaxDuration: 60,
+        quality: 0.7,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        attachWorkOrderMedia(wo.id, { videoUri: res.assets[0].uri });
+        showToast('Video kaydı eklendi.');
+      }
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Video kaydedilemedi.');
+    }
+  };
+
+  const pickVideoFromLibrary = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('İzin gerekli', 'Medya kütüphanesi izni verilmedi.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        quality: 0.7,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        attachWorkOrderMedia(wo.id, { videoUri: res.assets[0].uri });
+        showToast('Video eklendi.');
+      }
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Video seçilemedi.');
+    }
+  };
+
+  // ---- FAZ 19 — POZ-DEV-032 Ses kaydı ----
+  const toggleAudioRecording = async () => {
+    if (audioRecording) {
+      try {
+        const rec = await stopAudioRecording();
+        setAudioRecording(false);
+        attachWorkOrderMedia(wo.id, { audioUri: rec.uri });
+        showToast(`Ses kaydı eklendi (${Math.round(rec.durationMs / 1000)}s).`);
+      } catch (e: any) {
+        setAudioRecording(false);
+        Alert.alert('Hata', e?.message ?? 'Kayıt durdurulamadı.');
+      }
+      return;
+    }
+    if (!isAudioSupported()) {
+      Alert.alert(
+        'Ses kaydı desteklenmiyor',
+        Platform.OS === 'web'
+          ? 'Tarayıcı MediaRecorder API\'sini desteklemiyor.'
+          : 'Cihaz tabanlı kayıt için EAS dev-build (expo-av) gerekir. Web üzerinde deneyin.',
+      );
+      return;
+    }
+    try {
+      await startAudioRecording();
+      setAudioRecording(true);
+      showToast('Kayıt başladı. Durdurmak için tekrar dokunun.');
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Mikrofona erişilemedi.');
+    }
+  };
+
+  // ---- FAZ 19 — POZ-DEV-033 Mobil imza ----
+  const onSignatureSave = (dataUri: string) => {
+    setSignOpen(false);
+    attachWorkOrderMedia(wo.id, { signatureUri: dataUri });
+    showToast('İmza kaydedildi.');
+  };
+
+  const clearMedia = (kind: 'video' | 'audio' | 'signature') => {
+    Alert.alert('Sil', `${kind === 'video' ? 'Video' : kind === 'audio' ? 'Ses' : 'İmza'} kaldırılsın mı?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: () => {
+          if (kind === 'video') attachWorkOrderMedia(wo.id, { videoUri: undefined });
+          else if (kind === 'audio') attachWorkOrderMedia(wo.id, { audioUri: undefined });
+          else attachWorkOrderMedia(wo.id, { signatureUri: undefined });
+        },
+      },
+    ]);
   };
 
   return (
@@ -334,12 +442,99 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         <KV k="Kâr" v={wo.profit} highlight />
       </View>
 
+      {/* FAZ 19 — POZ-DEV-031/032/033 Medya */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Medya</Text>
+
+        {/* Video */}
+        <View style={styles.mediaRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.mediaLabel}>
+              <Ionicons name="videocam-outline" size={14} color={colors.text.muted} /> Video
+            </Text>
+            <Text style={styles.mediaValue} numberOfLines={1}>
+              {wo.videoUri ? wo.videoUri : 'Henüz eklenmedi'}
+            </Text>
+          </View>
+          {wo.videoUri ? (
+            <TouchableOpacity style={styles.iconBtn} onPress={() => clearMedia('video')}>
+              <Ionicons name="trash-outline" size={16} color="#dc2626" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <View style={styles.row}>
+          <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#1e40af' }]} onPress={recordVideo}>
+            <Ionicons name="videocam" size={14} color="#fff" />
+            <Text style={styles.smallBtnText}> Kaydet</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#334155' }]} onPress={pickVideoFromLibrary}>
+            <Ionicons name="folder-open-outline" size={14} color="#fff" />
+            <Text style={styles.smallBtnText}> Galeriden</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Audio */}
+        <View style={[styles.mediaRow, { marginTop: 14 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.mediaLabel}>
+              <Ionicons name="mic-outline" size={14} color={colors.text.muted} /> Ses
+            </Text>
+            <Text style={styles.mediaValue} numberOfLines={1}>
+              {wo.audioUri ? wo.audioUri : 'Henüz eklenmedi'}
+            </Text>
+          </View>
+          {wo.audioUri ? (
+            <TouchableOpacity style={styles.iconBtn} onPress={() => clearMedia('audio')}>
+              <Ionicons name="trash-outline" size={16} color="#dc2626" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <TouchableOpacity
+          style={[styles.smallBtn, { backgroundColor: audioRecording ? '#dc2626' : '#0891b2', alignSelf: 'flex-start' }]}
+          onPress={toggleAudioRecording}
+        >
+          <Ionicons name={audioRecording ? 'stop-circle' : 'mic'} size={14} color="#fff" />
+          <Text style={styles.smallBtnText}> {audioRecording ? 'Durdur' : 'Ses Kaydet'}</Text>
+        </TouchableOpacity>
+
+        {/* Signature */}
+        <View style={[styles.mediaRow, { marginTop: 14 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.mediaLabel}>
+              <Ionicons name="create-outline" size={14} color={colors.text.muted} /> İmza
+            </Text>
+            <Text style={styles.mediaValue} numberOfLines={1}>
+              {wo.signatureUri ? 'İmza kayıtlı (' + wo.signatureUri.length + ' karakter)' : 'Henüz eklenmedi'}
+            </Text>
+          </View>
+          {wo.signatureUri ? (
+            <TouchableOpacity style={styles.iconBtn} onPress={() => clearMedia('signature')}>
+              <Ionicons name="trash-outline" size={16} color="#dc2626" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <TouchableOpacity
+          style={[styles.smallBtn, { backgroundColor: brand.green, alignSelf: 'flex-start' }]}
+          onPress={() => setSignOpen(true)}
+        >
+          <Ionicons name="create" size={14} color={colors.bg.primary} />
+          <Text style={[styles.smallBtnText, { color: colors.bg.primary }]}> İmza Al</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity
         style={[styles.outlineBtn, { margin: 16 }]}
         onPress={() => navigation.goBack()}
       >
         <Text style={styles.outlineBtnText}>← Geri</Text>
       </TouchableOpacity>
+
+      <SignaturePad
+        visible={signOpen}
+        onClose={() => setSignOpen(false)}
+        onSave={onSignatureSave}
+        title={`${wo.id} • Müşteri / Teknisyen İmzası`}
+      />
     </ScrollView>
   );
 }
@@ -481,11 +676,28 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8, marginTop: 12 },
   smallBtn: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   smallBtnText: { color: '#fff', fontWeight: '700' },
+  mediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  mediaLabel: { color: colors.text.muted, fontSize: 12, marginBottom: 2 },
+  mediaValue: { color: colors.text.primary, fontSize: 12 },
+  iconBtn: {
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#7f1d1d',
+  },
   metricText: { color: colors.text.primary, fontSize: 14, marginBottom: 8 },
   kv: {
     flexDirection: 'row',

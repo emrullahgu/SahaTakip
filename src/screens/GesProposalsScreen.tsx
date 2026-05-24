@@ -1,0 +1,68 @@
+// GesProposalsScreen — POZ-DEV-226 GES teklif listesi
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { colors, spacing, radius, typography } from '../theme';
+import { RootStackParamList, GesQuote } from '../types';
+import { listGesQuotes, deleteGesQuote, GES_TYPE_LABEL } from '../services/gesProposals';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+export default function GesProposalsScreen() {
+  const nav = useNavigation<Nav>();
+  const [items, setItems] = useState<GesQuote[]>([]);
+  const refresh = useCallback(async () => { setItems(await listGesQuotes()); }, []);
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+  return (
+    <SafeAreaView style={s.safe} edges={['bottom']}>
+      <ScrollView contentContainerStyle={s.content}>
+        <View style={s.headerRow}>
+          <Text style={s.title}>GES Teklifleri</Text>
+          <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('GesProposalForm')}>
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={s.addBtnText}>Yeni</Text>
+          </TouchableOpacity>
+        </View>
+        {items.length === 0 && <Text style={s.empty}>Henüz GES teklifi yok</Text>}
+        {items.map(q => (
+          <TouchableOpacity key={q.id} style={s.card} onPress={() => nav.navigate('GesProposalForm', { quoteId: q.id })}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.cardTitle}>{q.customerName || 'Müşteri'}</Text>
+              <Text style={s.cardMeta}>{GES_TYPE_LABEL[q.input.type]} · {q.input.capacityKwp} kWp · {q.input.panelCount}× {q.input.panelWatt}W</Text>
+              <Text style={s.price}>₺{q.total.toLocaleString('tr-TR')}</Text>
+              <Text style={s.cardMeta}>Malzeme: ₺{q.materialCost.toLocaleString('tr-TR')} · İşçilik: ₺{q.laborCost.toLocaleString('tr-TR')}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => Alert.alert('Sil', 'Teklif silinsin mi?', [
+                { text: 'Vazgeç', style: 'cancel' },
+                { text: 'Sil', style: 'destructive', onPress: async () => { await deleteGesQuote(q.id); refresh(); } },
+              ])}
+              style={s.delBtn}
+            >
+              <Ionicons name="trash-outline" size={16} color="#ef4444" />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg.primary },
+  content: { padding: spacing.lg, paddingBottom: 80, gap: spacing.sm },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title: { color: colors.text.primary, fontSize: typography.md, fontWeight: '800' },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f59e0b', paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.md },
+  addBtnText: { color: '#fff', fontWeight: '700', fontSize: typography.sm },
+  empty: { color: colors.text.muted, textAlign: 'center', marginTop: spacing.lg },
+  card: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md },
+  cardTitle: { color: colors.text.primary, fontWeight: '700', fontSize: typography.sm },
+  cardMeta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
+  price: { color: '#f59e0b', fontWeight: '800', fontSize: typography.md, marginTop: 4 },
+  delBtn: { padding: 8, borderRadius: radius.sm, backgroundColor: '#ef444422' },
+});

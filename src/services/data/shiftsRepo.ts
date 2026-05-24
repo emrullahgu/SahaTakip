@@ -112,4 +112,21 @@ export const shiftsRepo = {
     if (error) return [];
     return (data ?? []).map(fromRow);
   },
+
+  /** Belirli ay (YYYY-MM) için tüm tamamlanmış vardiyaları getir (puantaj için) — POZ-DEV-123 */
+  async listMonth(year: number, month: number, userId?: string): Promise<Shift[]> {
+    if (!isOnlineMode()) return [];
+    const start = new Date(year, month - 1, 1).toISOString();
+    const end = new Date(year, month, 1).toISOString();
+    let q = supabase
+      .from('shifts')
+      .select('*')
+      .gte('start_at', start)
+      .lt('start_at', end)
+      .order('start_at', { ascending: true });
+    if (userId) q = q.eq('user_id', userId);
+    const { data, error } = await q;
+    if (error) return [];
+    return (data ?? []).map(fromRow);
+  },
 };

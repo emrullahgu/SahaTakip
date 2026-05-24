@@ -212,6 +212,486 @@ export default function ManagerScreen() {
               <Ionicons name="alarm-outline" size={18} color="#fff" />
               <Text style={styles.quickText}>SLA / Geciken</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0891b2' }]}
+              onPress={() => navigation.navigate('Notifications')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="notifications-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Bildirimler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#7c3aed' }]}
+              onPress={() => navigation.navigate('NotificationPreferences')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="options-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Bildirim Tercihleri</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#16a34a' }]}
+              onPress={() => navigation.navigate('Payments')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cash-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Tahsilatlar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#d97706' }]}
+              onPress={() => navigation.navigate('CustomerBalances')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="wallet-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Müşteri Bakiyeleri</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0d9488' }]}
+              onPress={() => navigation.navigate('CashRegister')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="briefcase-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Personel Kasa</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#be185d' }]}
+              onPress={() => navigation.navigate('EInvoice')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="receipt-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>E-Fatura</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#16a34a' }]}
+              onPress={() => navigation.navigate('Assets')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cube-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Cihazlar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('MaintenancePlans')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="construct-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Bakım Planları</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#8b5cf6' }]}
+              onPress={() => navigation.navigate('Inspections')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="clipboard-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Denetimler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#dc2626' }]}
+              onPress={() => navigation.navigate('Nonconformities')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="warning-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Uygunsuzluklar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#f59e0b' }]}
+              onPress={() => navigation.navigate('SalesVisits')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Satış Ziyaretleri</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#8b5cf6' }]}
+              onPress={() => navigation.navigate('AiHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>AI Asistan</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#6366f1' }]}
+              onPress={() => navigation.navigate('WebAdmin')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="desktop-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Web Admin</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('IntegrationsHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="git-network-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Entegrasyon</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#8b5cf6' }]}
+              onPress={() => navigation.navigate('ConnectivityHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cloud-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Veri & Auth</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#22c55e' }]}
+              onPress={() => navigation.navigate('PersonnelTrackingHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="navigate-circle-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Saha Takibi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('WorkOrderFlowHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="hammer-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>İş Emri Akışı</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#f59e0b' }]}
+              onPress={() => navigation.navigate('QuoteFlowHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="document-text-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Teklif Sistemi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#ec4899' }]}
+              onPress={() => navigation.navigate('CustomerHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="briefcase-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Müşteri Merkezi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#14b8a6' }]}
+              onPress={() => navigation.navigate('FormHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="clipboard-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Form & Kontrol</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#ef4444' }]}
+              onPress={() => navigation.navigate('StockHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cube-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Stok & Zimmet</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#6366f1' }]}
+              onPress={() => navigation.navigate('VehicleHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="car-sport-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Araç & Filo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('ReportingHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="bar-chart-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Raporlama</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#a855f7' }]}
+              onPress={() => navigation.navigate('NotificationHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="notifications-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Bildirim & İletişim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#10b981' }]}
+              onPress={() => navigation.navigate('FinanceHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cash-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Finans & Tahsilat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('SectorHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="business-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Sektörel Modüller</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#d946ef' }]}
+              onPress={() => navigation.navigate('ProposalsHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calculator-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Teklif Modülleri</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#84cc16' }]}
+              onPress={() => navigation.navigate('TaskHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-done-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Görev Yönetimi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#06b6d4' }]}
+              onPress={() => navigation.navigate('InventoryHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="cube-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Ürün & Envanter</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#eab308' }]}
+              onPress={() => navigation.navigate('OsosHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="speedometer-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>OSOS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#f43f5e' }]}
+              onPress={() => navigation.navigate('PayrollHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="wallet-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Bordro & Puantaj</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#a855f7' }]}
+              onPress={() => navigation.navigate('Calendar')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="calendar-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Takvim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#22c55e' }]}
+              onPress={() => navigation.navigate('TaskAnalytics')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="bar-chart-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Görev Analitik</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('Profile')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="person-circle-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Profilim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#6366f1' }]}
+              onPress={() => navigation.navigate('QualityHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="ribbon-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Kalite & Yayın</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#7c3aed' }]}
+              onPress={() => navigation.navigate('GovernanceHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="shield-checkmark-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Yetki & Denetim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('FieldHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="phone-portrait-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Mobil Saha</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#ec4899' }]}
+              onPress={() => navigation.navigate('CustomerExperienceHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="storefront-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Müşteri Deneyimi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#22c55e' }]}
+              onPress={() => navigation.navigate('BiHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="bar-chart-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>BI & Karar Destek</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#3b82f6' }]}
+              onPress={() => navigation.navigate('EnterpriseIntegrationsHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="git-network-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Entegrasyonlar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#a855f7' }]}
+              onPress={() => navigation.navigate('PlatformHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="server-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Platform</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#06b6d4' }]}
+              onPress={() => navigation.navigate('AiAssistantHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="sparkles" size={18} color="#fff" />
+              <Text style={styles.quickText}>AI Asistan</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('FieldOpsHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="rocket" size={18} color="#fff" />
+              <Text style={styles.quickText}>Saha Ops</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#f97316' }]}
+              onPress={() => navigation.navigate('SmartQuoteHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="bulb" size={18} color="#fff" />
+              <Text style={styles.quickText}>Akıllı Teklif</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#06b6d4' }]}
+              onPress={() => navigation.navigate('LiveOpsHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="map" size={18} color="#fff" />
+              <Text style={styles.quickText}>Canlı Ops</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#14b8a6' }]}
+              onPress={() => navigation.navigate('ComplianceHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="shield-checkmark" size={18} color="#fff" />
+              <Text style={styles.quickText}>Kalite & Denetim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('AssetHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="hardware-chip" size={18} color="#fff" />
+              <Text style={styles.quickText}>Ekipman & Bakım</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#facc15' }]}
+              onPress={() => navigation.navigate('ExecHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="trending-up" size={18} color="#000" />
+              <Text style={[styles.quickText, { color: '#000' }]}>Stratejik Dashboard</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0ea5e9' }]}
+              onPress={() => navigation.navigate('CpHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people-circle" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Müşteri Portalı 2.0</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#ef4444' }]}
+              onPress={() => navigation.navigate('SecHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="lock-closed" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Güvenlik & KVKK</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#3b82f6' }]}
+              onPress={() => navigation.navigate('SaasHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="rocket" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>SaaS & Çoklu Firma</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#22c55e' }]}
+              onPress={() => navigation.navigate('DepHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="rocket-outline" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Yayın & Platform</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#a855f7' }]}
+              onPress={() => navigation.navigate('QaHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="construct" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Kod Kalitesi & Refactor</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#14b8a6' }]}
+              onPress={() => navigation.navigate('UatHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-done-circle" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Kabul Testleri</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#0891b2' }]}
+              onPress={() => navigation.navigate('DocHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="library" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Dokümantasyon & Eğitim</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#dc2626' }]}
+              onPress={() => navigation.navigate('GoLiveHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="rocket" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Canlı Kullanım & İzleme</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#6366f1' }]}
+              onPress={() => navigation.navigate('CovHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="scan-circle" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Sistem Kapsam Denetimi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#7c3aed' }]}
+              onPress={() => navigation.navigate('ExtHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="link" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Dış Entegrasyonlar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#ec4899' }]}
+              onPress={() => navigation.navigate('AdvHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="rocket" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>İleri Analitik & AI</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#f97316' }]}
+              onPress={() => navigation.navigate('OrdHub')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="bag-handle" size={18} color="#fff" />
+              <Text style={[styles.quickText, { color: '#fff' }]}>Sipariş Yönetimi</Text>
+            </TouchableOpacity>
           </View>
           {/* KPI Cards */}
           <View style={styles.kpiGrid}>

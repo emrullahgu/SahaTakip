@@ -102,6 +102,7 @@ interface AppContextType {
   // FAZ 4
   acceptQuoteAndCreateWorkOrder: (quoteId: string, signedBy?: string, signature?: string) => string | null;
   reviseQuote: (q: Quote, reason?: string) => Promise<void>;
+  generateQuoteShareToken: (quoteId: string) => string | null;
   generateQuoteNumber: () => string;
   addCustomer: (c: Customer) => void;
   updateCustomer: (c: Customer) => void;
@@ -307,6 +308,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     await recordRevision(q, reason);
     await recordQuoteLines(q.lines);
     updateQuote({ ...q, revision: (q.revision ?? 0) + 1 });
+  };
+
+  // FAZ 4 — Paylaşılabilir kabul linki tokeni üret (POZ-DEV-040)
+  const generateQuoteShareToken = (quoteId: string): string | null => {
+    const q = quotes.find(x => x.id === quoteId);
+    if (!q) return null;
+    if (q.shareToken) return q.shareToken;
+    const token = `qst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    const updated: Quote = { ...q, shareToken: token };
+    setQuotes(prev => prev.map(x => (x.id === quoteId ? updated : x)));
+    quotesRepo.update(quoteId, updated).catch(e => console.warn('[quote.shareToken]', e));
+    auditRepo.log(userId, { action: 'quote.share_token', tableName: 'quotes', refId: quoteId });
+    return token;
   };
 
   // FAZ 4 — Teklif kabul edilince iş emri oluştur (POZ-DEV-039 + 040)
@@ -628,6 +642,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setQuoteStatus,
         acceptQuoteAndCreateWorkOrder,
         reviseQuote,
+        generateQuoteShareToken,
         generateQuoteNumber,
         addCustomer,
         updateCustomer,

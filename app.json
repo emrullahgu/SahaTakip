@@ -3,6 +3,7 @@
     "name": "SahaTakip",
     "slug": "sahatakip",
     "version": "1.0.0",
+    "scheme": "sahatakip",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

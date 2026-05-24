@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": [
         "src/*"
@@ -13,5 +14,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }

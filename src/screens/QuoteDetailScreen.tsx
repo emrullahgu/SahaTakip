@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Share, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -27,7 +27,7 @@ const NEXT_STATUS: Record<QuoteStatus, QuoteStatus | null> = {
 export default function QuoteDetailScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<DetailRoute>();
-  const { quotes, setQuoteStatus, deleteQuote, toast, showToast, acceptQuoteAndCreateWorkOrder } = useAppContext();
+  const { quotes, setQuoteStatus, deleteQuote, toast, showToast, acceptQuoteAndCreateWorkOrder, generateQuoteShareToken } = useAppContext();
   const quote = quotes.find(q => q.id === route.params.quoteId);
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -202,6 +202,44 @@ export default function QuoteDetailScreen() {
               Revizyon Geçmişi {quote.revision ? `(${quote.revision})` : ''}
             </Text>
           </TouchableOpacity>
+
+          {/* FAZ 4 — Müşteri kabul linki paylaş (POZ-DEV-040) */}
+          {quote.status !== 'Reddedildi' && quote.status !== 'Faturalandırıldı' && !quote.generatedWorkOrderId && (
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={async () => {
+                const token = generateQuoteShareToken(quote.id);
+                if (!token) {
+                  showToast('Link oluşturulamadı.', 'error');
+                  return;
+                }
+                const url = `https://sahatakip.app/quote/${token}`;
+                const deepLink = `sahatakip://quote-accept/${token}`;
+                const message =
+                  `Sayın ${quote.customerTitle || quote.customerName},\n\n` +
+                  `${quote.number} numaralı teklifimizi aşağıdaki linkten inceleyip onaylayabilirsiniz:\n\n` +
+                  `${url}\n\n` +
+                  `Mobil uygulama linki: ${deepLink}\n\n` +
+                  `Tutar: ${quote.grandTotal.toLocaleString('tr-TR')} ₺`;
+                try {
+                  await Share.share({
+                    title: `Teklif ${quote.number}`,
+                    message,
+                    ...(Platform.OS === 'ios' ? { url } : {}),
+                  });
+                  showToast('Kabul linki paylaşıldı.');
+                } catch (e: any) {
+                  showToast(e?.message ?? 'Paylaşılamadı.', 'error');
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="share-social-outline" size={16} color="#fff" />
+              <Text style={styles.shareBtnText}>
+                {quote.shareToken ? 'Kabul Linkini Tekrar Paylaş' : 'Müşteri Kabul Linki Oluştur ve Paylaş'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* FAZ 4 — Kabul + iş emri oluştur */}
           {(quote.status === 'Müşteriye Gönderildi' || quote.status === 'Onay Bekliyor') && (
@@ -423,6 +461,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emailBtnText: { color: '#fff', fontWeight: '700', fontSize: typography.xs },
+  shareBtn: {
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: colors.blue.default,
+    paddingVertical: 11,
+    borderRadius: radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareBtnText: { color: '#fff', fontWeight: '700', fontSize: typography.xs },
   linkBtn: {
     flexDirection: 'row',
     gap: 6,

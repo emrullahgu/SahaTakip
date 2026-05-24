@@ -122,9 +122,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#000' },
   cameraWrap: { flex: 1, position: 'relative' },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   scanBox: {
     width: 240,

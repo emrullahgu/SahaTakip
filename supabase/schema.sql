@@ -745,3 +745,423 @@ CREATE TABLE IF NOT EXISTS report_preferences (
 -- POZ-DEV-071 Edge Function placeholder:
 -- supabase functions deploy weekly-report-email
 -- Body: { email, reportId } → Resend / SMTP üzerinden gönderim.
+
+-- ============================================================
+-- FAZ 10 — Bildirim & İletişim (POZ-DEV-072..077)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  channels text[] DEFAULT ARRAY[]::text[],
+  related_id text,
+  recipient text,
+  read boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read = false;
+
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  channel_enabled jsonb DEFAULT '{"push":true,"email":false,"sms":false,"whatsapp":false}'::jsonb,
+  event_channels jsonb DEFAULT '{}'::jsonb,
+  push_token text,
+  email text,
+  phone text,
+  whatsapp text,
+  quiet_hours_start text,
+  quiet_hours_end text,
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS push_tokens (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  token text NOT NULL UNIQUE,
+  platform text,
+  created_at timestamptz DEFAULT now(),
+  last_seen_at timestamptz DEFAULT now()
+);
+
+-- Edge Function uçları (POZ-DEV-074, 075, 076):
+--   supabase functions deploy notify-email      (Resend / SMTP)
+--   supabase functions deploy notify-sms        (Netgsm / İletimerkezi)
+--   supabase functions deploy notify-whatsapp   (Meta WhatsApp Business)
+-- Body imzaları:
+--   notify-email     -> { to, subject, html }
+--   notify-sms       -> { to, message }
+--   notify-whatsapp  -> { to, message }
+
+-- ============================================================
+-- FAZ 11 — Finans & Tahsilat (POZ-DEV-078..082)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id uuid REFERENCES customers(id) ON DELETE SET NULL,
+  customer_name text NOT NULL,
+  work_order_id uuid REFERENCES work_orders(id) ON DELETE SET NULL,
+  quote_id uuid REFERENCES quotes(id) ON DELETE SET NULL,
+  amount numeric(14,2) NOT NULL CHECK (amount >= 0),
+  currency text DEFAULT 'TRY',
+  method text NOT NULL CHECK (method IN ('cash','card','transfer','check','other')),
+  status text NOT NULL DEFAULT 'received' CHECK (status IN ('received','pending','cancelled','refunded')),
+  received_at timestamptz DEFAULT now(),
+  received_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  received_by_name text,
+  receipt_no text UNIQUE,
+  vat_rate numeric(5,2),
+  note text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payments_workorder ON payments(work_order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+
+CREATE TABLE IF NOT EXISTS cash_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  employee_name text NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('opening','collection','expense','deposit','adjustment')),
+  amount numeric(14,2) NOT NULL,
+  date timestamptz DEFAULT now(),
+  payment_id uuid REFERENCES payments(id) ON DELETE SET NULL,
+  work_order_id uuid REFERENCES work_orders(id) ON DELETE SET NULL,
+  note text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cash_employee ON cash_entries(employee_id, date DESC);
+
+CREATE TABLE IF NOT EXISTS einvoice_config (
+  user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  provider text NOT NULL CHECK (provider IN ('logo','mikro','nesbilgi','foriba','manual','other')),
+  enabled boolean DEFAULT false,
+  test_mode boolean DEFAULT true,
+  api_url text,
+  username text,
+  vkn_tckn text,
+  company_title text,
+  prefix text,
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS einvoice_records (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id uuid REFERENCES payments(id) ON DELETE SET NULL,
+  work_order_id uuid REFERENCES work_orders(id) ON DELETE SET NULL,
+  customer_id uuid REFERENCES customers(id) ON DELETE SET NULL,
+  customer_name text NOT NULL,
+  customer_vkn text,
+  total numeric(14,2) NOT NULL,
+  vat numeric(14,2) DEFAULT 0,
+  status text NOT NULL DEFAULT 'queued'
+    CHECK (status IN ('draft','queued','sent','accepted','rejected','error')),
+  external_id text,
+  error_message text,
+  pdf_uri text,
+  created_at timestamptz DEFAULT now(),
+  sent_at timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS idx_einvoice_status ON einvoice_records(status);
+CREATE INDEX IF NOT EXISTS idx_einvoice_payment ON einvoice_records(payment_id);
+
+-- Edge Function ucu (POZ-DEV-082):
+--   supabase functions deploy einvoice-submit
+--   body: { provider, config, invoice }
+
+-- ============================================================
+-- FAZ 12 — Sektörel Modüller (POZ-DEV-083..089)
+-- ============================================================
+
+-- Cihazlar / ekipman
+create table if not exists public.assets (
+  id uuid primary key default gen_random_uuid(),
+  code text unique,
+  name text not null,
+  type text not null check (type in ('meter','panel','transformer','ges_inverter','ges_panel','compensation','machine','other')),
+  customer_id uuid references public.customers(id) on delete set null,
+  site_id uuid references public.customer_sites(id) on delete set null,
+  serial_no text,
+  manufacturer text,
+  model text,
+  power text,
+  install_date date,
+  warranty_end date,
+  location text,
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_assets_customer on public.assets(customer_id);
+create index if not exists idx_assets_code on public.assets(code);
+
+-- Enerji ölçüm kayıtları (sayaç/pano/trafo/GES)
+create table if not exists public.energy_readings (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('meter','panel','transformer','ges')),
+  asset_id uuid references public.assets(id) on delete cascade,
+  customer_id uuid references public.customers(id) on delete set null,
+  work_order_id uuid references public.work_orders(id) on delete set null,
+  date timestamptz not null default now(),
+  inspector_id uuid references public.profiles(id) on delete set null,
+  meter_active_kwh numeric(14,3),
+  meter_reactive_kvarh numeric(14,3),
+  meter_demand_kw numeric(10,3),
+  panel_voltage_l1 numeric(8,2),
+  panel_voltage_l2 numeric(8,2),
+  panel_voltage_l3 numeric(8,2),
+  panel_current_l1 numeric(8,2),
+  panel_current_l2 numeric(8,2),
+  panel_current_l3 numeric(8,2),
+  panel_power_factor numeric(4,3),
+  panel_temp_c numeric(6,2),
+  trafo_oil_temp_c numeric(6,2),
+  trafo_winding_temp_c numeric(6,2),
+  trafo_oil_level text,
+  trafo_silica_gel text,
+  trafo_buchholz_ok boolean,
+  trafo_grounding_ok boolean,
+  ges_dc_voltage numeric(8,2),
+  ges_ac_voltage numeric(8,2),
+  ges_power_kw numeric(10,3),
+  ges_energy_total_kwh numeric(14,3),
+  ges_irradiance numeric(8,2),
+  ges_panel_temp_c numeric(6,2),
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_energy_readings_asset on public.energy_readings(asset_id, date desc);
+
+-- Bakım planları
+create table if not exists public.maintenance_plans (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  kind text not null check (kind in ('preventive','corrective')),
+  asset_id uuid references public.assets(id) on delete cascade,
+  customer_id uuid references public.customers(id) on delete set null,
+  frequency_days int not null,
+  last_done_at timestamptz,
+  next_due_at timestamptz not null,
+  assigned_to uuid references public.profiles(id) on delete set null,
+  active boolean default true,
+  notes text,
+  created_at timestamptz default now()
+);
+create index if not exists idx_maint_next_due on public.maintenance_plans(next_due_at);
+create index if not exists idx_maint_asset on public.maintenance_plans(asset_id);
+
+-- Denetim formları
+create table if not exists public.inspections (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('audit','safety','quality','commissioning','periodic')),
+  title text not null,
+  asset_id uuid references public.assets(id) on delete set null,
+  customer_id uuid references public.customers(id) on delete set null,
+  work_order_id uuid references public.work_orders(id) on delete set null,
+  inspector_id uuid references public.profiles(id) on delete set null,
+  date timestamptz not null default now(),
+  items jsonb not null default '[]'::jsonb,
+  score int not null default 0,
+  status text not null default 'draft' check (status in ('draft','completed')),
+  notes text,
+  created_at timestamptz default now()
+);
+
+-- Uygunsuzluklar
+create table if not exists public.nonconformities (
+  id uuid primary key default gen_random_uuid(),
+  inspection_id uuid references public.inspections(id) on delete set null,
+  asset_id uuid references public.assets(id) on delete set null,
+  customer_id uuid references public.customers(id) on delete set null,
+  description text not null,
+  severity text not null check (severity in ('low','medium','high','critical')),
+  status text not null default 'open' check (status in ('open','in_progress','closed','cancelled')),
+  assigned_to uuid references public.profiles(id) on delete set null,
+  due_date date,
+  corrective_action text,
+  root_cause text,
+  closed_at timestamptz,
+  closed_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz default now()
+);
+create index if not exists idx_nc_status on public.nonconformities(status);
+create index if not exists idx_nc_asset on public.nonconformities(asset_id);
+
+-- Satış ziyaretleri
+create table if not exists public.sales_visits (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references public.customers(id) on delete cascade,
+  visit_date timestamptz not null default now(),
+  salesperson_id uuid references public.profiles(id) on delete set null,
+  purpose text,
+  summary text,
+  next_step text,
+  next_step_date date,
+  outcome text not null check (outcome in ('opportunity','won','lost','follow_up','no_interest')),
+  estimated_amount numeric(14,2),
+  competitor jsonb,
+  photos text[],
+  created_at timestamptz default now()
+);
+create index if not exists idx_sales_visits_customer on public.sales_visits(customer_id, visit_date desc);
+
+-- =============================================================
+-- FAZ 13 — Yapay Zeka (POZ-DEV-090..094)
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS voice_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  transcript text NOT NULL,
+  summary text,
+  action_items jsonb DEFAULT '[]'::jsonb,
+  customer_id uuid REFERENCES customers(id) ON DELETE SET NULL,
+  work_order_id uuid REFERENCES work_orders(id) ON DELETE SET NULL,
+  created_by uuid REFERENCES profiles(id),
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS damage_analyses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  image_url text,
+  severity text CHECK (severity IN ('low','medium','high','critical')),
+  findings jsonb DEFAULT '[]'::jsonb,
+  recommendations jsonb DEFAULT '[]'::jsonb,
+  estimated_cost numeric(14,2),
+  confidence int,
+  work_order_id uuid REFERENCES work_orders(id) ON DELETE SET NULL,
+  analyzed_at timestamptz DEFAULT now(),
+  analyzed_by uuid REFERENCES profiles(id)
+);
+
+-- ai_settings: yerel cihazda AsyncStorage'da saklanır, DB tablosu yok.
+
+-- =============================================================
+-- FAZ 14 — Web Admin Paneli (POZ-DEV-095..100)
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS app_users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  email text UNIQUE NOT NULL,
+  role text NOT NULL CHECK (role IN ('admin','manager','engineer','technician','sales','viewer')),
+  employee_id uuid REFERENCES employees(id) ON DELETE SET NULL,
+  active boolean DEFAULT true,
+  last_login_at timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_role ON app_users(role);
+CREATE INDEX IF NOT EXISTS idx_app_users_active ON app_users(active);
+
+-- =============================================================
+-- FAZ 15 — Entegrasyon & Güvenlik (POZ-DEV-101..108)
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  key TEXT NOT NULL,
+  scopes TEXT[] NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_used_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS webhooks (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  url TEXT NOT NULL,
+  events TEXT[] NOT NULL,
+  secret TEXT,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_delivery_at TIMESTAMPTZ,
+  last_status TEXT CHECK (last_status IN ('success','failed','pending')),
+  last_error TEXT
+);
+
+CREATE TABLE IF NOT EXISTS import_history (
+  id BIGSERIAL PRIMARY KEY,
+  type TEXT NOT NULL CHECK (type IN ('customers','poz','employees')),
+  rows_total INT NOT NULL,
+  rows_imported INT NOT NULL,
+  rows_skipped INT NOT NULL,
+  errors JSONB NOT NULL DEFAULT '[]'::JSONB,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS erp_adapters (
+  id TEXT PRIMARY KEY,
+  provider TEXT NOT NULL CHECK (provider IN ('logo','netsis','mikro','custom')),
+  label TEXT NOT NULL,
+  base_url TEXT,
+  api_key TEXT,
+  username TEXT,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  sync_customers BOOLEAN NOT NULL DEFAULT TRUE,
+  sync_invoices BOOLEAN NOT NULL DEFAULT TRUE,
+  sync_products BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_sync_at TIMESTAMPTZ,
+  last_sync_status TEXT CHECK (last_sync_status IN ('success','failed','pending'))
+);
+
+CREATE TABLE IF NOT EXISTS kvkk_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  current_version TEXT NOT NULL,
+  text TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT only_one_row CHECK (id = 1)
+);
+
+CREATE TABLE IF NOT EXISTS kvkk_consents (
+  id BIGSERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  user_name TEXT,
+  version TEXT NOT NULL,
+  accepted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ip TEXT
+);
+
+CREATE TABLE IF NOT EXISTS backups (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  size_bytes BIGINT NOT NULL,
+  location TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('success','failed','pending','restored')),
+  restored_at TIMESTAMPTZ,
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS two_factor (
+  user_id TEXT PRIMARY KEY,
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  secret TEXT,
+  backup_codes TEXT[] NOT NULL DEFAULT '{}',
+  confirmed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS access_rules (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('ip','device')),
+  value TEXT NOT NULL,
+  label TEXT,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(active);
+CREATE INDEX IF NOT EXISTS idx_webhooks_active ON webhooks(active);
+CREATE INDEX IF NOT EXISTS idx_import_history_at ON import_history(imported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_erp_active ON erp_adapters(active);
+CREATE INDEX IF NOT EXISTS idx_kvkk_user ON kvkk_consents(user_id);
+CREATE INDEX IF NOT EXISTS idx_backups_at ON backups(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_access_rules_kind ON access_rules(kind, active);
