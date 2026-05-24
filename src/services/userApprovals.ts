@@ -20,14 +20,20 @@ export interface PendingUser {
 
 export async function listPendingUsers(): Promise<PendingUser[]> {
   if (!SUPABASE_CONFIGURED) return [];
-  const { data, error } = await supabase
+  // Tercih: SECURITY DEFINER RPC (admin/manager kontrolü + auth.users join'ı içeride)
+  const { data, error } = await supabase.rpc('list_pending_user_approvals');
+  if (!error && Array.isArray(data)) {
+    return data as PendingUser[];
+  }
+  // Fallback: view'dan oku (eski şema)
+  const { data: viewData, error: viewError } = await supabase
     .from('pending_user_approvals')
     .select('*');
-  if (error) {
-    console.warn('[userApprovals] list error:', error.message);
+  if (viewError) {
+    console.warn('[userApprovals] list error:', error?.message ?? viewError.message);
     return [];
   }
-  return (data ?? []) as PendingUser[];
+  return (viewData ?? []) as PendingUser[];
 }
 
 export async function approveUser(userId: string): Promise<{ error: string | null }> {

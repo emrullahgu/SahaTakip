@@ -1193,31 +1193,74 @@ update public.profiles
  where approval_status = 'pending'
    and created_at < now() - interval '1 minute';
 
--- 2) handle_new_user trigger'ı güncelle: yeni kayıt 'pending' başlar
+-- 2) handle_new_user trigger'ı güncelle:
+--    İlk kullanıcı (profiles boşsa) admin + approved olarak başlar (bootstrap).
+--    Sonraki kullanıcılar 'pending' başlar ve admin onayı bekler.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  is_first boolean;
 begin
-  insert into public.profiles (id, full_name, approval_status)
+  select not exists(select 1 from public.profiles) into is_first;
+
+  insert into public.profiles (id, full_name, role, approval_status, approved_at)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', new.email),
-    'pending'
+    case when is_first then 'admin' else 'engineer' end,
+    case when is_first then 'approved' else 'pending' end,
+    case when is_first then now() else null end
   );
   return new;
 end;
 $$;
 
--- 3) Bekleyen kullanıcıları çekmek için view (RLS uygulanır)
+-- 3) Bekleyen kullanıcıları çekmek için SECURITY DEFINER fonksiyon
+--    (view auth.users'a erişemediği için fonksiyon kullanıyoruz; admin/manager kontrolü içeride)
+create or replace function public.list_pending_user_approvals()
+returns table (
+  id uuid,
+  full_name text,
+  role text,
+  approval_status text,
+  rejection_reason text,
+  created_at timestamptz,
+  email text
+) language plpgsql security definer set search_path = public as $$
+declare
+  caller_role text;
+begin
+  select p.role into caller_role from public.profiles p where p.id = auth.uid();
+  if caller_role is null or caller_role not in ('admin','manager') then
+    raise exception 'Bu işlem için admin/manager yetkisi gerekli.';
+  end if;
+
+  return query
+    select p.id,
+           p.full_name,
+           p.role,
+           p.approval_status,
+           p.rejection_reason,
+           p.created_at,
+           u.email::text
+      from public.profiles p
+      join auth.users u on u.id = p.id
+     where p.approval_status = 'pending'
+     order by p.created_at desc;
+end;
+$$;
+
+grant execute on function public.list_pending_user_approvals() to authenticated;
+
+-- Geriye uyum için view'i de tutuyoruz (auth.users join'ı kaldırarak)
 create or replace view public.pending_user_approvals as
   select p.id,
          p.full_name,
          p.role,
          p.approval_status,
          p.rejection_reason,
-         p.created_at,
-         u.email
+         p.created_at
     from public.profiles p
-    join auth.users u on u.id = p.id
    where p.approval_status = 'pending'
    order by p.created_at desc;
 

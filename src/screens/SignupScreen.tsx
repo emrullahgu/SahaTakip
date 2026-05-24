@@ -60,7 +60,7 @@ export default function SignupScreen() {
       });
       Alert.alert(
         'Başarılı',
-        'E-posta adresinize doğrulama bağlantısı gönderildi. Lütfen kontrol edip aktivasyon yaptıktan sonra giriş yapın.',
+        'Hesabınız oluşturuldu. E-posta doğrulamasını yaptıktan sonra yöneticinin onayını bekleyeceksiniz. Onay verildiğinde giriş yapabilirsiniz.',
         [{ text: 'Tamam', onPress: () => navigation.goBack() }]
       );
     }

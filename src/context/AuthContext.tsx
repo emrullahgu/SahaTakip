@@ -130,30 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!SUPABASE_CONFIGURED) {
       return { error: 'Supabase yapılandırılmamış. Demo modda devam edin.' };
     }
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
-
-    // E-posta onayı + admin onayı kontrolü
-    const uid = data.user?.id;
-    if (!uid) return { error: 'Oturum açılamadı.' };
-
-    // E-posta henüz doğrulanmamışsa Supabase zaten engeller; ek olarak profil onayı da gerekli.
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('approval_status, rejection_reason')
-      .eq('id', uid)
-      .single();
-
-    const status: ApprovalStatus | undefined = prof?.approval_status;
-    if (status === 'pending') {
-      await supabase.auth.signOut();
-      return { error: 'Hesabınız yönetici onayı bekliyor. Lütfen sistem yöneticinizle iletişime geçin.' };
-    }
-    if (status === 'rejected') {
-      const reason = prof?.rejection_reason ? ` Neden: ${prof.rejection_reason}` : '';
-      await supabase.auth.signOut();
-      return { error: `Hesap erişim talebiniz reddedildi.${reason}` };
-    }
+    // Onay durumu kontrolü artık AppNavigator tarafından profil yüklendikten sonra
+    // PendingApprovalScreen ile yapılır (yarış koşulunu engellemek için).
     return { error: null };
   };
 
@@ -161,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!SUPABASE_CONFIGURED) {
       return { error: 'Supabase yapılandırılmamış. Demo modda devam edin.' };
     }
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -169,7 +149,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: getAuthRedirectUrl(),
       },
     });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+    // Supabase, e-posta onayı kapalıysa otomatik oturum oluşturur.
+    // Yeni kullanıcı admin onayı bekleyeceği için bu oturumu hemen kapatıyoruz.
+    if (data.session) {
+      await supabase.auth.signOut();
+    }
+    return { error: null };
   };
 
   const signOut = async () => {

@@ -105,6 +105,7 @@ import AnomaliesScreen from '../screens/AnomaliesScreen';
 import WebAdminScreen from '../screens/WebAdminScreen';
 import UsersAdminScreen from '../screens/UsersAdminScreen';
 import UserApprovalsScreen from '../screens/UserApprovalsScreen';
+import PendingApprovalScreen from '../screens/PendingApprovalScreen';
 import ExternalApiKeysScreen from '../screens/ExternalApiKeysScreen';
 import LiveTrackingScreen from '../screens/LiveTrackingScreen';
 import IntegrationsHubScreen from '../screens/IntegrationsHubScreen';
@@ -596,7 +597,7 @@ function AuthFlow() {
 }
 
 export default function AppNavigator() {
-  const { session, isDemoMode, loading } = useAuth();
+  const { session, isDemoMode, loading, profile, user } = useAuth();
 
   if (loading) {
     return (
@@ -606,9 +607,27 @@ export default function AppNavigator() {
     );
   }
 
+  // Onay kapısı: oturum var ama profil henüz yüklenmedi → bekle
+  const sessionActive = !!session;
+  const profileLoading = sessionActive && !!user && !profile;
+  if (profileLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg.primary }}>
+        <ActivityIndicator size="large" color={brand.green} />
+      </View>
+    );
+  }
+
+  // Onay kapısı: profil yüklendi ve approval_status pending/rejected ise bloke et
+  const approvalStatus = profile?.approval_status;
+  const blockedByApproval =
+    sessionActive && !isDemoMode && (approvalStatus === 'pending' || approvalStatus === 'rejected');
+
   return (
     <NavigationContainer>
-      {session || isDemoMode ? (
+      {blockedByApproval ? (
+        <PendingApprovalScreen />
+      ) : session || isDemoMode ? (
         <>
           <MainStack />
           <ChatbotFAB />
