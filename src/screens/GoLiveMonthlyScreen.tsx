@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { getGoLiveMonthly } from '../services/goLive';
 import type { GoLiveMonthlyReport } from '../types';
+import EmptyState from '../components/EmptyState';
 
 export default function GoLiveMonthlyScreen() {
   const [r, setR] = useState<GoLiveMonthlyReport | null>(null);
@@ -14,7 +15,13 @@ export default function GoLiveMonthlyScreen() {
   const cols = width >= 900 ? 4 : 2;
   const tileW = `${100 / cols - 1}%`;
   useFocusEffect(useCallback(() => { (async () => setR(await getGoLiveMonthly()))(); }, []));
-  if (!r) return <SafeAreaView style={s.safe} edges={['bottom']}><View style={s.empty}><Ionicons name="hourglass" size={48} color={colors.text.muted} /></View></SafeAreaView>;
+  if (!r) {
+    return (
+      <SafeAreaView style={s.safe} edges={['bottom']}>
+        <EmptyState icon="analytics-outline" title="Yükleniyor…" subtitle="Aylık performans verileri analiz ediliyor." />
+      </SafeAreaView>
+    );
+  }
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll}>

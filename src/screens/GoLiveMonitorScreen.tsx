@@ -26,22 +26,30 @@ export default function GoLiveMonitorScreen() {
           <Text style={s.heroT}>Canlı İzleme Paneli</Text>
           <Text style={s.heroD}>Hata, performans, kullanıcı aktivitesi göstergeleri</Text>
         </View>
-        <View style={s.grid}>
-          {cards.map(c => {
-            const col = GO_LIVE_HEALTH_COLOR[c.status];
-            return (
-              <View key={c.id} style={[s.kpi, { width: tileW as any, borderColor: col }]}>
-                <View style={s.kpiTop}>
-                  <View style={[s.dot, { backgroundColor: col }]} />
-                  <Ionicons name={TREND_ICON[c.trend] as any} size={16} color={TREND_COLOR[c.trend]} />
+        {cards.length === 0 ? (
+          <EmptyState
+            icon="pulse-outline"
+            title="Veri yok"
+            subtitle="Canlı izleme verileri toplanırken hata oluştu veya henüz veri yok."
+          />
+        ) : (
+          <View style={s.grid}>
+            {cards.map(c => {
+              const col = GO_LIVE_HEALTH_COLOR[c.status];
+              return (
+                <View key={c.id} style={[s.kpi, { width: tileW as any, borderColor: col }]}>
+                  <View style={s.kpiTop}>
+                    <View style={[s.dot, { backgroundColor: col }]} />
+                    <Ionicons name={TREND_ICON[c.trend] as any} size={16} color={TREND_COLOR[c.trend]} />
+                  </View>
+                  <Text style={s.kpiL}>{c.label}</Text>
+                  <Text style={[s.kpiV, { color: col }]}>{c.value}{c.unit ? <Text style={s.kpiU}> {c.unit}</Text> : null}</Text>
+                  <Text style={s.target}>Hedef: {c.target}</Text>
                 </View>
-                <Text style={s.kpiL}>{c.label}</Text>
-                <Text style={[s.kpiV, { color: col }]}>{c.value}{c.unit ? <Text style={s.kpiU}> {c.unit}</Text> : null}</Text>
-                <Text style={s.target}>Hedef: {c.target}</Text>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

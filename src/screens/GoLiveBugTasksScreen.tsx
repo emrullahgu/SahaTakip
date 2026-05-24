@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveBugTasks, GO_LIVE_SEVERITY_LABEL, GO_LIVE_SEVERITY_COLOR, GO_LIVE_STATUS_LABEL, GO_LIVE_STATUS_COLOR } from '../services/goLive';
 import type { GoLiveBugTask } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const ROLE_LABEL: Record<GoLiveBugTask['assigneeRole'], string> = { admin: 'Admin', manager: 'Yönetici', field: 'Saha', support: 'Destek' };
 
@@ -21,19 +24,34 @@ export default function GoLiveBugTasksScreen() {
   }), [tasks]);
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="construct" size={48} color="#a855f7" />
-          <Text style={s.heroT}>Hata Bildiriminden Görev</Text>
-          <Text style={s.heroD}>Geri bildirimden teknik görev oluşturma akışı</Text>
-        </View>
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.open}</Text><Text style={s.statL}>Açık</Text></View>
-          <View style={[s.statBox, { borderColor: '#f59e0b' }]}><Text style={[s.statV, { color: '#f59e0b' }]}>{stats.inProg}</Text><Text style={s.statL}>Devam</Text></View>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.resolved}</Text><Text style={s.statL}>Çözüldü</Text></View>
-          <View style={[s.statBox, { borderColor: '#06b6d4' }]}><Text style={[s.statV, { color: '#06b6d4' }]}>{stats.fromFeedback}</Text><Text style={s.statL}>Bildirimden</Text></View>
-        </View>
-        {tasks.map(t => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={tasks}
+        keyExtractor={t => t.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="construct" size={48} color="#a855f7" />
+              <Text style={s.heroT}>Hata Bildiriminden Görev</Text>
+              <Text style={s.heroD}>Geri bildirimden teknik görev oluşturma akışı</Text>
+            </View>
+            <View style={s.statRow}>
+              <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.open}</Text><Text style={s.statL}>Açık</Text></View>
+              <View style={[s.statBox, { borderColor: '#f59e0b' }]}><Text style={[s.statV, { color: '#f59e0b' }]}>{stats.inProg}</Text><Text style={s.statL}>Devam</Text></View>
+              <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.resolved}</Text><Text style={s.statL}>Çözüldü</Text></View>
+              <View style={[s.statBox, { borderColor: '#06b6d4' }]}><Text style={[s.statV, { color: '#06b6d4' }]}>{stats.fromFeedback}</Text><Text style={s.statL}>Bildirimden</Text></View>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="construct-outline"
+            title="Görev yok"
+            subtitle="Hata bildirimlerine bağlı bir teknik görev bulunmuyor."
+          />
+        }
+        renderItem={({ item: t }) => (
           <View key={t.id} style={[s.card, { borderLeftColor: GO_LIVE_SEVERITY_COLOR[t.severity] }]}>
             <View style={s.headRow}>
               <View style={[s.pill, { backgroundColor: GO_LIVE_SEVERITY_COLOR[t.severity] + '33', borderColor: GO_LIVE_SEVERITY_COLOR[t.severity] }]}>
@@ -55,8 +73,8 @@ export default function GoLiveBugTasksScreen() {
               {t.eta && <Text style={[s.meta, { color: '#f59e0b' }]}>ETA: {t.eta}</Text>}
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

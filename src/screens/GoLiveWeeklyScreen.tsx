@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { getGoLiveWeekly } from '../services/goLive';
 import type { GoLiveWeeklyReport } from '../types';
+import EmptyState from '../components/EmptyState';
 
 export default function GoLiveWeeklyScreen() {
   const [r, setR] = useState<GoLiveWeeklyReport | null>(null);
@@ -14,7 +15,13 @@ export default function GoLiveWeeklyScreen() {
   const cols = width >= 900 ? 4 : 2;
   const tileW = `${100 / cols - 1}%`;
   useFocusEffect(useCallback(() => { (async () => setR(await getGoLiveWeekly()))(); }, []));
-  if (!r) return <SafeAreaView style={s.safe} edges={['bottom']}><View style={s.empty}><Ionicons name="hourglass" size={48} color={colors.text.muted} /></View></SafeAreaView>;
+  if (!r) {
+    return (
+      <SafeAreaView style={s.safe} edges={['bottom']}>
+        <EmptyState icon="calendar-outline" title="Yükleniyor…" subtitle="Haftalık rapor verileri hazırlanıyor." />
+      </SafeAreaView>
+    );
+  }
   const activeRate = Math.round((r.activeUsers / r.totalUsers) * 100);
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>

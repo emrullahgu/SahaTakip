@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveBacklog } from '../services/goLive';
 import type { GoLiveBacklogItem } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const IMPACT_LABEL: Record<GoLiveBacklogItem['impact'], string> = { high: 'Yüksek', medium: 'Orta', low: 'Düşük' };
 const IMPACT_COLOR: Record<GoLiveBacklogItem['impact'], string> = { high: '#ef4444', medium: '#f59e0b', low: '#22c55e' };
@@ -17,13 +20,26 @@ export default function GoLiveBacklogScreen() {
   useFocusEffect(useCallback(() => { (async () => setItems(await listGoLiveBacklog()))(); }, []));
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="list" size={48} color="#8b5cf6" />
-          <Text style={s.heroT}>Öncelikli İyileştirme Backlog</Text>
-          <Text style={s.heroD}>{items.length} kayıt • Öncelik skoruna göre sıralı</Text>
-        </View>
-        {items.map((it, idx) => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={it => it.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="list" size={48} color="#8b5cf6" />
+            <Text style={s.heroT}>Öncelikli İyileştirme Backlog</Text>
+            <Text style={s.heroD}>{items.length} kayıt • Öncelik skoruna göre sıralı</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="list-outline"
+            title="Backlog yok"
+            subtitle="Henüz planlanmış bir iyileştirme maddesi bulunmuyor."
+          />
+        }
+        renderItem={({ item: it, index: idx }) => (
           <View key={it.id} style={[s.card, { borderLeftColor: IMPACT_COLOR[it.impact] }]}>
             <View style={s.headRow}>
               <View style={s.rankBox}><Text style={s.rank}>#{idx + 1}</Text></View>
@@ -47,8 +63,8 @@ export default function GoLiveBacklogScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveFeedback, GO_LIVE_STATUS_LABEL, GO_LIVE_STATUS_COLOR } from '../services/goLive';
 import type { GoLiveFeedback } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const CAT_LABEL: Record<GoLiveFeedback['category'], string> = { bug: 'Hata', feature: 'İstek', ux: 'UX', performance: 'Performans', other: 'Diğer' };
 const CAT_COLOR: Record<GoLiveFeedback['category'], string> = { bug: '#ef4444', feature: '#3b82f6', ux: '#a855f7', performance: '#f59e0b', other: '#64748b' };
@@ -17,13 +20,26 @@ export default function GoLiveFeedbackScreen() {
   const avgRating = useMemo(() => items.length ? (items.reduce((s, i) => s + i.rating, 0) / items.length).toFixed(1) : '0.0', [items]);
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="chatbubbles" size={48} color="#06b6d4" />
-          <Text style={s.heroT}>Kullanıcı Geri Bildirimleri</Text>
-          <Text style={s.heroD}>{items.length} bildirim • Ortalama puan: {avgRating}/5</Text>
-        </View>
-        {items.map(f => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={f => f.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="chatbubbles" size={48} color="#06b6d4" />
+            <Text style={s.heroT}>Kullanıcı Geri Bildirimleri</Text>
+            <Text style={s.heroD}>{items.length} bildirim • Ortalama puan: {avgRating}/5</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="chatbubbles-outline"
+            title="Geri bildirim yok"
+            subtitle="Henüz kullanıcılardan gelen bir geri bildirim bulunmuyor."
+          />
+        }
+        renderItem={({ item: f }) => (
           <View key={f.id} style={[s.card, { borderLeftColor: CAT_COLOR[f.category] }]}>
             <View style={s.headRow}>
               <Ionicons name="person-circle" size={28} color={colors.text.muted} />
@@ -47,8 +63,8 @@ export default function GoLiveFeedbackScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

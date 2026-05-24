@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveSupport } from '../services/goLive';
 import type { GoLiveSupportPlanItem } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const FREQ_LABEL: Record<GoLiveSupportPlanItem['frequency'], string> = { daily: 'Günlük', weekly: 'Haftalık', monthly: 'Aylık', on_demand: 'Talep Üzerine' };
 const FREQ_COLOR: Record<GoLiveSupportPlanItem['frequency'], string> = { daily: '#ef4444', weekly: '#f59e0b', monthly: '#3b82f6', on_demand: '#a855f7' };
@@ -16,13 +19,26 @@ export default function GoLiveSupportScreen() {
   useFocusEffect(useCallback(() => { (async () => setItems(await listGoLiveSupport()))(); }, []));
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="shield-half" size={48} color="#f97316" />
-          <Text style={s.heroT}>Sürekli Bakım & Destek Süreci</Text>
-          <Text style={s.heroD}>{items.length} sorumluluk alanı tanımlandı</Text>
-        </View>
-        {items.map(it => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={it => it.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="shield-half" size={48} color="#f97316" />
+            <Text style={s.heroT}>Sürekli Bakım & Destek Süreci</Text>
+            <Text style={s.heroD}>{items.length} sorumluluk alanı tanımlandı</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="shield-outline"
+            title="Destek planı yok"
+            subtitle="Henüz bir bakım veya destek sorumluluk alanı tanımlanmadı."
+          />
+        }
+        renderItem={({ item: it }) => (
           <View key={it.id} style={[s.card, { borderLeftColor: FREQ_COLOR[it.frequency] }]}>
             <View style={s.headRow}>
               <Ionicons name="shield-checkmark" size={20} color="#f97316" />
@@ -41,8 +57,8 @@ export default function GoLiveSupportScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

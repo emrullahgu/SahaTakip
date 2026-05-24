@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveLogs, GO_LIVE_SEVERITY_LABEL, GO_LIVE_SEVERITY_COLOR } from '../services/goLive';
 import type { GoLiveLogEntry } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const KIND_LABEL: Record<GoLiveLogEntry['kind'], string> = { crash: 'Crash', api: 'API Hata', supabase: 'Supabase' };
 const KIND_COLOR: Record<GoLiveLogEntry['kind'], string> = { crash: '#ef4444', api: '#f59e0b', supabase: '#a855f7' };
@@ -26,28 +29,43 @@ export default function GoLiveLogsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="bug" size={48} color="#f59e0b" />
-          <Text style={s.heroT}>Hata Log Takibi</Text>
-          <Text style={s.heroD}>Crash, API ve Supabase hatalarının günlük izlenmesi</Text>
-        </View>
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.open}</Text><Text style={s.statL}>Açık</Text></View>
-          <View style={[s.statBox, { borderColor: '#b91c1c' }]}><Text style={[s.statV, { color: '#b91c1c' }]}>{stats.critical}</Text><Text style={s.statL}>Kritik Açık</Text></View>
-          <View style={[s.statBox, { borderColor: '#3b82f6' }]}><Text style={[s.statV, { color: '#3b82f6' }]}>{stats.total}</Text><Text style={s.statL}>Toplam Olay</Text></View>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-          <TouchableOpacity onPress={() => setFilter('all')} style={[s.chip, filter === 'all' && { backgroundColor: '#3b82f6', borderColor: '#3b82f6' }]}>
-            <Text style={[s.chipT, filter === 'all' && { color: '#fff' }]}>Hepsi</Text>
-          </TouchableOpacity>
-          {(['crash', 'api', 'supabase'] as const).map(k => (
-            <TouchableOpacity key={k} onPress={() => setFilter(k)} style={[s.chip, { borderColor: KIND_COLOR[k] }, filter === k && { backgroundColor: KIND_COLOR[k] }]}>
-              <Text style={[s.chipT, { color: KIND_COLOR[k] }, filter === k && { color: '#fff' }]}>{KIND_LABEL[k]}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        {filtered.map(l => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={l => l.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="bug" size={48} color="#f59e0b" />
+              <Text style={s.heroT}>Hata Log Takibi</Text>
+              <Text style={s.heroD}>Crash, API ve Supabase hatalarının günlük izlenmesi</Text>
+            </View>
+            <View style={s.statRow}>
+              <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.open}</Text><Text style={s.statL}>Açık</Text></View>
+              <View style={[s.statBox, { borderColor: '#b91c1c' }]}><Text style={[s.statV, { color: '#b91c1c' }]}>{stats.critical}</Text><Text style={s.statL}>Kritik Açık</Text></View>
+              <View style={[s.statBox, { borderColor: '#3b82f6' }]}><Text style={[s.statV, { color: '#3b82f6' }]}>{stats.total}</Text><Text style={s.statL}>Toplam Olay</Text></View>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 10 }}>
+              <TouchableOpacity onPress={() => setFilter('all')} style={[s.chip, filter === 'all' && { backgroundColor: '#3b82f6', borderColor: '#3b82f6' }]}>
+                <Text style={[s.chipT, filter === 'all' && { color: '#fff' }]}>Hepsi</Text>
+              </TouchableOpacity>
+              {(['crash', 'api', 'supabase'] as const).map(k => (
+                <TouchableOpacity key={k} onPress={() => setFilter(k)} style={[s.chip, { borderColor: KIND_COLOR[k] }, filter === k && { backgroundColor: KIND_COLOR[k] }]}>
+                  <Text style={[s.chipT, { color: KIND_COLOR[k] }, filter === k && { color: '#fff' }]}>{KIND_LABEL[k]}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="bug-outline"
+            title="Hata kaydı yok"
+            subtitle="Bu filtreye uygun herhangi bir hata kaydı bulunamadı."
+          />
+        }
+        renderItem={({ item: l }) => (
           <View key={l.id} style={[s.card, { borderLeftColor: l.resolved ? '#22c55e' : GO_LIVE_SEVERITY_COLOR[l.severity] }]}>
             <View style={s.headRow}>
               <View style={[s.kindPill, { backgroundColor: KIND_COLOR[l.kind] + '33', borderColor: KIND_COLOR[l.kind] }]}>
@@ -70,8 +88,8 @@ export default function GoLiveLogsScreen() {
               <Text style={s.meta}>Son: {l.lastAt}</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }
