@@ -6,7 +6,7 @@
 // ====================================================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { CustomerDocument } from '../types';
 import { supabase } from './supabase';
 import { isOnlineMode } from './data/repository';

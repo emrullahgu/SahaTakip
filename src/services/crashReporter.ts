@@ -76,7 +76,7 @@ let _installed = false;
 export function installGlobalErrorHandler() {
   if (_installed) return;
   _installed = true;
-  const g: any = (global as any).ErrorUtils;
+  const g: any = (globalThis as any).ErrorUtils;
   if (g && typeof g.setGlobalHandler === 'function') {
     const prev = g.getGlobalHandler?.();
     g.setGlobalHandler((err: Error, isFatal?: boolean) => {

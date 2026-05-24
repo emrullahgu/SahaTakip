@@ -1,6 +1,6 @@
 // services/ai.ts — POZ-DEV-090..092 AI core (OpenAI/Claude/mock)
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { AiProvider, AiSettings, DamageAnalysis, DamageSeverity, PozSuggestion, VoiceReport } from '../types';
 import { POZ_CATALOG, PozItem } from '../data/pozCatalog';
 

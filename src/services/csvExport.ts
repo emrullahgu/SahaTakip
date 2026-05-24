@@ -1,7 +1,7 @@
 // csvExport.ts — POZ-DEV-067
 // Basit CSV üretici + paylaşım (xlsx yerine, Türkçe Excel ile uyumlu UTF-8 BOM).
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 function escapeCell(v: unknown): string {

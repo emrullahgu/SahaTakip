@@ -255,7 +255,7 @@ export async function generateQuotePdf(quote: Quote): Promise<string> {
 // POZ-DEV-022 — Puantaj (Attendance) Raporu (PDF + CSV)
 // ====================================================================
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import type { Employee } from '../types';
 
 /** YYYY-MM ay anahtarı için ayın tüm günlerini gez ve attendance['YYYY-MM-DD'] değerini kullan */
