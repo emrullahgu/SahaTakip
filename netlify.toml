@@ -16,7 +16,11 @@
   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY = "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
   # app.json / eas.json mobil derleme yapılandırması içindir; web build'in parçası değildir.
   SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
-  SECRETS_SCAN_OMIT_PATHS = "app.json,eas.json"
+  # netlify.toml de hariç tutuluyor: build env değerleri burada tanımlı olduğu için
+  # smart detection ham değeri (AIza...) yanlış pozitif olarak raporluyordu.
+  SECRETS_SCAN_OMIT_PATHS = "app.json,eas.json,netlify.toml"
+  # Smart detection'ı tamamen kapatmak yerine sadece bilinen public değerleri hariç tut.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
 
 # SPA fallback — React Navigation history için
 [[redirects]]
