@@ -8,10 +8,14 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Google Maps API key (EXPO_PUBLIC_*) bilerek client bundle'a gömülür ve
-  # Google Cloud Console'da Android paket adı + SHA-1 ile kısıtlanır.
+  # EXPO_PUBLIC_* değişkenleri bilerek client bundle'a gömülür.
+  # Supabase anon key public'tir (RLS ile korunur). Google Maps key
+  # Google Cloud Console'da Android paketi + HTTP referrer ile kısıtlanır.
+  EXPO_PUBLIC_SUPABASE_URL = "https://mdwcasycfssdkogdlbyh.supabase.co"
+  EXPO_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_U-ETT9DDji_bbzYMd3KABQ_ENfXfGYa"
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY = "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
   # app.json / eas.json mobil derleme yapılandırması içindir; web build'in parçası değildir.
-  SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
+  SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
   SECRETS_SCAN_OMIT_PATHS = "app.json,eas.json"
 
 # SPA fallback — React Navigation history için
