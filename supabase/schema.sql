@@ -1590,3 +1590,40 @@ create policy "app_settings_admin_write" on public.app_settings
   ) with check (
     exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
   );
+-- =============================================================
+-- inbox_messages — Gmail / WhatsApp / diğer kanallardan gelen mesajlar
+-- Edge Functions webhook'ları buraya yazar.
+-- Saha Copilot bu tabloyu okur, "atladığım var mı?" taraması yapar.
+-- =============================================================
+create table if not exists public.inbox_messages (
+  id uuid primary key default gen_random_uuid(),
+  source text not null check (source in ('gmail','whatsapp','sms','telegram','other')),
+  external_id text,                     -- Gmail messageId / WA wamid (idempotency)
+  sender text,                          -- "Ahmet Yılmaz <ahmet@x.com>" veya "+9053..."
+  subject text,
+  body text,
+  received_at timestamptz not null default now(),
+  processed boolean not null default false,
+  processed_at timestamptz,
+  user_id uuid references public.profiles(id),
+  metadata jsonb default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (source, external_id)
+);
+
+create index if not exists idx_inbox_messages_received on public.inbox_messages (received_at desc);
+create index if not exists idx_inbox_messages_unprocessed on public.inbox_messages (processed) where processed = false;
+
+alter table public.inbox_messages enable row level security;
+
+drop policy if exists "inbox_read_auth" on public.inbox_messages;
+create policy "inbox_read_auth" on public.inbox_messages
+  for select using (auth.role() = 'authenticated');
+
+drop policy if exists "inbox_update_auth" on public.inbox_messages;
+create policy "inbox_update_auth" on public.inbox_messages
+  for update using (auth.role() = 'authenticated');
+
+-- INSERT: yalnızca service_role (edge function) — RLS gereği policy yok.
+-- Edge functions service_role anahtarı ile yazar.
+

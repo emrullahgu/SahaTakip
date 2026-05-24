@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDocs, upsertDoc, deleteDoc, type KbDoc } from '../services/aiKnowledgeBase';
+import { syncInboxFromCloud } from '../services/inboxConnector';
 import EmptyState from '../components/EmptyState';
 
 const SOURCE_LABEL: Record<NonNullable<KbDoc['source']>, string> = {
@@ -23,9 +24,25 @@ export default function AiKnowledgeBaseScreen() {
   const [docs, setDocs] = useState<KbDoc[]>([]);
   const [editor, setEditor] = useState<Partial<KbDoc> | null>(null);
   const [tagsInput, setTagsInput] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => setDocs(await listDocs()), []);
   useEffect(() => { load(); }, [load]);
+
+  const onSync = async () => {
+    setSyncing(true);
+    try {
+      const r = await syncInboxFromCloud({ limit: 200, sinceDays: 60 });
+      if (r.error) {
+        Alert.alert('Senkronizasyon Hatası', r.error);
+      } else {
+        Alert.alert('Tamamlandı', `Çekilen: ${r.fetched}\nEklenen: ${r.imported}\nAtlanan: ${r.skipped}`);
+        load();
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const openNew = () => { setEditor({ title: '', content: '', source: 'manual', tags: [] }); setTagsInput(''); };
   const openEdit = (d: KbDoc) => { setEditor(d); setTagsInput((d.tags || []).join(', ')); };
@@ -64,6 +81,9 @@ export default function AiKnowledgeBaseScreen() {
           <Text style={s.title}>Bilgi Tabanı</Text>
           <Text style={s.sub}>{docs.length} doküman · Copilot bunları okur</Text>
         </View>
+        <TouchableOpacity style={[s.syncBtn, syncing && { opacity: 0.6 }]} onPress={onSync} disabled={syncing}>
+          <Ionicons name={syncing ? 'sync' : 'cloud-download-outline'} size={18} color="#0ea5e9" />
+        </TouchableOpacity>
         <TouchableOpacity style={s.addBtn} onPress={openNew}>
           <Ionicons name="add" size={20} color="#fff" />
           <Text style={s.addText}>Ekle</Text>
@@ -189,6 +209,10 @@ const s = StyleSheet.create({
     backgroundColor: '#a855f7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.full,
   },
   addText: { color: '#fff', fontWeight: '700', fontSize: typography.sm },
+  syncBtn: {
+    width: 36, height: 36, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#0ea5e9', marginRight: 6,
+  },
   card: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     padding: spacing.md, backgroundColor: colors.bg.secondary,
