@@ -73,7 +73,7 @@ export default function AdvCollectionForecastScreen() {
             </View>
             <View style={s.drivers}>
               <Text style={s.driverHead}>Etkileyen faktörler:</Text>
-              {c.drivers.map((d, i) => (
+              {c.drivers.map((d: string, i: number) => (
                 <View key={i} style={s.driverRow}>
                   <Ionicons name="ellipse" size={6} color={COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR]} />
                   <Text style={s.driverT}>{d}</Text>

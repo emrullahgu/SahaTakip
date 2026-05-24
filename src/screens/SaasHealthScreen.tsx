@@ -93,7 +93,7 @@ export default function SaasHealthScreen() {
 
               {t.churnRiskFactors.length > 0 && (
                 <View style={s.risks}>
-                  {t.churnRiskFactors.map((r, i) => (
+                  {t.churnRiskFactors.map((r: string, i: number) => (
                     <View key={i} style={s.riskRow}>
                       <Ionicons name="alert-circle" size={12} color="#ef4444" />
                       <Text style={s.riskT}>{r}</Text>
