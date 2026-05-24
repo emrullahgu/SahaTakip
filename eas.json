@@ -16,6 +16,11 @@
       "android": {
         "buildType": "apk",
         "image": "latest"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mdwcasycfssdkogdlbyh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_U-ETT9DDji_bbzYMd3KABQ_ENfXfGYa",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
       }
     },
     "production": {
@@ -23,6 +28,11 @@
       "android": {
         "buildType": "app-bundle",
         "image": "latest"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mdwcasycfssdkogdlbyh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_U-ETT9DDji_bbzYMd3KABQ_ENfXfGYa",
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
       }
     }
   },
