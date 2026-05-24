@@ -10,6 +10,15 @@ hibrit takip uygulaması. Expo / React Native ile yazılmıştır, tek kod taban
 
 ---
 
+## 📚 Dokümantasyon
+
+- **[Modül haritası](docs/MODULE_MAP.md)** — Ekran prefiksleri, navigation, servis katmanı
+- **[Smoke test matrisi](docs/SMOKE_TESTS.md)** — Manuel kontrol listesi
+- **[Yol haritası](POZ_ROADMAP.md)** — Faz geçmişi (1..21)
+- **[Değişiklik günlüğü](CHANGELOG.md)** — Sürüm notları
+
+---
+
 ## 🎯 Özellikler
 
 ### v1 (Mevcut)

@@ -1,0 +1,49 @@
+{
+  "common": {
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "add": "Ekle",
+    "search": "Ara",
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "retry": "Tekrar Dene",
+    "back": "Geri",
+    "next": "İleri",
+    "yes": "Evet",
+    "no": "Hayır",
+    "ok": "Tamam",
+    "close": "Kapat",
+    "confirm": "Onayla",
+    "empty": "Kayıt bulunamadı",
+    "today": "Bugün",
+    "yesterday": "Dün",
+    "all": "Tümü"
+  },
+  "auth": {
+    "login": "Giriş Yap",
+    "logout": "Çıkış",
+    "signup": "Kayıt Ol",
+    "email": "E-posta",
+    "password": "Şifre",
+    "forgotPassword": "Şifremi Unuttum"
+  },
+  "errors": {
+    "required": "Bu alan zorunludur",
+    "invalidEmail": "Geçersiz e-posta",
+    "invalidPhone": "Geçersiz telefon",
+    "network": "Bağlantı hatası",
+    "unknown": "Bilinmeyen hata"
+  },
+  "screens": {
+    "home": "Ana Sayfa",
+    "customers": "Müşteriler",
+    "quotes": "Teklifler",
+    "orders": "Siparişler",
+    "workOrders": "İş Emirleri",
+    "services": "Servisler",
+    "manager": "Yönetici",
+    "settings": "Ayarlar"
+  }
+}

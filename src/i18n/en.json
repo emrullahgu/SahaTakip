@@ -1,0 +1,49 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "back": "Back",
+    "next": "Next",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "close": "Close",
+    "confirm": "Confirm",
+    "empty": "No records found",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "all": "All"
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password"
+  },
+  "errors": {
+    "required": "This field is required",
+    "invalidEmail": "Invalid email",
+    "invalidPhone": "Invalid phone",
+    "network": "Network error",
+    "unknown": "Unknown error"
+  },
+  "screens": {
+    "home": "Home",
+    "customers": "Customers",
+    "quotes": "Quotes",
+    "orders": "Orders",
+    "workOrders": "Work Orders",
+    "services": "Services",
+    "manager": "Manager",
+    "settings": "Settings"
+  }
+}
