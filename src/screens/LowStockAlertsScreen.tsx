@@ -9,6 +9,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList } from '../types';
 import { lowStockAlerts, LowStockRow } from '../services/stock';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -41,6 +43,7 @@ export default function LowStockAlertsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={rows}
         keyExtractor={r => r.material.id}
         renderItem={({ item }) => {
@@ -89,11 +92,12 @@ export default function LowStockAlertsScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={42} color="#22c55e" />
-            <Text style={styles.emptyText}>Tüm stoklar yeterli</Text>
-            <Text style={styles.emptySub}>Minimum altında malzeme yok.</Text>
-          </View>
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title="Tüm stoklar yeterli"
+            subtitle="Minimum altında malzeme bulunmuyor."
+            iconColor="#22c55e"
+          />
         }
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.text.muted} />}

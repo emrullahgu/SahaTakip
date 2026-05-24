@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaUiStates } from '../services/codeQuality';
 import type { QaUiStateAudit } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function QaUiStatesScreen() {
   const [items, setItems] = useState<QaUiStateAudit[]>([]);
@@ -19,21 +22,35 @@ export default function QaUiStatesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="apps" size={48} color="#06b6d4" />
-          <Text style={s.heroT}>UI Durum Standartları</Text>
-          <Text style={s.heroD}>{stats.ok}/{stats.total} ekran tam standart • Loading / Empty / Error</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={a => a.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="apps" size={48} color="#06b6d4" />
+              <Text style={s.heroT}>UI Durum Standartları</Text>
+              <Text style={s.heroD}>{stats.ok}/{stats.total} ekran tam standart • Loading / Empty / Error</Text>
+            </View>
 
-        <View style={s.tableHead}>
-          <Text style={[s.thScreen, s.thT]}>Ekran</Text>
-          <Text style={[s.thCol, s.thT]}>Loading</Text>
-          <Text style={[s.thCol, s.thT]}>Empty</Text>
-          <Text style={[s.thCol, s.thT]}>Error</Text>
-        </View>
-
-        {items.map(a => {
+            <View style={s.tableHead}>
+              <Text style={[s.thScreen, s.thT]}>Ekran</Text>
+              <Text style={[s.thCol, s.thT]}>Loading</Text>
+              <Text style={[s.thCol, s.thT]}>Empty</Text>
+              <Text style={[s.thCol, s.thT]}>Error</Text>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="browsers-outline"
+            title="Ekran kaydı yok"
+            subtitle="Sistemde henüz denetlenmiş bir ekran kaydı bulunmuyor."
+          />
+        }
+        renderItem={({ item: a }) => {
           const allOk = a.loadingOk && a.emptyOk && a.errorOk;
           return (
             <View key={a.id} style={[s.row, { borderLeftColor: allOk ? '#22c55e' : '#f59e0b' }]}>
@@ -46,8 +63,8 @@ export default function QaUiStatesScreen() {
               {a.notes ? <Text style={s.notes}>{a.notes}</Text> : null}
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </SafeAreaView>
   );
 }

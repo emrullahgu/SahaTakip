@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import type { FieldJob, FieldJobStage, RootStackParamList } from '../types';
 import { listJobs, PRIORITY_COLOR, PRIORITY_LABEL, STAGE_COLOR, STAGE_LABEL } from '../services/fieldOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const FILTERS: { key: 'all' | FieldJobStage; label: string }[] = [
@@ -37,10 +39,17 @@ export default function FieldJobsScreen() {
         ))}
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
-        ListEmptyComponent={<Text style={s.empty}>İş yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="list-outline"
+            title="İş bulunamadı"
+            subtitle="Filtreyi değiştirerek tekrar deneyebilirsiniz."
+          />
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('FieldJobDetail', { jobId: item.id })}>
             <View style={{ flex: 1 }}>

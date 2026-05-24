@@ -11,6 +11,7 @@ import { RootStackParamList, Material, Warehouse, StockBalance } from '../types'
 import { listMaterials } from '../services/materials';
 import { listWarehouses } from '../services/warehouses';
 import { listBalances } from '../services/stock';
+import MiniBarChart from '../components/MiniBarChart';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -115,54 +116,24 @@ export default function StockSummaryScreen() {
         </View>
 
         <Text style={styles.section}>Depo Bazlı Değer</Text>
-        {whStats.length === 0 ? (
-          <Text style={styles.empty}>Depo yok</Text>
-        ) : (
-          whStats.map(w => (
-            <TouchableOpacity
-              key={w.warehouse.id}
-              style={styles.barRow}
-              activeOpacity={0.85}
-              onPress={() => nav.navigate('WarehouseDetail', { warehouseId: w.warehouse.id })}
-            >
-              <View style={[styles.dot, { backgroundColor: kindColor(w.warehouse.kind) }]} />
-              <View style={{ flex: 1 }}>
-                <View style={styles.barTopRow}>
-                  <Text style={styles.barLabel} numberOfLines={1}>{w.warehouse.name}</Text>
-                  <Text style={styles.barCount}>{TL(w.totalValue)}</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: `${(w.totalValue / maxWhValue) * 100}%`, backgroundColor: kindColor(w.warehouse.kind) }]} />
-                </View>
-                <Text style={styles.subMeta}>{w.itemCount} kalem · {Math.round(w.totalQty)} adet</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
+        <MiniBarChart
+          data={whStats.map(w => ({
+            label: w.warehouse.name,
+            value: w.totalValue,
+            color: kindColor(w.warehouse.kind),
+          }))}
+          formatValue={TL}
+        />
 
         <Text style={styles.section}>En Değerli 10 Malzeme</Text>
-        {topByValue.length === 0 ? (
-          <Text style={styles.empty}>Stok yok</Text>
-        ) : (
-          topByValue.map((r, idx) => (
-            <TouchableOpacity
-              key={r.material.id}
-              style={styles.topRow}
-              activeOpacity={0.85}
-              onPress={() => nav.navigate('MaterialForm', { materialId: r.material.id })}
-            >
-              <View style={styles.rank}><Text style={styles.rankText}>{idx + 1}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topName} numberOfLines={1}>{r.material.name}</Text>
-                <Text style={styles.topMeta}>{r.material.code} · {Math.round(r.totalQty)} {r.material.unit}</Text>
-                <View style={[styles.barTrack, { marginTop: 4 }]}>
-                  <View style={[styles.barFill, { width: `${(r.totalValue / maxTopValue) * 100}%`, backgroundColor: '#ec4899' }]} />
-                </View>
-              </View>
-              <Text style={styles.topValue}>{TL(r.totalValue)}</Text>
-            </TouchableOpacity>
-          ))
-        )}
+        <MiniBarChart
+          data={topByValue.map(r => ({
+            label: r.material.name,
+            value: r.totalValue,
+            color: '#ec4899',
+          }))}
+          formatValue={TL}
+        />
       </ScrollView>
     </SafeAreaView>
   );

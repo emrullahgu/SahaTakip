@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Platform, Alert } from 'react-native';
 import type { WorkOrder, Quote } from '../types';
 
 export async function generateAndShareActivityPdf(
@@ -68,6 +69,27 @@ export async function generateAndShareActivityPdf(
 </body>
 </html>`;
 
-  const { uri } = await Print.printToFileAsync({ html });
-  await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Aktivite Raporu' });
+  if (Platform.OS === 'web') {
+    // Web: yeni sekmede HTML olarak aç (kullanıcı tarayıcıdan PDF kaydedebilir)
+    try {
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+        setTimeout(() => { try { w.print(); } catch {} }, 300);
+      } else {
+        Alert.alert('Uyarı', 'Pop-up engellendi. Tarayıcı ayarlarından izin verin.');
+      }
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'PDF oluşturulamadı');
+    }
+    return;
+  }
+  try {
+    const res = await Print.printToFileAsync({ html });
+    if (!res?.uri) throw new Error('PDF dosyası oluşturulamadı');
+    await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Aktivite Raporu' });
+  } catch (e: any) {
+    Alert.alert('Hata', e?.message || 'PDF oluşturulamadı');
+  }
 }

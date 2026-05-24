@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaRender } from '../services/codeQuality';
 import type { QaRenderMetric } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const TECH_LABEL: Record<NonNullable<QaRenderMetric['technique']>, string> = { memo: 'memo', callback: 'useCallback', virtualization: 'FlatList', splitting: 'split' };
 
@@ -22,14 +25,26 @@ export default function QaPerformanceScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="speedometer" size={48} color="#ec4899" />
-          <Text style={s.heroT}>Render Performansı</Text>
-          <Text style={s.heroD}>Ortalama render süresi, re-render sayısı ve liste optimizasyonu</Text>
-        </View>
-
-        {items.map(r => {
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={r => r.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="speedometer" size={48} color="#ec4899" />
+            <Text style={s.heroT}>Render Performansı</Text>
+            <Text style={s.heroD}>Ortalama render süresi, re-render sayısı ve liste optimizasyonu</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="speedometer-outline"
+            title="Ölçüm yok"
+            subtitle="Henüz render performansı ölçüm verisi toplanmadı."
+          />
+        }
+        renderItem={({ item: r }) => {
           const c = renderColor(r.avgRenderMs);
           return (
             <View key={r.id} style={[s.card, { borderLeftColor: c }]}>
@@ -50,8 +65,8 @@ export default function QaPerformanceScreen() {
               )}
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </SafeAreaView>
   );
 }

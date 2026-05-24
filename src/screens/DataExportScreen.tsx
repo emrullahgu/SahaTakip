@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listExportJobs, addExportJob, SEC_JOB_LABEL, SEC_JOB_COLOR } from '../services/secCenter';
 import type { DataExportJob } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const FORMATS: DataExportJob['format'][] = ['json', 'csv', 'pdf'];
 const FORMAT_ICON: Record<DataExportJob['format'], string> = { json: 'code', csv: 'grid', pdf: 'document' };
@@ -29,14 +32,28 @@ export default function DataExportScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.hero}>
-          <Ionicons name="cloud-download" size={40} color="#22c55e" />
-          <Text style={s.heroT}>Veri Dışa Aktarım</Text>
-          <Text style={s.heroS}>KVKK m.11 kapsamında kullanıcı verisi indirme</Text>
-        </View>
-
-        {list.map(j => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={list}
+        keyExtractor={j => j.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.hero}>
+            <Ionicons name="cloud-download" size={40} color="#22c55e" />
+            <Text style={s.heroT}>Veri Dışa Aktarım</Text>
+            <Text style={s.heroS}>KVKK m.11 kapsamında kullanıcı verisi indirme</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="cloud-download-outline"
+            title="Dışa aktarım yok"
+            subtitle="Geçmiş veri talepleri burada listelenir."
+            actionLabel="+ Yeni Talep"
+            onAction={() => setModal(true)}
+          />
+        }
+        renderItem={({ item: j }) => (
           <View key={j.id} style={[s.card, { borderLeftColor: SEC_JOB_COLOR[j.status] }]}>
             <View style={s.row}>
               <View style={[s.iconBox, { backgroundColor: SEC_JOB_COLOR[j.status] + '22', borderColor: SEC_JOB_COLOR[j.status] }]}>
@@ -58,8 +75,8 @@ export default function DataExportScreen() {
               </TouchableOpacity>
             )}
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       <TouchableOpacity style={s.fab} onPress={() => setModal(true)}>
         <Ionicons name="add" size={28} color="#fff" />

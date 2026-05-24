@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDepNetlify } from '../services/deploy';
 import type { DepNetlifyDeploy } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const STATUS_LABEL: Record<DepNetlifyDeploy['status'], string> = { ready: 'Yayında', building: 'Derleniyor', error: 'Hata', queued: 'Sırada' };
 const STATUS_COLOR: Record<DepNetlifyDeploy['status'], string> = { ready: '#22c55e', building: '#0ea5e9', error: '#ef4444', queued: '#64748b' };
@@ -29,25 +32,40 @@ export default function DepNetlifyScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="cloud-upload" size={48} color="#06b6d4" />
-          <Text style={s.heroT}>Netlify Deploy</Text>
-          <Text style={s.heroD}>{items.length} deploy • {items.filter(d => d.status === 'ready').length} aktif</Text>
-        </View>
-
-        <Text style={s.section}>Build Ayarları</Text>
-        <View style={s.cfgCard}>
-          {buildSettings.map((b, idx) => (
-            <View key={b.k} style={[s.cfgRow, idx === buildSettings.length - 1 && { borderBottomWidth: 0 }]}>
-              <Text style={s.cfgK}>{b.k}</Text>
-              <Text style={s.cfgV}>{b.v}</Text>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={d => d.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="cloud-upload" size={48} color="#06b6d4" />
+              <Text style={s.heroT}>Netlify Deploy</Text>
+              <Text style={s.heroD}>{items.length} deploy • {items.filter(d => d.status === 'ready').length} aktif</Text>
             </View>
-          ))}
-        </View>
 
-        <Text style={s.section}>Son Deploy'lar</Text>
-        {items.map(d => (
+            <Text style={s.section}>Build Ayarları</Text>
+            <View style={s.cfgCard}>
+              {buildSettings.map((b, idx) => (
+                <View key={b.k} style={[s.cfgRow, idx === buildSettings.length - 1 && { borderBottomWidth: 0 }]}>
+                  <Text style={s.cfgK}>{b.k}</Text>
+                  <Text style={s.cfgV}>{b.v}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Text style={s.section}>Son Deploy'lar</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="cloud-upload-outline"
+            title="Deploy kaydı yok"
+            subtitle="Sistemde henüz bir web deploy kaydı bulunmuyor."
+          />
+        }
+        renderItem={({ item: d }) => (
           <View key={d.id} style={[s.card, { borderLeftColor: STATUS_COLOR[d.status] }]}>
             <View style={s.headRow}>
               <Ionicons name={STATUS_ICON[d.status] as any} size={20} color={STATUS_COLOR[d.status]} />
@@ -70,8 +88,8 @@ export default function DepNetlifyScreen() {
               )}
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

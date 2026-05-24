@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSaasIsolation } from '../services/saas';
 import type { SaasIsolationCheck } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const SCOPE_LABEL: Record<SaasIsolationCheck['scope'], string> = { tenant: 'Firma', user: 'Kullanıcı', global: 'Global' };
 const SCOPE_COLOR: Record<SaasIsolationCheck['scope'], string> = { tenant: '#0ea5e9', user: '#a855f7', global: '#64748b' };
@@ -26,21 +29,35 @@ export default function SaasIsolationScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="shield-half" size={48} color="#22c55e" />
-          <Text style={s.heroT}>Veri İzolasyon Kontrolü</Text>
-          <Text style={s.heroD}>Firma bazlı veri ayrımının her tabloda doğru çalıştığı kontrol edilir.</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="shield-half" size={48} color="#22c55e" />
+              <Text style={s.heroT}>Veri İzolasyon Kontrolü</Text>
+              <Text style={s.heroD}>Firma bazlı veri ayrımının her tabloda doğru çalıştığı kontrol edilir.</Text>
+            </View>
 
-        <View style={s.statRow}>
-          <View style={s.statBox}><Text style={s.statV}>{stats.total}</Text><Text style={s.statL}>Tablo</Text></View>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.ok}</Text><Text style={s.statL}>Temiz</Text></View>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.fail}</Text><Text style={s.statL}>Sorun</Text></View>
-          <View style={[s.statBox, { borderColor: '#f59e0b' }]}><Text style={[s.statV, { color: '#f59e0b' }]}>{stats.leaked}</Text><Text style={s.statL}>Sızıntı</Text></View>
-        </View>
-
-        {items.map(i => (
+            <View style={s.statRow}>
+              <View style={s.statBox}><Text style={s.statV}>{stats.total}</Text><Text style={s.statL}>Tablo</Text></View>
+              <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.ok}</Text><Text style={s.statL}>Temiz</Text></View>
+              <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.fail}</Text><Text style={s.statL}>Sorun</Text></View>
+              <View style={[s.statBox, { borderColor: '#f59e0b' }]}><Text style={[s.statV, { color: '#f59e0b' }]}>{stats.leaked}</Text><Text style={s.statL}>Sızıntı</Text></View>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="shield-outline"
+            title="Veri yok"
+            subtitle="İzolasyon kontrolü yapılacak tablo verisi bulunamadı."
+          />
+        }
+        renderItem={({ item: i }) => (
           <View key={i.id} style={[s.card, { borderLeftColor: i.ok ? '#22c55e' : '#ef4444' }]}>
             <View style={s.headRow}>
               <Ionicons name={i.ok ? 'checkmark-circle' : 'alert-circle'} size={20} color={i.ok ? '#22c55e' : '#ef4444'} />
@@ -59,8 +76,8 @@ export default function SaasIsolationScreen() {
               </Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

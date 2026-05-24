@@ -29,6 +29,7 @@ import {
   FormTemplate,
   RootStackParamList,
 } from '../types';
+import EmptyState from '../components/EmptyState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'FormResponseDetail'>;
 type Rt = RouteProp<RootStackParamList, 'FormResponseDetail'>;
@@ -77,7 +78,7 @@ export default function FormResponseDetailScreen() {
   if (!resp) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={styles.loading}>Yükleniyor…</Text>
+        <EmptyState icon="clipboard-outline" title="Yükleniyor…" subtitle="Form cevabı sunucudan getiriliyor." />
       </SafeAreaView>
     );
   }

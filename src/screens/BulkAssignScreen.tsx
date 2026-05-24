@@ -18,6 +18,8 @@ import { colors, brand } from '../theme';
 import { RootStackParamList } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { statusColor } from '../services/workOrderFlow';
+import BulkSelectionBar from '../components/BulkSelectionBar';
+import EmptyState from '../components/EmptyState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BulkAssign'>;
 
@@ -50,31 +52,36 @@ export default function BulkAssignScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. İş Emirlerini Seç ({selectedIds.length})</Text>
-          {eligible.length === 0 && (
-            <Text style={styles.empty}>Atanabilir iş emri yok.</Text>
+          <Text style={styles.sectionTitle}>1. İş Emirlerini Seç</Text>
+          {eligible.length === 0 ? (
+            <EmptyState
+              icon="clipboard-outline"
+              title="Atanabilir iş yok"
+              subtitle="Şu an bekleyen durumunda iş emri bulunmuyor."
+            />
+          ) : (
+            eligible.map(w => {
+              const sel = selectedIds.includes(w.id);
+              return (
+                <TouchableOpacity key={w.id} style={styles.row} onPress={() => toggle(w.id)}>
+                  <Ionicons
+                    name={sel ? 'checkbox' : 'square-outline'}
+                    size={20}
+                    color={sel ? brand.green : colors.text.muted}
+                  />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.title}>{w.serviceName}</Text>
+                    <Text style={styles.sub}>
+                      {w.client} · {w.id}
+                    </Text>
+                  </View>
+                  <View style={[styles.statusDot, { backgroundColor: statusColor(w.status) }]} />
+                </TouchableOpacity>
+              );
+            })
           )}
-          {eligible.map(w => {
-            const sel = selectedIds.includes(w.id);
-            return (
-              <TouchableOpacity key={w.id} style={styles.row} onPress={() => toggle(w.id)}>
-                <Ionicons
-                  name={sel ? 'checkbox' : 'square-outline'}
-                  size={20}
-                  color={sel ? brand.green : colors.text.muted}
-                />
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.title}>{w.serviceName}</Text>
-                  <Text style={styles.sub}>
-                    {w.client} · {w.id}
-                  </Text>
-                </View>
-                <View style={[styles.statusDot, { backgroundColor: statusColor(w.status) }]} />
-              </TouchableOpacity>
-            );
-          })}
         </View>
 
         <View style={styles.section}>
@@ -98,10 +105,14 @@ export default function BulkAssignScreen({ navigation }: Props) {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.submit} onPress={submit}>
-        <Ionicons name="checkmark-circle-outline" size={18} color={colors.bg.primary} />
-        <Text style={styles.submitText}>Toplu Ata</Text>
-      </TouchableOpacity>
+      <BulkSelectionBar
+        count={selectedIds.length}
+        onClear={() => setSelectedIds([])}
+        onAction={() => submit()}
+        actions={[
+          { key: 'assign', label: 'Toplu Ata', icon: 'checkmark-circle', color: brand.green }
+        ]}
+      />
     </View>
   );
 }

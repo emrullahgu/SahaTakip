@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { bulkImportReadings } from '../services/osos';
+import EmptyState from '../components/EmptyState';
 
 const SAMPLE = `meterNo,readingAt,activeImportKwh,activeExportKwh,peakDemandKw
 M-1001,2025-01-15T08:00:00Z,12450.5,0,42.3
@@ -60,17 +61,29 @@ export default function OsosImportScreen() {
           placeholder="CSV içeriğini buraya yapıştırın..."
           placeholderTextColor={colors.text.faint}
         />
-        <Text style={s.preview}>Önizleme: {rows.length} satır</Text>
-        {rows.slice(0, 5).map((r, i) => (
-          <View key={i} style={s.previewRow}>
-            <Text style={s.prevTitle}>{r.meterNo}</Text>
-            <Text style={s.prevMeta}>{r.activeImportKwh} kWh @ {r.readingAt}</Text>
-          </View>
-        ))}
-        <TouchableOpacity style={s.importBtn} onPress={onImport} disabled={rows.length === 0}>
-          <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-          <Text style={s.importText}>İçe Aktar ({rows.length})</Text>
-        </TouchableOpacity>
+        {text.length === 0 ? (
+          <EmptyState
+            icon="cloud-upload-outline"
+            title="Veri yapıştırın"
+            subtitle="Excel'den kopyaladığınız CSV verilerini buraya yapıştırarak toplu yükleme yapabilirsiniz."
+            actionLabel="Örnek Doldur"
+            onAction={() => setText(SAMPLE)}
+          />
+        ) : (
+          <>
+            <Text style={s.preview}>Önizleme: {rows.length} satır</Text>
+            {rows.slice(0, 5).map((r, i) => (
+              <View key={i} style={s.previewRow}>
+                <Text style={s.prevTitle}>{r.meterNo}</Text>
+                <Text style={s.prevMeta}>{r.activeImportKwh} kWh @ {r.readingAt}</Text>
+              </View>
+            ))}
+            <TouchableOpacity style={s.importBtn} onPress={onImport} disabled={rows.length === 0}>
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+              <Text style={s.importText}>İçe Aktar ({rows.length})</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

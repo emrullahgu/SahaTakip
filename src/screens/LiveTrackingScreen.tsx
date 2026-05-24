@@ -9,6 +9,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { LiveWorker } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const DEFAULT_REGION: Region = { latitude: 41.0082, longitude: 28.9784, latitudeDelta: 0.4, longitudeDelta: 0.4 };
 
@@ -93,11 +96,22 @@ export default function LiveTrackingScreen() {
         <StatPill label="Bekliyor" value={counts.idle} color={STATUS_COLOR.idle} />
         <StatPill label="Off" value={counts.offline} color={STATUS_COLOR.offline} />
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
-        {workers.map(w => {
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={workers}
+        keyExtractor={w => w.employeeId}
+        contentContainerStyle={{ paddingBottom: 16 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="people-outline"
+            title="Personel kaydı yok"
+            subtitle="Sistemde kayıtlı personel bulunmuyor."
+          />
+        }
+        renderItem={({ item: w }) => {
           const active = selectedId === w.employeeId;
           return (
-            <TouchableOpacity key={w.employeeId} style={[styles.workerRow, active && styles.workerRowActive]} onPress={() => focusOn(w)}>
+            <TouchableOpacity style={[styles.workerRow, active && styles.workerRowActive]} onPress={() => focusOn(w)}>
               <View style={[styles.dot, { backgroundColor: STATUS_COLOR[w.status] }]} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.workerName} numberOfLines={1}>{w.name}</Text>
@@ -110,11 +124,8 @@ export default function LiveTrackingScreen() {
               </View>
             </TouchableOpacity>
           );
-        })}
-        {workers.length === 0 && (
-          <Text style={styles.emptyText}>Personel kaydı yok.</Text>
-        )}
-      </ScrollView>
+        }}
+      />
     </View>
   );
 

@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { SmartRouteSuggestion } from '../types';
 import { listRoutes, generateRoute } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function SmartRouteSuggestScreen() {
   const [items, setItems] = useState<SmartRouteSuggestion[]>([]);
@@ -31,9 +33,17 @@ export default function SmartRouteSuggestScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="git-network-outline"
+            title="Rota önerisi yok"
+            subtitle="Personel için akıllı rota oluşturmak üzere yukarıdaki formu kullanın."
+          />
+        }
         renderItem={({ item }) => (
           <View style={s.card}>
             <View style={s.head}>

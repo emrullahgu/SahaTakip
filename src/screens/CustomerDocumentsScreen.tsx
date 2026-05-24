@@ -57,7 +57,7 @@ export default function CustomerDocumentsScreen({ route }: Props) {
         return;
       }
       const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ['images','videos'],
         quality: 0.8,
       });
       if (res.canceled || res.assets.length === 0) return;

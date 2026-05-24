@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaQueries } from '../services/codeQuality';
 import type { QaQueryAudit } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function QaQueriesScreen() {
   const [items, setItems] = useState<QaQueryAudit[]>([]);
@@ -20,14 +23,26 @@ export default function QaQueriesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="server-outline" size={48} color="#22c55e" />
-          <Text style={s.heroT}>Supabase Sorgu Audit</Text>
-          <Text style={s.heroD}>{stats.optimized}/{stats.total} optimize • {stats.duplicates} mükerrer çağrı</Text>
-        </View>
-
-        {items.map(q => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={q => q.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="server-outline" size={48} color="#22c55e" />
+            <Text style={s.heroT}>Supabase Sorgu Audit</Text>
+            <Text style={s.heroD}>{stats.optimized}/{stats.total} optimize • {stats.duplicates} mükerrer çağrı</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="server-outline"
+            title="Sorgu verisi yok"
+            subtitle="Henüz veritabanı sorgu analizi verisi toplanmadı."
+          />
+        }
+        renderItem={({ item: q }) => (
           <View key={q.id} style={[s.card, { borderLeftColor: q.optimized ? '#22c55e' : '#f59e0b' }]}>
             <View style={s.headRow}>
               <Ionicons name="server" size={18} color="#22c55e" />
@@ -53,8 +68,8 @@ export default function QaQueriesScreen() {
               <Text style={s.rows}>~{q.rowsTypical} satır</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

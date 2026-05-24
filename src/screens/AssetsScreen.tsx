@@ -11,6 +11,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { listAssets, ASSET_TYPES, ASSET_TYPE_LABEL } from '../services/assets';
 import { Asset, AssetType, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Assets'>;
 type RP = RouteProp<RootStackParamList, 'Assets'>;
@@ -78,14 +80,18 @@ export default function AssetsScreen() {
       </View>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 80 }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="cube-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Kayıtlı cihaz yok.</Text>
-          </View>
+          <EmptyState
+            icon="cube-outline"
+            title="Cihaz bulunamadı"
+            subtitle="Filtreleri değiştirerek tekrar deneyebilir veya yeni bir cihaz ekleyebilirsiniz."
+            actionLabel="+ Yeni Cihaz"
+            onAction={() => navigation.navigate('AssetForm', filterCustomerId ? { customerId: filterCustomerId } : undefined)}
+          />
         }
         renderItem={({ item }) => {
           const t = ASSET_TYPES.find(x => x.value === item.type);

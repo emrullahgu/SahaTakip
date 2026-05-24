@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDepAiProviders } from '../services/deploy';
 import type { DepAiProvider } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const STATUS_LABEL: Record<DepAiProvider['status'], string> = { active: 'Aktif', inactive: 'Pasif', degraded: 'Düşük' };
 const STATUS_COLOR: Record<DepAiProvider['status'], string> = { active: '#22c55e', inactive: '#64748b', degraded: '#f59e0b' };
@@ -17,14 +20,26 @@ export default function DepAiProvidersScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="sparkles" size={48} color="#f59e0b" />
-          <Text style={s.heroT}>AI Sağlayıcı Yapılandırması</Text>
-          <Text style={s.heroD}>Öncelik sıralı sağlayıcılar • otomatik fallback</Text>
-        </View>
-
-        {items.sort((a, b) => a.priority - b.priority).map(p => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items.sort((a, b) => a.priority - b.priority)}
+        keyExtractor={p => p.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="sparkles" size={48} color="#f59e0b" />
+            <Text style={s.heroT}>AI Sağlayıcı Yapılandırması</Text>
+            <Text style={s.heroD}>Öncelik sıralı sağlayıcılar • otomatik fallback</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="sparkles-outline"
+            title="Sağlayıcı yok"
+            subtitle="Sistemde henüz bir AI sağlayıcı yapılandırması bulunmuyor."
+          />
+        }
+        renderItem={({ item: p }) => (
           <View key={p.id} style={[s.card, { borderLeftColor: STATUS_COLOR[p.status] }]}>
             <View style={s.headRow}>
               <View style={s.priBadge}><Text style={s.priT}>#{p.priority}</Text></View>
@@ -54,8 +69,8 @@ export default function DepAiProvidersScreen() {
               <View style={s.statBox}><Text style={s.statV}>${p.costPer1kTokens.toFixed(2)}</Text><Text style={s.statL}>1k token</Text></View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

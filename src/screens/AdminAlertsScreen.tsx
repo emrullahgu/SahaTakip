@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listAdminAlerts, ackAlert, ALERT_SEV_LABEL, ALERT_SEV_COLOR, ALERT_KIND_LABEL, ALERT_KIND_ICON } from '../services/secCenter';
 import type { AdminAlert } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function AdminAlertsScreen() {
   const [list, setList] = useState<AdminAlert[]>([]);
@@ -21,27 +24,41 @@ export default function AdminAlertsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.summary}>
-          <View style={s.sumBox}>
-            <Text style={s.sumV}>{unack}</Text>
-            <Text style={s.sumL}>Onaylanmamış</Text>
-          </View>
-          <View style={[s.sumBox, { backgroundColor: '#ef444433' }]}>
-            <Text style={[s.sumV, { color: '#ef4444' }]}>{critical}</Text>
-            <Text style={s.sumL}>Kritik</Text>
-          </View>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={a => a.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.summary}>
+              <View style={s.sumBox}>
+                <Text style={s.sumV}>{unack}</Text>
+                <Text style={s.sumL}>Onaylanmamış</Text>
+              </View>
+              <View style={[s.sumBox, { backgroundColor: '#ef444433' }]}>
+                <Text style={[s.sumV, { color: '#ef4444' }]}>{critical}</Text>
+                <Text style={s.sumL}>Kritik</Text>
+              </View>
+            </View>
 
-        <View style={s.chips}>
-          {(['unack', 'all'] as const).map(k => (
-            <TouchableOpacity key={k} style={[s.chip, filter === k && { backgroundColor: '#ec4899' }]} onPress={() => setFilter(k)}>
-              <Text style={[s.chipT, filter === k && { color: '#fff' }]}>{k === 'unack' ? 'Bekleyen' : 'Tümü'}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {filtered.map(a => (
+            <View style={s.chips}>
+              {(['unack', 'all'] as const).map(k => (
+                <TouchableOpacity key={k} style={[s.chip, filter === k && { backgroundColor: '#ec4899' }]} onPress={() => setFilter(k)}>
+                  <Text style={[s.chipT, filter === k && { color: '#fff' }]}>{k === 'unack' ? 'Bekleyen' : 'Tümü'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="notifications-off-outline"
+            title="Uyarı yok"
+            subtitle="Tüm sistem bildirimleri onaylandı veya henüz bir uyarı oluşmadı."
+          />
+        }
+        renderItem={({ item: a }) => (
           <View key={a.id} style={[s.card, { borderLeftColor: ALERT_SEV_COLOR[a.severity] }, a.ack && { opacity: 0.55 }]}>
             <View style={s.row}>
               <View style={[s.iconBox, { backgroundColor: ALERT_SEV_COLOR[a.severity] + '22', borderColor: ALERT_SEV_COLOR[a.severity] }]}>
@@ -63,8 +80,8 @@ export default function AdminAlertsScreen() {
               </TouchableOpacity>
             )}
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

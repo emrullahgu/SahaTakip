@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveChecklist } from '../services/goLive';
 import type { GoLiveChecklistItem } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const CAT_LABEL: Record<GoLiveChecklistItem['category'], string> = { infra: 'Altyapı', data: 'Veri', comms: 'İletişim', support: 'Destek', monitoring: 'İzleme' };
 const CAT_COLOR: Record<GoLiveChecklistItem['category'], string> = { infra: '#06b6d4', data: '#3b82f6', comms: '#a855f7', support: '#f59e0b', monitoring: '#22c55e' };
@@ -22,18 +25,33 @@ export default function GoLiveChecklistScreen() {
   const progress = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="rocket" size={48} color="#ef4444" />
-          <Text style={s.heroT}>Canlıya Alma Günü Kontrolü</Text>
-          <Text style={s.heroD}>Production go-live için son kontroller</Text>
-        </View>
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>%{progress}</Text><Text style={s.statL}>Tamamlanan</Text></View>
-          <View style={[s.statBox, { borderColor: '#3b82f6' }]}><Text style={[s.statV, { color: '#3b82f6' }]}>{stats.done}/{stats.total}</Text><Text style={s.statL}>Madde</Text></View>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.criticalOpen}</Text><Text style={s.statL}>Kritik Açık</Text></View>
-        </View>
-        {items.map(i => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="rocket" size={48} color="#ef4444" />
+              <Text style={s.heroT}>Canlıya Alma Günü Kontrolü</Text>
+              <Text style={s.heroD}>Production go-live için son kontroller</Text>
+            </View>
+            <View style={s.statRow}>
+              <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>%{progress}</Text><Text style={s.statL}>Tamamlanan</Text></View>
+              <View style={[s.statBox, { borderColor: '#3b82f6' }]}><Text style={[s.statV, { color: '#3b82f6' }]}>{stats.done}/{stats.total}</Text><Text style={s.statL}>Madde</Text></View>
+              <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.criticalOpen}</Text><Text style={s.statL}>Kritik Açık</Text></View>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="rocket-outline"
+            title="Madde yok"
+            subtitle="Canlıya alma kontrol listesi bulunamadı."
+          />
+        }
+        renderItem={({ item: i }) => (
           <View key={i.id} style={[s.card, { borderLeftColor: i.done ? '#22c55e' : i.critical ? '#ef4444' : '#f59e0b' }]}>
             <Ionicons name={i.done ? 'checkmark-circle' : i.critical ? 'alert-circle' : 'ellipse-outline'} size={22} color={i.done ? '#22c55e' : i.critical ? '#ef4444' : '#64748b'} />
             <View style={{ flex: 1 }}>
@@ -47,8 +65,8 @@ export default function GoLiveChecklistScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

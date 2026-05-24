@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaConsoleLogs, toggleQaConsoleStatus, QA_STATUS_COLOR, QA_STATUS_LABEL } from '../services/codeQuality';
 import type { QaConsoleLog } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const LEVEL_COLOR: Record<QaConsoleLog['level'], string> = { error: '#ef4444', warn: '#f59e0b', info: '#0ea5e9' };
 const LEVEL_ICON: Record<QaConsoleLog['level'], string> = { error: 'close-circle', warn: 'warning', info: 'information-circle' };
@@ -24,14 +27,26 @@ export default function QaConsoleScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{counts.open}</Text><Text style={s.statL}>Açık</Text></View>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{counts.fixed}</Text><Text style={s.statL}>Düzeltildi</Text></View>
-          <View style={[s.statBox, { borderColor: '#64748b' }]}><Text style={[s.statV, { color: '#64748b' }]}>{counts.ignored}</Text><Text style={s.statL}>Yoksayıldı</Text></View>
-        </View>
-
-        {items.map(l => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={l => l.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.statRow}>
+            <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{counts.open}</Text><Text style={s.statL}>Açık</Text></View>
+            <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{counts.fixed}</Text><Text style={s.statL}>Düzeltildi</Text></View>
+            <View style={[s.statBox, { borderColor: '#64748b' }]}><Text style={[s.statV, { color: '#64748b' }]}>{counts.ignored}</Text><Text style={s.statL}>Yoksayıldı</Text></View>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="terminal-outline"
+            title="Log kaydı yok"
+            subtitle="Konsol çıktıları veya uygulama hataları burada listelenir."
+          />
+        }
+        renderItem={({ item: l }) => (
           <View key={l.id} style={[s.card, { borderLeftColor: QA_STATUS_COLOR[l.status], opacity: l.status === 'ignored' ? 0.55 : 1 }]}>
             <View style={s.headRow}>
               <Ionicons name={LEVEL_ICON[l.level] as any} size={20} color={LEVEL_COLOR[l.level]} />
@@ -52,8 +67,8 @@ export default function QaConsoleScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

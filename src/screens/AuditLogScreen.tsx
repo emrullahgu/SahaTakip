@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
 import { auditRepo, AuditLogRow } from '../services/data/auditRepo';
 import { isOnlineMode } from '../services/data';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 function fmt(iso: string) {
   try { const d = new Date(iso); return d.toLocaleString('tr-TR'); } catch { return iso; }
@@ -78,15 +80,17 @@ export default function AuditLogScreen() {
         <View style={styles.empty}><ActivityIndicator color="#22c55e" /></View>
       ) : (
         <FlatList
+          {...FLATLIST_DEFAULTS}
           data={filtered}
           keyExtractor={(r) => r.id}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#22c55e" />}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="document-text-outline" size={48} color={colors.text.faint} />
-              <Text style={styles.emptyText}>Kayıt bulunamadı.</Text>
-            </View>
+            <EmptyState
+              icon="document-text-outline"
+              title="Kayıt bulunamadı"
+              subtitle="Arama kriterlerini değiştirerek tekrar deneyebilirsiniz."
+            />
           }
           renderItem={({ item }) => {
             const c = actionColor(item.action);

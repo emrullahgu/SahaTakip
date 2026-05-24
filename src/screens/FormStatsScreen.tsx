@@ -10,6 +10,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, FormResponse, FormTemplate } from '../types';
 import { listResponses } from '../services/formResponses';
 import { listTemplates } from '../services/formTemplates';
+import MiniBarChart from '../components/MiniBarChart';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -90,50 +91,22 @@ export default function FormStatsScreen() {
         </View>
 
         <Text style={styles.section}>Kategori Bazlı</Text>
-        {byCategory.length === 0 ? (
-          <Text style={styles.empty}>Henüz veri yok</Text>
-        ) : (
-          byCategory.map(c => (
-            <View key={c.category} style={styles.barRow}>
-              <View style={[styles.dot, { backgroundColor: catColor(c.category) }]} />
-              <View style={{ flex: 1 }}>
-                <View style={styles.barTopRow}>
-                  <Text style={styles.barLabel}>{c.category}</Text>
-                  <Text style={styles.barCount}>{c.count}</Text>
-                </View>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { width: `${(c.count / maxCat) * 100}%`, backgroundColor: catColor(c.category) }]} />
-                </View>
-              </View>
-            </View>
-          ))
-        )}
+        <MiniBarChart
+          data={byCategory.map(c => ({
+            label: c.category,
+            value: c.count,
+            color: catColor(c.category),
+          }))}
+        />
 
         <Text style={styles.section}>Şablon Bazlı (en çok kullanılan)</Text>
-        {byTemplate.filter(t => t.count > 0).length === 0 ? (
-          <Text style={styles.empty}>Henüz şablon kullanımı yok</Text>
-        ) : (
-          byTemplate.filter(t => t.count > 0).map(t => (
-            <TouchableOpacity
-              key={t.templateId}
-              style={styles.tplRow}
-              activeOpacity={0.85}
-              onPress={() => nav.navigate('FormResponses', { templateId: t.templateId })}
-            >
-              <View style={[styles.tplBadge, { backgroundColor: catColor(t.category) }]}>
-                <Text style={styles.tplBadgeText}>{t.count}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.tplName} numberOfLines={1}>{t.name}</Text>
-                <Text style={styles.tplMeta}>{t.category}{t.lastUpdated ? ` · ${new Date(t.lastUpdated).toLocaleDateString('tr-TR')}` : ''}</Text>
-                <View style={[styles.barTrack, { marginTop: 4 }]}>
-                  <View style={[styles.barFill, { width: `${(t.count / maxTpl) * 100}%`, backgroundColor: catColor(t.category) }]} />
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
-            </TouchableOpacity>
-          ))
-        )}
+        <MiniBarChart
+          data={byTemplate.filter(t => t.count > 0).map(t => ({
+            label: t.name,
+            value: t.count,
+            color: catColor(t.category),
+          }))}
+        />
       </ScrollView>
     </SafeAreaView>
   );

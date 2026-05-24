@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaTypes } from '../services/codeQuality';
 import type { QaTypeIssue } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const KIND_LABEL: Record<QaTypeIssue['kind'], string> = { 'any': 'any', 'implicit-any': 'implicit any', 'missing-return': 'eksik return', 'unused-type': 'kullanılmayan tip', 'loose-cast': 'gevşek cast' };
 const KIND_COLOR: Record<QaTypeIssue['kind'], string> = { 'any': '#ef4444', 'implicit-any': '#f59e0b', 'missing-return': '#a855f7', 'unused-type': '#64748b', 'loose-cast': '#ec4899' };
@@ -22,14 +25,26 @@ export default function QaTypesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="code-slash" size={48} color="#3b82f6" />
-          <Text style={s.heroT}>TypeScript Güçlendirme</Text>
-          <Text style={s.heroD}>{stats.fixed}/{stats.total} sorun çözüldü</Text>
-        </View>
-
-        {items.map(t => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={t => t.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="code-slash" size={48} color="#3b82f6" />
+            <Text style={s.heroT}>TypeScript Güçlendirme</Text>
+            <Text style={s.heroD}>{stats.fixed}/{stats.total} sorun çözüldü</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="code-outline"
+            title="Tip sorunu yok"
+            subtitle="Proje genelinde herhangi bir TypeScript tip ihlali bulunamadı."
+          />
+        }
+        renderItem={({ item: t }) => (
           <View key={t.id} style={[s.card, { borderLeftColor: t.fixed ? '#22c55e' : KIND_COLOR[t.kind] }]}>
             <View style={s.headRow}>
               <View style={[s.pill, { backgroundColor: KIND_COLOR[t.kind] + '33', borderColor: KIND_COLOR[t.kind] }]}>
@@ -40,8 +55,8 @@ export default function QaTypesScreen() {
             </View>
             <Text style={s.snippet}>{t.snippet}</Text>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -7,6 +7,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listFavorites, deleteFavorite, resetFavorites } from '../services/offline';
 import type { OfflineFavorite } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function FieldFavoritesScreen() {
   const nav = useNavigation<any>();
@@ -44,12 +46,21 @@ export default function FieldFavoritesScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         numColumns={2}
         columnWrapperStyle={{ gap: spacing.sm }}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz favori yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="star-outline"
+            title="Henüz favori yok"
+            subtitle="Sık kullandığınız ekranları buraya ekleyebilirsiniz."
+            actionLabel="Varsayılanları Yükle"
+            onAction={doReset}
+          />
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={[s.card, { borderLeftColor: item.color }]} onPress={() => launch(item)} onLongPress={() => doDelete(item)}>
             <View style={[s.iconWrap, { backgroundColor: item.color + '22' }]}>

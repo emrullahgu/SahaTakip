@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { getOp, resolveConflict } from '../services/offline';
 import type { OfflineOperation, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ConflictResolver'>;
 type R = RouteProp<RootStackParamList, 'ConflictResolver'>;
@@ -20,8 +21,20 @@ export default function ConflictResolverScreen() {
   const load = useCallback(async () => { setOp(await getOp(route.params.opId)); }, [route.params.opId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!op) return <SafeAreaView style={s.safe}><Text style={s.empty}>İşlem bulunamadı.</Text></SafeAreaView>;
-  if (op.status !== 'conflict') return <SafeAreaView style={s.safe}><Text style={s.empty}>Bu işlemde çakışma yok.</Text></SafeAreaView>;
+  if (!op) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <EmptyState icon="help-circle-outline" title="İşlem bulunamadı" subtitle="Bu işlem ID'sine sahip bir offline kayıt yok." />
+      </SafeAreaView>
+    );
+  }
+  if (op.status !== 'conflict') {
+    return (
+      <SafeAreaView style={s.safe}>
+        <EmptyState icon="checkmark-circle-outline" title="Çakışma yok" subtitle="Bu işlemde herhangi bir veri çakışması bulunmuyor." iconColor="#22c55e" />
+      </SafeAreaView>
+    );
+  }
 
   const choose = async (side: 'local' | 'remote') => {
     await resolveConflict(op.id, side);

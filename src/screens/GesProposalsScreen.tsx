@@ -1,6 +1,6 @@
 // GesProposalsScreen — POZ-DEV-226 GES teklif listesi
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, GesQuote } from '../types';
 import { listGesQuotes, deleteGesQuote, GES_TYPE_LABEL } from '../services/gesProposals';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -19,17 +21,31 @@ export default function GesProposalsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.content}>
-        <View style={s.headerRow}>
-          <Text style={s.title}>GES Teklifleri</Text>
-          <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('GesProposalForm')}>
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={s.addBtnText}>Yeni</Text>
-          </TouchableOpacity>
-        </View>
-        {items.length === 0 && <Text style={s.empty}>Henüz GES teklifi yok</Text>}
-        {items.map(q => (
-          <TouchableOpacity key={q.id} style={s.card} onPress={() => nav.navigate('GesProposalForm', { quoteId: q.id })}>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={q => q.id}
+        contentContainerStyle={s.content}
+        ListHeaderComponent={
+          <View style={s.headerRow}>
+            <Text style={s.title}>GES Teklifleri</Text>
+            <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('GesProposalForm')}>
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text style={s.addBtnText}>Yeni</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="sunny-outline"
+            title="Henüz GES teklifi yok"
+            subtitle="Güneş Enerji Santrali teklifi oluşturmak için Yeni butonuna basın."
+            actionLabel="+ Yeni GES Teklifi"
+            onAction={() => nav.navigate('GesProposalForm')}
+          />
+        }
+        renderItem={({ item: q }) => (
+          <TouchableOpacity style={s.card} onPress={() => nav.navigate('GesProposalForm', { quoteId: q.id })}>
             <View style={{ flex: 1 }}>
               <Text style={s.cardTitle}>{q.customerName || 'Müşteri'}</Text>
               <Text style={s.cardMeta}>{GES_TYPE_LABEL[q.input.type]} · {q.input.capacityKwp} kWp · {q.input.panelCount}× {q.input.panelWatt}W</Text>
@@ -46,8 +62,8 @@ export default function GesProposalsScreen() {
               <Ionicons name="trash-outline" size={16} color="#ef4444" />
             </TouchableOpacity>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

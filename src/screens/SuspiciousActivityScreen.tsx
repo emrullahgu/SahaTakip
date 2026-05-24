@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSuspicious, resolveSuspicious, SUS_SEV_LABEL, SUS_SEV_COLOR, SUS_TYPE_LABEL, SUS_TYPE_ICON } from '../services/secCenter';
 import type { SuspiciousActivity } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function SuspiciousActivityScreen() {
   const [list, setList] = useState<SuspiciousActivity[]>([]);
@@ -23,29 +26,43 @@ export default function SuspiciousActivityScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.summary}>
-          <View style={s.sumBox}>
-            <Text style={s.sumV}>{openCount}</Text>
-            <Text style={s.sumL}>Açık</Text>
-          </View>
-          <View style={[s.sumBox, { backgroundColor: '#ef444433' }]}>
-            <Text style={[s.sumV, { color: '#ef4444' }]}>{critical}</Text>
-            <Text style={s.sumL}>Kritik / Yüksek</Text>
-          </View>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={a => a.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.summary}>
+              <View style={s.sumBox}>
+                <Text style={s.sumV}>{openCount}</Text>
+                <Text style={s.sumL}>Açık</Text>
+              </View>
+              <View style={[s.sumBox, { backgroundColor: '#ef444433' }]}>
+                <Text style={[s.sumV, { color: '#ef4444' }]}>{critical}</Text>
+                <Text style={s.sumL}>Kritik / Yüksek</Text>
+              </View>
+            </View>
 
-        <View style={s.chips}>
-          {(['open', 'all', 'resolved'] as const).map(k => (
-            <TouchableOpacity key={k} style={[s.chip, filter === k && { backgroundColor: '#0ea5e9' }]} onPress={() => setFilter(k)}>
-              <Text style={[s.chipT, filter === k && { color: '#fff' }]}>
-                {k === 'open' ? 'Açık' : k === 'all' ? 'Tümü' : 'Çözüldü'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {filtered.map(a => (
+            <View style={s.chips}>
+              {(['open', 'all', 'resolved'] as const).map(k => (
+                <TouchableOpacity key={k} style={[s.chip, filter === k && { backgroundColor: '#0ea5e9' }]} onPress={() => setFilter(k)}>
+                  <Text style={[s.chipT, filter === k && { color: '#fff' }]}>
+                    {k === 'open' ? 'Açık' : k === 'all' ? 'Tümü' : 'Çözüldü'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="shield-checkmark-outline"
+            title="Şüpheli aktivite yok"
+            subtitle="Sistemde henüz bir anomali veya güvenlik ihlali tespit edilmedi."
+          />
+        }
+        renderItem={({ item: a }) => (
           <View key={a.id} style={[s.card, { borderLeftColor: SUS_SEV_COLOR[a.severity] }, a.resolved && { opacity: 0.55 }]}>
             <View style={s.row}>
               <View style={[s.iconBox, { backgroundColor: SUS_SEV_COLOR[a.severity] + '22', borderColor: SUS_SEV_COLOR[a.severity] }]}>
@@ -67,8 +84,8 @@ export default function SuspiciousActivityScreen() {
               </TouchableOpacity>
             )}
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -22,6 +22,9 @@ import {
   ensureSeeded,
 } from '../services/formTemplates';
 import { FormTemplate, FormTemplateCategory, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'FormTemplates'>;
 
@@ -114,53 +117,59 @@ export default function FormTemplatesScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.listContent}>
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={48} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Henüz şablon yok.</Text>
-          </View>
-        ) : (
-          filtered.map(t => (
-            <TouchableOpacity
-              key={t.id}
-              style={styles.card}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('FormBuilder', { templateId: t.id })}
-            >
-              <View style={styles.cardHead}>
-                <View
-                  style={[
-                    styles.iconBox,
-                    { backgroundColor: colors.indigo.bg, borderColor: colors.indigo.border },
-                  ]}
-                >
-                  <Ionicons
-                    name={CAT_ICON[t.category] ?? 'document-text-outline'}
-                    size={18}
-                    color={brand.blueLight}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardName}>{t.name || '(adsız şablon)'}</Text>
-                  <Text style={styles.cardMeta}>
-                    {t.category} · {t.fields.length} alan
-                    {t.isSeed ? ' · Hazır' : ''}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => onDelete(t)}
-                  style={styles.delBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
-                </TouchableOpacity>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={t => t.id}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-text-outline"
+            title="Henüz şablon yok"
+            subtitle="Bu kategoriye uygun form şablonu bulunamadı."
+            actionLabel="+ Yeni Şablon"
+            onAction={() => navigation.navigate('FormBuilder')}
+          />
+        }
+        renderItem={({ item: t }) => (
+          <TouchableOpacity
+            key={t.id}
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('FormBuilder', { templateId: t.id })}
+          >
+            <View style={styles.cardHead}>
+              <View
+                style={[
+                  styles.iconBox,
+                  { backgroundColor: colors.indigo.bg, borderColor: colors.indigo.border },
+                ]}
+              >
+                <Ionicons
+                  name={CAT_ICON[t.category] ?? 'document-text-outline'}
+                  size={18}
+                  color={brand.blueLight}
+                />
               </View>
-              {t.description ? <Text style={styles.cardDesc}>{t.description}</Text> : null}
-            </TouchableOpacity>
-          ))
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardName}>{t.name || '(adsız şablon)'}</Text>
+                <Text style={styles.cardMeta}>
+                  {t.category} · {t.fields.length} alan
+                  {t.isSeed ? ' · Hazır' : ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => onDelete(t)}
+                style={styles.delBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
+              </TouchableOpacity>
+            </View>
+            {t.description ? <Text style={styles.cardDesc}>{t.description}</Text> : null}
+          </TouchableOpacity>
         )}
-      </ScrollView>
+      />
     </SafeAreaView>
   );
 }

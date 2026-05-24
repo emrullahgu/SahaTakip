@@ -1,6 +1,6 @@
 // OsosReadingsScreen — POZ-DEV-247 OSOS sayaç okuma listesi + inline ekleme
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, OsosReading } from '../types';
 import { listReadings, addReading, deleteReading } from '../services/osos';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'OsosReadings'>;
@@ -46,31 +48,45 @@ export default function OsosReadingsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.content}>
-        <View style={s.formCard}>
-          <Text style={s.formTitle}>Hızlı Ekle</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TextInput style={[s.input, { flex: 2 }]} value={meterNo} onChangeText={setMN} placeholder="Sayaç No" placeholderTextColor={colors.text.faint} />
-            <TextInput style={[s.input, { flex: 1 }]} value={actImp} onChangeText={setImp} placeholder="Çekiş kWh" placeholderTextColor={colors.text.faint} keyboardType="numeric" />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TextInput style={[s.input, { flex: 1 }]} value={actExp} onChangeText={setExp} placeholder="Veriş kWh" placeholderTextColor={colors.text.faint} keyboardType="numeric" />
-            <TextInput style={[s.input, { flex: 1 }]} value={peak} onChangeText={setPeak} placeholder="Demand kW" placeholderTextColor={colors.text.faint} keyboardType="numeric" />
-          </View>
-          <TouchableOpacity style={s.addBtn} onPress={onAdd}>
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={s.addBtnText}>Ekle</Text>
-          </TouchableOpacity>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={r => r.id}
+        contentContainerStyle={s.content}
+        ListHeaderComponent={
+          <>
+            <View style={s.formCard}>
+              <Text style={s.formTitle}>Hızlı Ekle</Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TextInput style={[s.input, { flex: 2 }]} value={meterNo} onChangeText={setMN} placeholder="Sayaç No" placeholderTextColor={colors.text.faint} />
+                <TextInput style={[s.input, { flex: 1 }]} value={actImp} onChangeText={setImp} placeholder="Çekiş kWh" placeholderTextColor={colors.text.faint} keyboardType="numeric" />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TextInput style={[s.input, { flex: 1 }]} value={actExp} onChangeText={setExp} placeholder="Veriş kWh" placeholderTextColor={colors.text.faint} keyboardType="numeric" />
+                <TextInput style={[s.input, { flex: 1 }]} value={peak} onChangeText={setPeak} placeholder="Demand kW" placeholderTextColor={colors.text.faint} keyboardType="numeric" />
+              </View>
+              <TouchableOpacity style={s.addBtn} onPress={onAdd}>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={s.addBtnText}>Ekle</Text>
+              </TouchableOpacity>
+            </View>
 
-        <View style={s.headerRow}>
-          <Text style={s.title}>Okumalar ({items.length})</Text>
-          <TouchableOpacity onPress={() => nav.navigate('OsosImport')}>
-            <Text style={s.linkText}>CSV İçe Aktar →</Text>
-          </TouchableOpacity>
-        </View>
-        {items.length === 0 && <Text style={s.empty}>Okuma yok</Text>}
-        {items.map(r => (
+            <View style={s.headerRow}>
+              <Text style={s.title}>Okumalar ({items.length})</Text>
+              <TouchableOpacity onPress={() => nav.navigate('OsosImport')}>
+                <Text style={s.linkText}>CSV İçe Aktar →</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="speedometer-outline"
+            title="Okuma yok"
+            subtitle="Sayaç okumalarını manuel ekleyebilir veya CSV olarak içe aktarabilirsiniz."
+          />
+        }
+        renderItem={({ item: r }) => (
           <View key={r.id} style={s.card}>
             <View style={{ flex: 1 }}>
               <Text style={s.cardTitle}>{r.meterNo}</Text>
@@ -85,8 +101,8 @@ export default function OsosReadingsScreen() {
               <Ionicons name="trash-outline" size={16} color="#ef4444" />
             </TouchableOpacity>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

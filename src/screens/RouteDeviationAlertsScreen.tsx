@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { RouteDeviationAlert } from '../types';
 import { listDeviations, resolveDeviation } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function RouteDeviationAlertsScreen() {
   const [items, setItems] = useState<RouteDeviationAlert[]>([]);
@@ -31,9 +33,17 @@ export default function RouteDeviationAlertsScreen() {
         </View>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="warning-outline"
+            title="Rota sapması yok"
+            subtitle="Tüm personel planlanan rotada ilerliyor."
+          />
+        }
         renderItem={({ item }) => (
           <View style={[s.card, { borderLeftColor: item.resolved ? '#22c55e' : '#ef4444' }]}>
             <Ionicons name={item.resolved ? 'checkmark-circle' : 'warning'} size={22} color={item.resolved ? '#22c55e' : '#ef4444'} />

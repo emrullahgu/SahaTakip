@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listErasureJobs, addErasureJob, SEC_JOB_LABEL, SEC_JOB_COLOR } from '../services/secCenter';
 import type { DataErasureJob } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const SCOPES: DataErasureJob['scope'][] = ['full', 'anonymize', 'partial'];
 const SCOPE_LABEL: Record<DataErasureJob['scope'], string> = { full: 'Tam Silme', anonymize: 'Anonimleştirme', partial: 'Kısmi Silme' };
@@ -40,13 +43,27 @@ export default function DataErasureScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.warn}>
-          <Ionicons name="warning" size={24} color="#ef4444" />
-          <Text style={s.warnT}>Bu işlemler kalıcıdır ve geri alınamaz.</Text>
-        </View>
-
-        {list.map(j => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={list}
+        keyExtractor={j => j.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.warn}>
+            <Ionicons name="warning" size={24} color="#ef4444" />
+            <Text style={s.warnT}>Bu işlemler kalıcıdır ve geri alınamaz.</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="trash-outline"
+            title="Silme kaydı yok"
+            subtitle="Geçmiş veri silme/anonimleştirme talepleri burada listelenir."
+            actionLabel="+ Yeni İşlem"
+            onAction={() => setModal(true)}
+          />
+        }
+        renderItem={({ item: j }) => (
           <View key={j.id} style={[s.card, { borderLeftColor: SEC_JOB_COLOR[j.status] }]}>
             <View style={s.row}>
               <View style={[s.iconBox, { backgroundColor: SCOPE_COLOR[j.scope] + '22', borderColor: SCOPE_COLOR[j.scope] }]}>
@@ -65,8 +82,8 @@ export default function DataErasureScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       <TouchableOpacity style={s.fab} onPress={() => setModal(true)}>
         <Ionicons name="trash" size={26} color="#fff" />

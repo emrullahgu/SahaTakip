@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listGoLiveMonitor, GO_LIVE_HEALTH_COLOR } from '../services/goLive';
 import type { GoLiveMonitorCard } from '../types';
+import EmptyState from '../components/EmptyState';
 
 const TREND_ICON: Record<GoLiveMonitorCard['trend'], string> = { up: 'trending-up', down: 'trending-down', flat: 'remove' };
 const TREND_COLOR: Record<GoLiveMonitorCard['trend'], string> = { up: '#22c55e', down: '#ef4444', flat: '#64748b' };

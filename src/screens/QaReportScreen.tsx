@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { getQaKpi } from '../services/codeQuality';
 import type { QaQualityKpi } from '../types';
+import EmptyState from '../components/EmptyState';
 
 type KpiTile = { label: string; value: string; icon: string; color: string };
 
@@ -15,7 +16,11 @@ export default function QaReportScreen() {
   useFocusEffect(useCallback(() => { (async () => setKpi(await getQaKpi()))(); }, []));
 
   if (!kpi) {
-    return <SafeAreaView style={s.safe} edges={['bottom']}><View style={s.empty}><Ionicons name="hourglass" size={48} color={colors.text.muted} /><Text style={s.emptyT}>Yükleniyor…</Text></View></SafeAreaView>;
+    return (
+      <SafeAreaView style={s.safe} edges={['bottom']}>
+        <EmptyState icon="analytics-outline" title="Yükleniyor…" subtitle="Kalite KPI verileri hesaplanıyor." />
+      </SafeAreaView>
+    );
   }
 
   const tiles: KpiTile[] = [

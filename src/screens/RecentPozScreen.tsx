@@ -9,6 +9,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList } from '../types';
 import { listRecentPozes, RecentPoz } from '../services/recentPozes';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -71,6 +73,7 @@ export default function RecentPozScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={list}
         keyExtractor={item => item.pozId}
         renderItem={renderItem}
@@ -86,11 +89,11 @@ export default function RecentPozScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Henüz POZ kullanım kaydı yok</Text>
-            <Text style={styles.emptySub}>Bir teklif oluşturup POZ kullandıkça bu liste dolar.</Text>
-          </View>
+          <EmptyState
+            icon="document-text-outline"
+            title="Henüz kayıt yok"
+            subtitle="Teklif oluşturdukça kullanılan POZ'lar burada listelenir."
+          />
         }
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.text.muted} />}

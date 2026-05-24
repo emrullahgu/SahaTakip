@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDepErrors, toggleErrorFixed } from '../services/deploy';
 import type { DepBuildError } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const SEV_COLOR: Record<DepBuildError['severity'], string> = { error: '#ef4444', warning: '#f59e0b' };
 const SEV_ICON: Record<DepBuildError['severity'], string> = { error: 'close-circle', warning: 'warning' };
@@ -40,16 +43,28 @@ export default function DepBuildErrorsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>
-          {(['all', 'error', 'warning', 'open', 'fixed'] as Filter[]).map(f => (
-            <TouchableOpacity key={f} onPress={() => setFilter(f)} style={[s.tab, filter === f && s.tabActive]}>
-              <Text style={[s.tabT, filter === f && s.tabTActive]}>{f === 'all' ? 'Tümü' : f === 'error' ? 'Hata' : f === 'warning' ? 'Uyarı' : f === 'open' ? 'Açık' : 'Düzeltildi'} ({counts[f]})</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {filtered.map(e => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={e => e.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>
+            {(['all', 'error', 'warning', 'open', 'fixed'] as Filter[]).map(f => (
+              <TouchableOpacity key={f} onPress={() => setFilter(f)} style={[s.tab, filter === f && s.tabActive]}>
+                <Text style={[s.tabT, filter === f && s.tabTActive]}>{f === 'all' ? 'Tümü' : f === 'error' ? 'Hata' : f === 'warning' ? 'Uyarı' : f === 'open' ? 'Açık' : 'Düzeltildi'} ({counts[f]})</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title="Sorun yok"
+            subtitle="Bu filtreye uygun derleme hatası veya uyarısı bulunamadı."
+          />
+        }
+        renderItem={({ item: e }) => (
           <View key={e.id} style={[s.card, { borderLeftColor: e.fixed ? '#22c55e' : SEV_COLOR[e.severity], opacity: e.fixed ? 0.6 : 1 }]}>
             <View style={s.headRow}>
               <Ionicons name={e.fixed ? 'checkmark-done-circle' : SEV_ICON[e.severity] as any} size={20} color={e.fixed ? '#22c55e' : SEV_COLOR[e.severity]} />
@@ -72,15 +87,8 @@ export default function DepBuildErrorsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-
-        {filtered.length === 0 && (
-          <View style={s.empty}>
-            <Ionicons name="checkmark-circle" size={48} color="#22c55e" />
-            <Text style={s.emptyT}>Bu filtrede kayıt yok</Text>
-          </View>
         )}
-      </ScrollView>
+      />
     </SafeAreaView>
   );
 }

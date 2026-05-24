@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaUnusedFiles } from '../services/codeQuality';
 import type { QaUnusedFile } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const KIND_LABEL: Record<QaUnusedFile['kind'], string> = { component: 'Component', hook: 'Hook', service: 'Servis', util: 'Util', screen: 'Ekran', type: 'Tip' };
 const KIND_COLOR: Record<QaUnusedFile['kind'], string> = { component: '#0ea5e9', hook: '#a855f7', service: '#22c55e', util: '#f59e0b', screen: '#ec4899', type: '#3b82f6' };
@@ -24,14 +27,26 @@ export default function QaUnusedScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="trash" size={48} color="#f59e0b" />
-          <Text style={s.heroT}>Kullanılmayan Kod</Text>
-          <Text style={s.heroD}>{stats.total} dosya • {stats.removable} silinebilir • toplam {stats.totalKb.toFixed(1)} KB</Text>
-        </View>
-
-        {items.map(f => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={f => f.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="trash" size={48} color="#f59e0b" />
+            <Text style={s.heroT}>Kullanılmayan Kod</Text>
+            <Text style={s.heroD}>{stats.total} dosya • {stats.removable} silinebilir • toplam {stats.totalKb.toFixed(1)} KB</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="trash-outline"
+            title="Kullanılmayan dosya yok"
+            subtitle="Tüm dosyalar uygulama içerisinde en az bir kez kullanılıyor."
+          />
+        }
+        renderItem={({ item: f }) => (
           <View key={f.id} style={[s.card, { borderLeftColor: f.removable ? '#ef4444' : '#f59e0b' }]}>
             <View style={s.headRow}>
               <Ionicons name={KIND_ICON[f.kind] as any} size={20} color={KIND_COLOR[f.kind]} />
@@ -48,8 +63,8 @@ export default function QaUnusedScreen() {
               <Text style={[s.tagT, { color: f.removable ? '#ef4444' : '#f59e0b' }]}>{f.removable ? 'Silinebilir' : 'Manuel inceleme gerekli'}</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

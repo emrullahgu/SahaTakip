@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaApiErrors, toggleQaApiRule } from '../services/codeQuality';
 import type { QaApiErrorRule } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const CAT_LABEL: Record<QaApiErrorRule['category'], string> = { network: 'Ağ', auth: 'Yetki', validation: 'Doğrulama', server: 'Sunucu', timeout: 'Zaman Aşımı' };
 const CAT_COLOR: Record<QaApiErrorRule['category'], string> = { network: '#f59e0b', auth: '#ef4444', validation: '#3b82f6', server: '#a855f7', timeout: '#ec4899' };
@@ -18,14 +21,26 @@ export default function QaApiErrorsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="cloud-offline" size={48} color="#a855f7" />
-          <Text style={s.heroT}>API Hata Yönetimi</Text>
-          <Text style={s.heroD}>Standart hata mesajları, yeniden deneme stratejisi ve kategorize raporlama</Text>
-        </View>
-
-        {items.map(r => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={r => r.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="cloud-offline" size={48} color="#a855f7" />
+            <Text style={s.heroT}>API Hata Yönetimi</Text>
+            <Text style={s.heroD}>Standart hata mesajları, yeniden deneme stratejisi ve kategorize raporlama</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="alert-circle-outline"
+            title="Kural yok"
+            subtitle="Sistemde henüz bir API hata kuralı tanımlanmadı."
+          />
+        }
+        renderItem={({ item: r }) => (
           <View key={r.id} style={[s.card, { borderLeftColor: CAT_COLOR[r.category], opacity: r.enabled ? 1 : 0.55 }]}>
             <View style={s.headRow}>
               <View style={[s.pill, { backgroundColor: CAT_COLOR[r.category] + '33', borderColor: CAT_COLOR[r.category] }]}>
@@ -44,8 +59,8 @@ export default function QaApiErrorsScreen() {
               <Text style={s.hits}>{r.hits.toLocaleString('tr-TR')} olay</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

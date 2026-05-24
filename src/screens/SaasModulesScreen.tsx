@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSaasModules, toggleSaasModule, SAAS_PLAN_LABEL, SAAS_PLAN_COLOR } from '../services/saas';
 import type { SaasModuleToggle } from '../types';
+import EmptyState from '../components/EmptyState';
 
 const CAT_LABEL: Record<SaasModuleToggle['category'], string> = {
   core: 'Çekirdek', finance: 'Finans', field: 'Saha', analytics: 'Analitik', integration: 'Entegrasyon', ai: 'AI',
@@ -40,7 +41,13 @@ export default function SaasModulesScreen() {
           <Text style={s.heroD}>{enabledCount} / {items.length} modül aktif</Text>
         </View>
 
-        {Object.entries(grouped).map(([cat, list]) => {
+        {items.length === 0 ? (
+          <EmptyState
+            icon="apps-outline"
+            title="Modül bulunamadı"
+            subtitle="Sistemde yapılandırılabilecek modül kaydı bulunmuyor."
+          />
+        ) : Object.entries(grouped).map(([cat, list]) => {
           const c = CAT_COLOR[cat as SaasModuleToggle['category']];
           return (
             <View key={cat} style={{ gap: 6 }}>

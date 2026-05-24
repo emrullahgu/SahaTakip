@@ -7,13 +7,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { QualityDashboardStat } from '../types';
 import { computeQualityDashboard, NC_KIND_LABEL, NC_KIND_COLOR, NC_STATUS_LABEL, NC_STATUS_COLOR } from '../services/quality';
+import MiniBarChart from '../components/MiniBarChart';
+import EmptyState from '../components/EmptyState';
 
 export default function QualityDashboardScreen() {
   const [stat, setStat] = useState<QualityDashboardStat | null>(null);
   const load = useCallback(async () => { setStat(await computeQualityDashboard()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!stat) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  if (!stat) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <EmptyState icon="analytics-outline" title="Yükleniyor..." subtitle="Kalite verileri analiz ediliyor." />
+      </SafeAreaView>
+    );
+  }
 
   const totalKind = stat.byKind.reduce((a, b) => a + b.count, 0) || 1;
   const maxStatus = Math.max(1, ...stat.byStatus.map(b => b.count));
@@ -57,30 +65,24 @@ export default function QualityDashboardScreen() {
 
         <View style={s.bigCard}>
           <Text style={s.cardT}>Türe Göre Dağılım</Text>
-          {stat.byKind.map(k => (
-            <View key={k.kind} style={s.distRow}>
-              <View style={[s.dot, { backgroundColor: NC_KIND_COLOR[k.kind] }]} />
-              <Text style={s.distL}>{NC_KIND_LABEL[k.kind]}</Text>
-              <View style={s.distBar}>
-                <View style={[s.distFill, { width: `${(k.count / totalKind) * 100}%`, backgroundColor: NC_KIND_COLOR[k.kind] }]} />
-              </View>
-              <Text style={s.distV}>{k.count}</Text>
-            </View>
-          ))}
+          <MiniBarChart
+            data={stat.byKind.map(k => ({
+              label: NC_KIND_LABEL[k.kind],
+              value: k.count,
+              color: NC_KIND_COLOR[k.kind],
+            }))}
+          />
         </View>
 
         <View style={s.bigCard}>
           <Text style={s.cardT}>Durum Dağılımı</Text>
-          {stat.byStatus.map(st => (
-            <View key={st.status} style={s.distRow}>
-              <View style={[s.dot, { backgroundColor: NC_STATUS_COLOR[st.status] }]} />
-              <Text style={s.distL}>{NC_STATUS_LABEL[st.status]}</Text>
-              <View style={s.distBar}>
-                <View style={[s.distFill, { width: `${(st.count / maxStatus) * 100}%`, backgroundColor: NC_STATUS_COLOR[st.status] }]} />
-              </View>
-              <Text style={s.distV}>{st.count}</Text>
-            </View>
-          ))}
+          <MiniBarChart
+            data={stat.byStatus.map(st => ({
+              label: NC_STATUS_LABEL[st.status],
+              value: st.count,
+              color: NC_STATUS_COLOR[st.status],
+            }))}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

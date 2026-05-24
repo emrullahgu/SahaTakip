@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { PersonnelAvailabilityRecord, PersonnelLiveStatus } from '../types';
 import { listPersonnel, setPersonnelStatus, STATUS_COLOR, STATUS_LABEL } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const STATUSES: PersonnelLiveStatus[] = ['available', 'on_job', 'break', 'offline'];
 
@@ -36,9 +38,17 @@ export default function PersonnelAvailabilityScreen() {
         ))}
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="people-outline"
+            title="Personel verisi yok"
+            subtitle="Canlı takip sisteminde kayıtlı personel bulunamadı."
+          />
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={[s.card, { borderLeftColor: STATUS_COLOR[item.status] }]} onPress={() => setEditing(item)}>
             <View style={[s.avatar, { backgroundColor: STATUS_COLOR[item.status] }]}>

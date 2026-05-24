@@ -12,7 +12,7 @@ import {
   Alert,
   TextInput,
   Switch,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -38,6 +38,8 @@ import {
   ReportPeriod,
   RootStackParamList,
 } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Reports'>;
 
@@ -112,117 +114,127 @@ export default function ReportsScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.section}>Yeni Rapor Oluştur</Text>
-        <View style={styles.actionRow}>
-          {PERIODS.map(p => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={r => r.id}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.section}>Yeni Rapor Oluştur</Text>
+            <View style={styles.actionRow}>
+              {PERIODS.map(p => (
+                <TouchableOpacity
+                  key={p.kind}
+                  style={[styles.actionBtn, { borderColor: p.color }]}
+                  onPress={() => onGenerate(p.kind)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name={p.icon} size={18} color={p.color} />
+                  <Text style={[styles.actionText, { color: p.color }]}>{p.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.linkRow}>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => navigation.navigate('Dashboard')}
+              >
+                <Ionicons name="speedometer-outline" size={16} color={brand.blueLight} />
+                <Text style={styles.linkText}>Dashboard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => generateAndShareActivityPdf(new Date().toISOString().slice(0,10), workOrders, quotes)}
+              >
+                <Ionicons name="document-text-outline" size={16} color={brand.green} />
+                <Text style={styles.linkText}>Aktivite PDF</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => navigation.navigate('ExecutiveSummary')}
+              >
+                <Ionicons name="sparkles-outline" size={16} color="#a855f7" />
+                <Text style={styles.linkText}>Yönetim Özeti</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.section}>Otomatik</Text>
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Günlük Hatırlatma (18:00)</Text>
+                <Text style={styles.rowSub}>Her gün rapor üretimini hatırlatır.</Text>
+              </View>
+              <Switch
+                value={reminderOn}
+                onValueChange={toggleReminder}
+                trackColor={{ false: colors.border.primary, true: brand.green }}
+              />
+            </View>
+
+            <Text style={styles.label}>Haftalık E-posta</Text>
+            <View style={styles.emailRow}>
+              <TextInput
+                value={email}
+                onChangeText={setEmailState}
+                style={styles.input}
+                placeholder="ornek@firma.com"
+                placeholderTextColor={colors.text.faint}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+              <TouchableOpacity style={styles.saveBtn} onPress={saveEmail}>
+                <Ionicons name="save-outline" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.section}>Geçmiş Raporlar ({items.length})</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-text-outline"
+            title="Henüz rapor yok"
+            subtitle="Üstteki butonları kullanarak ilk raporunuzu oluşturabilirsiniz."
+            actionLabel="+ İlk Raporu Üret"
+            onAction={() => onGenerate('daily')}
+          />
+        }
+        renderItem={({ item: r }) => {
+          const m = periodMeta(r.period);
+          return (
             <TouchableOpacity
-              key={p.kind}
-              style={[styles.actionBtn, { borderColor: p.color }]}
-              onPress={() => onGenerate(p.kind)}
+              key={r.id}
+              style={styles.card}
+              onPress={() => navigation.navigate('ReportDetail', { reportId: r.id })}
+              onLongPress={() => onDelete(r)}
               activeOpacity={0.85}
             >
-              <Ionicons name={p.icon} size={18} color={p.color} />
-              <Text style={[styles.actionText, { color: p.color }]}>{p.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.linkRow}>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => navigation.navigate('Dashboard')}
-          >
-            <Ionicons name="speedometer-outline" size={16} color={brand.blueLight} />
-            <Text style={styles.linkText}>Dashboard</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => generateAndShareActivityPdf(new Date().toISOString().slice(0,10), workOrders, quotes)}
-          >
-            <Ionicons name="document-text-outline" size={16} color={brand.green} />
-            <Text style={styles.linkText}>Aktivite PDF</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => navigation.navigate('ExecutiveSummary')}
-          >
-            <Ionicons name="sparkles-outline" size={16} color="#a855f7" />
-            <Text style={styles.linkText}>Yönetim Özeti</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.section}>Otomatik</Text>
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Günlük Hatırlatma (18:00)</Text>
-            <Text style={styles.rowSub}>Her gün rapor üretimini hatırlatır.</Text>
-          </View>
-          <Switch
-            value={reminderOn}
-            onValueChange={toggleReminder}
-            trackColor={{ false: colors.border.primary, true: brand.green }}
-          />
-        </View>
-
-        <Text style={styles.label}>Haftalık E-posta</Text>
-        <View style={styles.emailRow}>
-          <TextInput
-            value={email}
-            onChangeText={setEmailState}
-            style={styles.input}
-            placeholder="ornek@firma.com"
-            placeholderTextColor={colors.text.faint}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TouchableOpacity style={styles.saveBtn} onPress={saveEmail}>
-            <Ionicons name="save-outline" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.section}>Geçmiş Raporlar ({items.length})</Text>
-        {items.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Henüz rapor yok.</Text>
-          </View>
-        ) : (
-          items.map(r => {
-            const m = periodMeta(r.period);
-            return (
-              <TouchableOpacity
-                key={r.id}
-                style={styles.card}
-                onPress={() => navigation.navigate('ReportDetail', { reportId: r.id })}
-                onLongPress={() => onDelete(r)}
-                activeOpacity={0.85}
+              <View
+                style={[
+                  styles.icon,
+                  { borderColor: m.color, backgroundColor: m.color + '22' },
+                ]}
               >
-                <View
-                  style={[
-                    styles.icon,
-                    { borderColor: m.color, backgroundColor: m.color + '22' },
-                  ]}
-                >
-                  <Ionicons name={m.icon} size={16} color={m.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>
-                    {m.label} · {r.startDate}
-                    {r.startDate !== r.endDate ? ` → ${r.endDate}` : ''}
-                  </Text>
-                  <Text style={styles.cardMeta}>
-                    {r.kpi.workOrdersTotal} iş · ciro{' '}
-                    {r.kpi.revenue.toLocaleString('tr-TR')} ₺
-                    {r.kpi.slaBreaches > 0 ? ` · ${r.kpi.slaBreaches} SLA ihlali` : ''}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                <Ionicons name={m.icon} size={16} color={m.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>
+                  {m.label} · {r.startDate}
+                  {r.startDate !== r.endDate ? ` → ${r.endDate}` : ''}
+                </Text>
+                <Text style={styles.cardMeta}>
+                  {r.kpi.workOrdersTotal} iş · ciro{' '}
+                  {r.kpi.revenue.toLocaleString('tr-TR')} ₺
+                  {r.kpi.slaBreaches > 0 ? ` · ${r.kpi.slaBreaches} SLA ihlali` : ''}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+            </TouchableOpacity>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

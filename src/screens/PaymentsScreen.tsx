@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -24,6 +24,8 @@ import {
   PAYMENT_STATUS_LABEL,
 } from '../services/payments';
 import { Payment, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Payments'>;
 type Rt = RouteProp<RootStackParamList, 'Payments'>;
@@ -147,59 +149,67 @@ export default function PaymentsScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={p => p.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-      >
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="cash-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Tahsilat yok.</Text>
-          </View>
-        ) : (
-          filtered.map(p => {
-            const m = PAYMENT_METHODS.find(x => x.value === p.method);
-            return (
-              <TouchableOpacity
-                key={p.id}
-                style={styles.card}
-                onPress={() => navigation.navigate('PaymentDetail', { paymentId: p.id })}
-                onLongPress={() => onLongPress(p)}
-                activeOpacity={0.85}
+        ListEmptyComponent={
+          <EmptyState
+            icon="cash-outline"
+            title="Tahsilat yok"
+            subtitle="Filtreyi değiştirerek tekrar deneyebilir veya yeni bir tahsilat ekleyebilirsiniz."
+            actionLabel="+ Yeni Tahsilat"
+            onAction={() =>
+              navigation.navigate('PaymentForm', {
+                customerId: filterCustomerId,
+                workOrderId: filterWorkOrderId,
+              })
+            }
+          />
+        }
+        renderItem={({ item: p }) => {
+          const m = PAYMENT_METHODS.find(x => x.value === p.method);
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate('PaymentDetail', { paymentId: p.id })}
+              onLongPress={() => onLongPress(p)}
+              activeOpacity={0.85}
+            >
+              <View
+                style={[
+                  styles.iconWrap,
+                  { backgroundColor: STATUS_COLOR[p.status] + '22' },
+                ]}
               >
-                <View
-                  style={[
-                    styles.iconWrap,
-                    { backgroundColor: STATUS_COLOR[p.status] + '22' },
-                  ]}
-                >
-                  <Ionicons
-                    name={(m?.icon ?? 'cash-outline') as keyof typeof Ionicons.glyphMap}
-                    size={18}
-                    color={STATUS_COLOR[p.status]}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {p.customerName}
-                  </Text>
-                  <Text style={styles.cardSub} numberOfLines={1}>
-                    {p.receiptNo} · {fmtDate(p.receivedAt)} · {m?.label ?? p.method}
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.amount, { color: STATUS_COLOR[p.status] }]}>
-                    {fmtMoney(p.amount)}
-                  </Text>
-                  <Text style={[styles.statusChip, { color: STATUS_COLOR[p.status] }]}>
-                    {PAYMENT_STATUS_LABEL[p.status]}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                <Ionicons
+                  name={(m?.icon ?? 'cash-outline') as keyof typeof Ionicons.glyphMap}
+                  size={18}
+                  color={STATUS_COLOR[p.status]}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {p.customerName}
+                </Text>
+                <Text style={styles.cardSub} numberOfLines={1}>
+                  {p.receiptNo} · {fmtDate(p.receivedAt)} · {m?.label ?? p.method}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.amount, { color: STATUS_COLOR[p.status] }]}>
+                  {fmtMoney(p.amount)}
+                </Text>
+                <Text style={[styles.statusChip, { color: STATUS_COLOR[p.status] }]}>
+                  {PAYMENT_STATUS_LABEL[p.status]}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

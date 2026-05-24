@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSaasInvoices, listSaasSubscriptions, markInvoicePaid, SAAS_STATUS_LABEL, SAAS_STATUS_COLOR, SAAS_PLAN_LABEL, SAAS_PLAN_COLOR } from '../services/saas';
 import type { SaasInvoice, SaasSubscription } from '../types';
+import EmptyState from '../components/EmptyState';
 
 const fmtTL = (n: number) => `₺${n.toLocaleString('tr-TR')}`;
 const fmtDate = (s: string) => new Date(s).toLocaleDateString('tr-TR');
@@ -63,7 +64,13 @@ export default function SaasBillingScreen() {
           </TouchableOpacity>
         </View>
 
-        {tab === 'subs' && subs.map(sub => (
+        {tab === 'subs' && (subs.length === 0 ? (
+          <EmptyState
+            icon="card-outline"
+            title="Abonelik yok"
+            subtitle="Aktif veya pasif bir abonelik kaydı bulunmuyor."
+          />
+        ) : subs.map(sub => (
           <View key={sub.id} style={[s.card, { borderLeftColor: SAAS_STATUS_COLOR[sub.status] }]}>
             <View style={s.headRow}>
               <View style={{ flex: 1 }}>
@@ -86,9 +93,15 @@ export default function SaasBillingScreen() {
               <Text style={[s.mrr, { color: '#22c55e' }]}>{fmtTL(sub.mrr)}/ay</Text>
             </View>
           </View>
-        ))}
+        )))}
 
-        {tab === 'invoices' && invs.map(i => (
+        {tab === 'invoices' && (invs.length === 0 ? (
+          <EmptyState
+            icon="document-text-outline"
+            title="Fatura yok"
+            subtitle="Henüz oluşturulmuş bir fatura kaydı bulunmuyor."
+          />
+        ) : invs.map(i => (
           <View key={i.id} style={[s.card, { borderLeftColor: SAAS_STATUS_COLOR[i.status] }]}>
             <View style={s.headRow}>
               <View style={{ flex: 1 }}>
@@ -112,7 +125,7 @@ export default function SaasBillingScreen() {
               </TouchableOpacity>
             )}
           </View>
-        ))}
+        )))}
       </ScrollView>
     </SafeAreaView>
   );

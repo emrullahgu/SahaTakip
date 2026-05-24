@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { LiveOpsEntity, LiveOpsEntityKind } from '../types';
 import { listEntities, ENTITY_COLOR, ENTITY_ICON, ENTITY_LABEL } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const KINDS: (LiveOpsEntityKind | 'all')[] = ['all', 'personnel', 'vehicle', 'job', 'site'];
 
@@ -51,9 +53,17 @@ export default function LiveOpsMapScreen() {
         </View>
       )}
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="map-outline"
+            title="Varlık bulunamadı"
+            subtitle="Haritada gösterilecek canlı veri mevcut değil."
+          />
+        }
         renderItem={({ item }) => (
           <View style={[s.card, { borderLeftColor: ENTITY_COLOR[item.kind] }]}>
             <Ionicons name={ENTITY_ICON[item.kind] as any} size={20} color={ENTITY_COLOR[item.kind]} />

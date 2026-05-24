@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDocChecklist, listDocTrChars } from '../services/docs';
 import type { DocChecklistItem, DocTrCharCheck } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const CAT_LABEL: Record<DocChecklistItem['category'], string> = { data: 'Veri', permission: 'Yetki', integration: 'Entegrasyon', training: 'Eğitim', translation: 'Türkçe' };
 const CAT_COLOR: Record<DocChecklistItem['category'], string> = { data: '#3b82f6', permission: '#ef4444', integration: '#06b6d4', training: '#a855f7', translation: '#f59e0b' };
@@ -35,22 +38,36 @@ export default function DocChecklistScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="checkbox" size={48} color="#3b82f6" />
-          <Text style={s.heroT}>Canlı Kullanım Öncesi Kontrol</Text>
-          <Text style={s.heroD}>Yayın öncesi eğitim ve kabul kontrolü</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="checkbox" size={48} color="#3b82f6" />
+              <Text style={s.heroT}>Canlı Kullanım Öncesi Kontrol</Text>
+              <Text style={s.heroD}>Yayın öncesi eğitim ve kabul kontrolü</Text>
+            </View>
 
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>%{progress}</Text><Text style={s.statL}>Tamamlanan</Text></View>
-          <View style={[s.statBox, { borderColor: '#3b82f6' }]}><Text style={[s.statV, { color: '#3b82f6' }]}>{stats.done}/{stats.total}</Text><Text style={s.statL}>Madde</Text></View>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.criticalOpen}</Text><Text style={s.statL}>Kritik Açık</Text></View>
-        </View>
+            <View style={s.statRow}>
+              <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>%{progress}</Text><Text style={s.statL}>Tamamlanan</Text></View>
+              <View style={[s.statBox, { borderColor: '#3b82f6' }]}><Text style={[s.statV, { color: '#3b82f6' }]}>{stats.done}/{stats.total}</Text><Text style={s.statL}>Madde</Text></View>
+              <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.criticalOpen}</Text><Text style={s.statL}>Kritik Açık</Text></View>
+            </View>
 
-        <Text style={s.sectionT}>Kontrol Maddeleri</Text>
-
-        {items.map(i => (
+            <Text style={s.sectionT}>Kontrol Maddeleri</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="checkbox-outline"
+            title="Madde yok"
+            subtitle="Henüz bir kontrol listesi maddesi tanımlanmadı."
+          />
+        }
+        renderItem={({ item: i }) => (
           <View key={i.id} style={[s.card, { borderLeftColor: i.done ? '#22c55e' : i.critical ? '#ef4444' : '#f59e0b' }]}>
             <Ionicons name={i.done ? 'checkmark-circle' : i.critical ? 'alert-circle' : 'ellipse-outline'} size={22} color={i.done ? '#22c55e' : i.critical ? '#ef4444' : '#64748b'} />
             <View style={{ flex: 1 }}>
@@ -68,18 +85,20 @@ export default function DocChecklistScreen() {
               </View>
             </View>
           </View>
-        ))}
-
-        <Text style={s.sectionT}>Türkçe Karakter Kontrolleri ({stats.charsOk}/{stats.charsTotal} OK)</Text>
-
-        {chars.map(c => (
-          <View key={c.id} style={[s.charCard, { borderLeftColor: c.ok ? '#22c55e' : '#ef4444' }]}>
-            <Ionicons name={c.ok ? 'checkmark-circle' : 'close-circle'} size={18} color={c.ok ? '#22c55e' : '#ef4444'} />
-            <Text style={s.charFile} numberOfLines={1}>{c.file}</Text>
-            <Text style={s.charMeta}>{c.total} string{c.issues > 0 ? ` • ${c.issues} sorun` : ''}</Text>
-          </View>
-        ))}
-      </ScrollView>
+        )}
+        ListFooterComponent={
+          <>
+            <Text style={s.sectionT}>Türkçe Karakter Kontrolleri ({stats.charsOk}/{stats.charsTotal} OK)</Text>
+            {chars.map(c => (
+              <View key={c.id} style={[s.charCard, { borderLeftColor: c.ok ? '#22c55e' : '#ef4444' }]}>
+                <Ionicons name={c.ok ? 'checkmark-circle' : 'close-circle'} size={18} color={c.ok ? '#22c55e' : '#ef4444'} />
+                <Text style={s.charFile} numberOfLines={1}>{c.file}</Text>
+                <Text style={s.charMeta}>{c.total} string{c.issues > 0 ? ` • ${c.issues} sorun` : ''}</Text>
+              </View>
+            ))}
+          </>
+        }
+      />
     </SafeAreaView>
   );
 }

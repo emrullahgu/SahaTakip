@@ -1,6 +1,6 @@
 // ProductItemsScreen — POZ-DEV-242 Ürün listesi + filtre/arama
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
@@ -11,6 +11,8 @@ import {
   listProductItems, deleteProductItem, filterProductItems,
   PRODUCT_ITEM_STATUS_LABEL, PRODUCT_ITEM_STATUS_COLOR,
 } from '../services/productItems';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'ProductItems'>;
@@ -41,10 +43,22 @@ export default function ProductItemsScreen() {
           <Tab key={st} label={PRODUCT_ITEM_STATUS_LABEL[st]} color={PRODUCT_ITEM_STATUS_COLOR[st]} active={status === st} onPress={() => setStatus(st)} count={items.filter(x => x.status === st).length} />
         ))}
       </ScrollView>
-      <ScrollView contentContainerStyle={s.content}>
-        {filtered.length === 0 && <Text style={s.empty}>Ürün yok</Text>}
-        {filtered.map(p => (
-          <TouchableOpacity key={p.id} style={s.card} onPress={() => nav.navigate('ProductItemDetail', { itemId: p.id })}>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.content}
+        ListEmptyComponent={
+          <EmptyState
+            icon="cube-outline"
+            title="Ürün bulunamadı"
+            subtitle="Filtreleri veya aramayı değiştirerek tekrar deneyebilirsiniz."
+            actionLabel="+ Yeni Ürün"
+            onAction={() => nav.navigate('ProductItemForm')}
+          />
+        }
+        renderItem={({ item: p }) => (
+          <TouchableOpacity style={s.card} onPress={() => nav.navigate('ProductItemDetail', { itemId: p.id })}>
             <View style={[s.statusStripe, { backgroundColor: PRODUCT_ITEM_STATUS_COLOR[p.status] }]} />
             <View style={{ flex: 1 }}>
               <View style={s.cardHead}>
@@ -63,8 +77,8 @@ export default function ProductItemsScreen() {
               <Ionicons name="trash-outline" size={16} color="#ef4444" />
             </TouchableOpacity>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

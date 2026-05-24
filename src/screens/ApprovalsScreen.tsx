@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { listApprovals, createApproval, APPROVAL_KIND_LABEL, APPROVAL_STATUS_LABEL, APPROVAL_STATUS_COLOR } from '../services/governance';
 import type { ApprovalRequest, ApprovalStatus, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Approvals'>;
 type R = RouteProp<RootStackParamList, 'Approvals'>;
@@ -47,17 +49,18 @@ export default function ApprovalsScreen() {
       </ScrollView>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 100 }}
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', marginTop: 40, gap: spacing.sm }}>
-            <Text style={s.empty}>Bu filtrede onay yok.</Text>
-            <TouchableOpacity style={s.seedBtn} onPress={seedDemo}>
-              <Ionicons name="flask-outline" size={16} color="#fff" />
-              <Text style={s.seedTxt}>Demo Onay Oluştur</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title="Bekleyen onay yok"
+            subtitle="Bu filtreye uygun onay talebi bulunamadı."
+            actionLabel="+ Demo Onay Oluştur"
+            onAction={seedDemo}
+          />
         }
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('ApprovalDetail', { requestId: item.id })}>

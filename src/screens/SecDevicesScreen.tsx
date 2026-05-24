@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDevices, revokeDevice } from '../services/secCenter';
 import type { SecDevice } from '../types';
+import EmptyState from '../components/EmptyState';
 
 const deviceIcon = (os: string) => {
   if (/iOS|macOS/i.test(os)) return 'logo-apple';
@@ -47,7 +48,13 @@ export default function SecDevicesScreen() {
           </View>
         </View>
 
-        {Object.entries(grouped).map(([user, devices]) => (
+        {list.length === 0 ? (
+          <EmptyState
+            icon="phone-portrait-outline"
+            title="Cihaz bulunamadı"
+            subtitle="Aktif oturumu olan bir cihaz kaydı bulunmuyor."
+          />
+        ) : Object.entries(grouped).map(([user, devices]) => (
           <View key={user} style={s.userBlock}>
             <Text style={s.user}>{user}</Text>
             {devices.map(d => {

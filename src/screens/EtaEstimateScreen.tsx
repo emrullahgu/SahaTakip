@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { EtaEstimateRecord } from '../types';
 import { listEta, calculateEta } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function EtaEstimateScreen() {
   const [items, setItems] = useState<EtaEstimateRecord[]>([]);
@@ -35,9 +37,17 @@ export default function EtaEstimateScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="time-outline"
+            title="Hesaplama yok"
+            subtitle="Varış süresi tahmini için yukarıdaki formu doldurun."
+          />
+        }
         renderItem={({ item }) => {
           const trafficPct = item.baseMin === 0 ? 0 : (item.trafficMin / item.baseMin) * 100;
           const cong = trafficPct > 50 ? '#ef4444' : trafficPct > 30 ? '#f59e0b' : '#22c55e';

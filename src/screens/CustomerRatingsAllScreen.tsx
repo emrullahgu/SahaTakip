@@ -10,6 +10,8 @@ import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, CustomerRating, Customer } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { listRatings } from '../services/customerRatings';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -77,6 +79,7 @@ export default function CustomerRatingsAllScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={rows}
         keyExtractor={r => r.customerId}
         renderItem={({ item }) => (
@@ -122,11 +125,11 @@ export default function CustomerRatingsAllScreen() {
           </>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="star-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Henüz puan kaydı yok</Text>
-            <Text style={styles.emptySub}>İş emri tamamlandığında müşteriden puan toplayın.</Text>
-          </View>
+          <EmptyState
+            icon="star-outline"
+            title="Henüz puan kaydı yok"
+            subtitle="İş emri tamamlandığında müşteriden puan toplayın."
+          />
         }
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.text.muted} />}

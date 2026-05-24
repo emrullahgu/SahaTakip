@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { SiteEventLog } from '../types';
 import { listEvents } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function SiteEventLogsScreen() {
   const [items, setItems] = useState<SiteEventLog[]>([]);
@@ -32,9 +34,17 @@ export default function SiteEventLogsScreen() {
         </View>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={sorted}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="calendar-outline"
+            title="Olay kaydı yok"
+            subtitle="Saha giriş/çıkış hareketleri burada listelenir."
+          />
+        }
         renderItem={({ item }) => {
           const isArr = item.kind === 'arrival';
           const c = isArr ? '#22c55e' : '#f59e0b';

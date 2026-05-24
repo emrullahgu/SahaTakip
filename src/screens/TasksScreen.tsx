@@ -1,6 +1,6 @@
 // TasksScreen — POZ-DEV-233 Görev listesi + filtre
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
@@ -12,6 +12,8 @@ import {
   TASK_STATUS_LABEL, TASK_STATUS_COLOR, TASK_STATUS_ORDER,
   TASK_PRIORITY_LABEL, TASK_PRIORITY_COLOR,
 } from '../services/tasks';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'Tasks'>;
@@ -55,10 +57,22 @@ export default function TasksScreen() {
           <Tab key={st} label={TASK_STATUS_LABEL[st]} color={TASK_STATUS_COLOR[st]} active={filterStatus === st} onPress={() => setFilterStatus(st)} count={items.filter(x => x.status === st).length} />
         ))}
       </ScrollView>
-      <ScrollView contentContainerStyle={s.content}>
-        {filtered.length === 0 && <Text style={s.empty}>Görev yok</Text>}
-        {filtered.map(t => (
-          <View key={t.id} style={s.card}>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={t => t.id}
+        contentContainerStyle={s.content}
+        ListEmptyComponent={
+          <EmptyState
+            icon="checkmark-done-outline"
+            title="Görev bulunamadı"
+            subtitle="Filtreleri değiştirerek tekrar deneyebilir veya yeni bir görev ekleyebilirsiniz."
+            actionLabel="+ Yeni Görev"
+            onAction={() => nav.navigate('TaskForm')}
+          />
+        }
+        renderItem={({ item: t }) => (
+          <View style={s.card}>
             <TouchableOpacity style={{ flex: 1 }} onPress={() => nav.navigate('TaskDetail', { taskId: t.id })} onLongPress={() => nav.navigate('TaskForm', { taskId: t.id })}>
               <View style={s.cardHead}>
                 <Text style={s.cardTitle}>{t.title}</Text>
@@ -84,8 +98,8 @@ export default function TasksScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

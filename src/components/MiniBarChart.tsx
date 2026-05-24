@@ -39,7 +39,13 @@ export default function MiniBarChart({
             </Text>
             <View style={styles.barWrap}>
               <View
-                style={[styles.bar, { width: `${ratio * 100}%`, backgroundColor: barColor }]}
+                style={[
+                  styles.bar,
+                  {
+                    width: `${ratio * 100}%`,
+                    backgroundColor: r.color || barColor,
+                  },
+                ]}
               />
             </View>
             <Text style={styles.value}>{formatValue(r.value)}</Text>

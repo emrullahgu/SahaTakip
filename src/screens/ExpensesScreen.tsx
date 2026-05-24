@@ -7,14 +7,16 @@ import {
   TextInput,
   ScrollView,
   Alert,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography } from '../theme';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 import { useAppContext } from '../context/AppContext';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const EXPENSE_TYPES = ['Yol', 'Yemek', 'Malzeme', 'Diğer'];
 
@@ -150,64 +152,61 @@ export default function ExpensesScreen() {
         )}
 
         {/* List or Empty State */}
-        {expenses.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🧾</Text>
-            <Text style={styles.emptyTitle}>Henüz masraf yok</Text>
-            <Text style={styles.emptyDesc}>
-              İlk saha fiş veya masrafınızı eklemek için + butonuna basın.
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyBtn}
-              onPress={() => setShowForm(true)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.emptyBtnText}>+ Masraf Ekle</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-            {expenses.map(e => (
-              <View key={e.id} style={styles.expenseCard}>
-                <View style={styles.expenseIcon}>
-                  <Ionicons
-                    name={
-                      e.type === 'Yol' ? 'car-outline' :
-                      e.type === 'Yemek' ? 'restaurant-outline' :
-                      e.type === 'Malzeme' ? 'construct-outline' :
-                      'receipt-outline'
-                    }
-                    size={20}
-                    color={colors.amber.default}
-                  />
-                </View>
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseType}>{e.type}</Text>
-                  {e.description ? (
-                    <Text style={styles.expenseDesc} numberOfLines={1}>{e.description}</Text>
-                  ) : null}
-                  <Text style={styles.expenseDate}>{e.date}</Text>
-                </View>
-                <View style={styles.expenseRight}>
-                  <Text style={styles.expenseAmount}>
-                    ₺{e.amount.toLocaleString('tr-TR')}
-                  </Text>
-                  <View style={[
-                    styles.expenseStatus,
-                    { backgroundColor: e.status === 'Onaylandı' ? colors.emerald.bg : colors.amber.bg }
+        <FlatList
+          {...FLATLIST_DEFAULTS}
+          data={expenses}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          ListEmptyComponent={
+            <EmptyState
+              icon="receipt-outline"
+              title="Henüz masraf yok"
+              subtitle="Saha harcamalarınızı kaydetmek için + butonuna basın."
+              actionLabel="+ Masraf Ekle"
+              onAction={() => setShowForm(true)}
+            />
+          }
+          renderItem={({ item: e }) => (
+            <View key={e.id} style={styles.expenseCard}>
+              <View style={styles.expenseIcon}>
+                <Ionicons
+                  name={
+                    e.type === 'Yol' ? 'car-outline' :
+                    e.type === 'Yemek' ? 'restaurant-outline' :
+                    e.type === 'Malzeme' ? 'construct-outline' :
+                    'receipt-outline'
+                  }
+                  size={20}
+                  color={colors.amber.default}
+                />
+              </View>
+              <View style={styles.expenseInfo}>
+                <Text style={styles.expenseType}>{e.type}</Text>
+                {e.description ? (
+                  <Text style={styles.expenseDesc} numberOfLines={1}>{e.description}</Text>
+                ) : null}
+                <Text style={styles.expenseDate}>{e.date}</Text>
+              </View>
+              <View style={styles.expenseRight}>
+                <Text style={styles.expenseAmount}>
+                  ₺{e.amount.toLocaleString('tr-TR')}
+                </Text>
+                <View style={[
+                  styles.expenseStatus,
+                  { backgroundColor: e.status === 'Onaylandı' ? colors.emerald.bg : colors.amber.bg }
+                ]}>
+                  <Text style={[
+                    styles.expenseStatusText,
+                    { color: e.status === 'Onaylandı' ? colors.emerald.default : colors.amber.default }
                   ]}>
-                    <Text style={[
-                      styles.expenseStatusText,
-                      { color: e.status === 'Onaylandı' ? colors.emerald.default : colors.amber.default }
-                    ]}>
-                      {e.status}
-                    </Text>
-                  </View>
+                    {e.status}
+                  </Text>
                 </View>
               </View>
-            ))}
-          </ScrollView>
-        )}
+            </View>
+          )}
+        />
       </View>
     </SafeAreaView>
   );

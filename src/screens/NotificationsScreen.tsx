@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -29,6 +29,8 @@ import {
   NotificationEventType,
   RootStackParamList,
 } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Notifications'>;
 
@@ -200,55 +202,56 @@ export default function NotificationsScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={n => n.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
-      >
-        {items.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="notifications-off-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Bildirim yok.</Text>
-          </View>
-        ) : (
-          items.map(n => {
-            const color = COLORS[n.type] ?? colors.text.muted;
-            const icon = ICONS[n.type] ?? 'notifications-outline';
-            return (
-              <TouchableOpacity
-                key={n.id}
-                style={[styles.card, !n.read && styles.cardUnread]}
-                onPress={() => onPress(n)}
-                onLongPress={() => onLongPress(n)}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.iconWrap, { backgroundColor: color + '22' }]}>
-                  <Ionicons name={icon} size={18} color={color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.headRow}>
-                    <Text
-                      style={[styles.cardTitle, !n.read && { color: colors.text.primary }]}
-                      numberOfLines={1}
-                    >
-                      {n.title}
-                    </Text>
-                    {!n.read ? <View style={styles.dot} /> : null}
-                  </View>
-                  <Text style={styles.msg} numberOfLines={2}>
-                    {n.message}
+        ListEmptyComponent={
+          <EmptyState
+            icon="notifications-off-outline"
+            title="Bildirim yok"
+            subtitle="Henüz bir bildirim almadınız."
+          />
+        }
+        renderItem={({ item: n }) => {
+          const color = COLORS[n.type] ?? colors.text.muted;
+          const icon = ICONS[n.type] ?? 'notifications-outline';
+          return (
+            <TouchableOpacity
+              style={[styles.card, !n.read && styles.cardUnread]}
+              onPress={() => onPress(n)}
+              onLongPress={() => onLongPress(n)}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.iconWrap, { backgroundColor: color + '22' }]}>
+                <Ionicons name={icon} size={18} color={color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.headRow}>
+                  <Text
+                    style={[styles.cardTitle, !n.read && { color: colors.text.primary }]}
+                    numberOfLines={1}
+                  >
+                    {n.title}
                   </Text>
-                  <View style={styles.metaRow}>
-                    <Text style={styles.meta}>{timeAgo(n.createdAt)}</Text>
-                    {n.channels.length > 0 ? (
-                      <Text style={styles.meta}>· {n.channels.join(', ')}</Text>
-                    ) : null}
-                  </View>
+                  {!n.read ? <View style={styles.dot} /> : null}
                 </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                <Text style={styles.msg} numberOfLines={2}>
+                  {n.message}
+                </Text>
+                <View style={styles.metaRow}>
+                  <Text style={styles.meta}>{timeAgo(n.createdAt)}</Text>
+                  {n.channels.length > 0 ? (
+                    <Text style={styles.meta}>· {n.channels.join(', ')}</Text>
+                  ) : null}
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

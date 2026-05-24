@@ -9,6 +9,8 @@ import { shareAsync } from 'expo-sharing';
 import { colors, spacing, radius, typography } from '../theme';
 import type { AuditReport } from '../types';
 import { listReports } from '../services/quality';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const pctColor = (p: number) => p >= 85 ? '#22c55e' : p >= 70 ? '#eab308' : p >= 50 ? '#f59e0b' : '#ef4444';
 
@@ -66,6 +68,7 @@ export default function AuditReportScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
@@ -88,7 +91,15 @@ export default function AuditReportScreen() {
             </TouchableOpacity>
           );
         }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz rapor yok. Denetim Puanlama ekranından rapor oluşturun.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-text-outline"
+            title="Henüz rapor yok"
+            subtitle="Denetim Puanlama ekranından rapor oluşturun."
+            actionLabel="Denetimlere Git"
+            onAction={() => (nav as any).navigate('Inspections')}
+          />
+        }
       />
 
       <Modal visible={!!view} transparent animationType="slide" onRequestClose={() => setView(null)}>

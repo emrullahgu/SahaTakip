@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -24,6 +24,8 @@ import {
   Warehouse,
   RootStackParamList,
 } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Stock'>;
 
@@ -62,130 +64,142 @@ export default function StockScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.kpiRow}>
-          <View style={styles.kpi}>
-            <Text style={styles.kpiLabel}>Malzeme</Text>
-            <Text style={styles.kpiValue}>{materials.length}</Text>
-          </View>
-          <View style={styles.kpi}>
-            <Text style={styles.kpiLabel}>Depo/Zimmet</Text>
-            <Text style={styles.kpiValue}>{warehouses.length}</Text>
-          </View>
-          <View style={styles.kpi}>
-            <Text style={styles.kpiLabel}>Toplam Değer</Text>
-            <Text style={styles.kpiValue}>
-              {totalValue.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actBtn, { backgroundColor: '#22c55e' }]}
-            onPress={() => navigation.navigate('StockMovement', { kind: 'giris' })}
-          >
-            <Ionicons name="arrow-down-circle-outline" size={16} color="#fff" />
-            <Text style={styles.actText}>Giriş</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actBtn, { backgroundColor: '#ef4444' }]}
-            onPress={() => navigation.navigate('StockMovement', { kind: 'cikis' })}
-          >
-            <Ionicons name="arrow-up-circle-outline" size={16} color="#fff" />
-            <Text style={styles.actText}>Çıkış</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actBtn, { backgroundColor: '#3b82f6' }]}
-            onPress={() => navigation.navigate('StockMovement', { kind: 'transfer' })}
-          >
-            <Ionicons name="swap-horizontal-outline" size={16} color="#fff" />
-            <Text style={styles.actText}>Transfer</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => navigation.navigate('Materials')}
-          >
-            <Ionicons name="cube-outline" size={16} color={brand.green} />
-            <Text style={styles.linkText}>Malzemeler</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => navigation.navigate('Warehouses')}
-          >
-            <Ionicons name="business-outline" size={16} color={brand.green} />
-            <Text style={styles.linkText}>Depo & Zimmet</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.linkBtn}
-            onPress={() => navigation.navigate('StockMovements', {})}
-          >
-            <Ionicons name="time-outline" size={16} color={brand.green} />
-            <Text style={styles.linkText}>Hareketler</Text>
-          </TouchableOpacity>
-        </View>
-
-        {lows.length > 0 && (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={materials}
+        keyExtractor={m => m.id}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={
           <>
-            <View style={styles.warnHeader}>
-              <Ionicons name="warning-outline" size={16} color={colors.rose.default} />
-              <Text style={styles.warnTitle}>Düşük Stok Uyarısı ({lows.length})</Text>
+            <View style={styles.kpiRow}>
+              <View style={styles.kpi}>
+                <Text style={styles.kpiLabel}>Malzeme</Text>
+                <Text style={styles.kpiValue}>{materials.length}</Text>
+              </View>
+              <View style={styles.kpi}>
+                <Text style={styles.kpiLabel}>Depo/Zimmet</Text>
+                <Text style={styles.kpiValue}>{warehouses.length}</Text>
+              </View>
+              <View style={styles.kpi}>
+                <Text style={styles.kpiLabel}>Toplam Değer</Text>
+                <Text style={styles.kpiValue}>
+                  {totalValue.toLocaleString('tr-TR', { maximumFractionDigits: 0 })} ₺
+                </Text>
+              </View>
             </View>
-            {lows.map(row => (
-              <TouchableOpacity
-                key={row.material.id}
-                style={[styles.row, { borderColor: colors.rose.border }]}
-                onPress={() =>
-                  navigation.navigate('MaterialForm', { materialId: row.material.id })
-                }
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowName}>{row.material.name}</Text>
-                  <Text style={styles.rowMeta}>
-                    Mevcut {row.totalQty} · Min {row.material.minStock} · Eksik {row.shortage}
-                  </Text>
-                </View>
-                <Text style={[styles.qty, { color: colors.rose.default }]}>
-                  {row.totalQty} {row.material.unit}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
 
-        <Text style={styles.section}>Tüm Malzemeler</Text>
-        {materials.length === 0 ? (
-          <Text style={styles.empty}>Henüz malzeme yok.</Text>
-        ) : (
-          materials.map(m => {
-            const q = totalQty(m.id);
-            const low = m.minStock && q < m.minStock;
-            return (
+            <View style={styles.actionsRow}>
               <TouchableOpacity
-                key={m.id}
-                style={styles.row}
-                onPress={() =>
-                  navigation.navigate('MaterialForm', { materialId: m.id })
-                }
+                style={[styles.actBtn, { backgroundColor: '#22c55e' }]}
+                onPress={() => navigation.navigate('StockMovement', { kind: 'giris' })}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowName}>{m.name}</Text>
-                  <Text style={styles.rowMeta}>
-                    {m.code}
-                    {m.category ? ` · ${m.category}` : ''}
-                  </Text>
-                </View>
-                <Text style={[styles.qty, low ? { color: colors.rose.default } : null]}>
-                  {q} {m.unit}
-                </Text>
+                <Ionicons name="arrow-down-circle-outline" size={16} color="#fff" />
+                <Text style={styles.actText}>Giriş</Text>
               </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+              <TouchableOpacity
+                style={[styles.actBtn, { backgroundColor: '#ef4444' }]}
+                onPress={() => navigation.navigate('StockMovement', { kind: 'cikis' })}
+              >
+                <Ionicons name="arrow-up-circle-outline" size={16} color="#fff" />
+                <Text style={styles.actText}>Çıkış</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actBtn, { backgroundColor: '#3b82f6' }]}
+                onPress={() => navigation.navigate('StockMovement', { kind: 'transfer' })}
+              >
+                <Ionicons name="swap-horizontal-outline" size={16} color="#fff" />
+                <Text style={styles.actText}>Transfer</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => navigation.navigate('Materials')}
+              >
+                <Ionicons name="cube-outline" size={16} color={brand.green} />
+                <Text style={styles.linkText}>Malzemeler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => navigation.navigate('Warehouses')}
+              >
+                <Ionicons name="business-outline" size={16} color={brand.green} />
+                <Text style={styles.linkText}>Depo & Zimmet</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.linkBtn}
+                onPress={() => navigation.navigate('StockMovements', {})}
+              >
+                <Ionicons name="time-outline" size={16} color={brand.green} />
+                <Text style={styles.linkText}>Hareketler</Text>
+              </TouchableOpacity>
+            </View>
+
+            {lows.length > 0 && (
+              <>
+                <View style={styles.warnHeader}>
+                  <Ionicons name="warning-outline" size={16} color={colors.rose.default} />
+                  <Text style={styles.warnTitle}>Düşük Stok Uyarısı ({lows.length})</Text>
+                </View>
+                {lows.map(row => (
+                  <TouchableOpacity
+                    key={row.material.id}
+                    style={[styles.row, { borderColor: colors.rose.border }]}
+                    onPress={() =>
+                      navigation.navigate('MaterialForm', { materialId: row.material.id })
+                    }
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowName}>{row.material.name}</Text>
+                      <Text style={styles.rowMeta}>
+                        Mevcut {row.totalQty} · Min {row.material.minStock} · Eksik {row.shortage}
+                      </Text>
+                    </View>
+                    <Text style={[styles.qty, { color: colors.rose.default }]}>
+                      {row.totalQty} {row.material.unit}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            <Text style={styles.section}>Tüm Malzemeler</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="cube-outline"
+            title="Malzeme bulunamadı"
+            subtitle="Henüz malzeme tanımlanmamış."
+            actionLabel="+ Yeni Malzeme"
+            onAction={() => navigation.navigate('MaterialForm')}
+          />
+        }
+        renderItem={({ item: m }) => {
+          const q = totalQty(m.id);
+          const low = m.minStock && q < m.minStock;
+          return (
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() =>
+                navigation.navigate('MaterialForm', { materialId: m.id })
+              }
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowName}>{m.name}</Text>
+                <Text style={styles.rowMeta}>
+                  {m.code}
+                  {m.category ? ` · ${m.category}` : ''}
+                </Text>
+              </View>
+              <Text style={[styles.qty, low ? { color: colors.rose.default } : null]}>
+                {q} {m.unit}
+              </Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -21,6 +21,7 @@ import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import { TabParamList, RootStackParamList } from '../types';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
 
 type WorkOrdersNavProp = CompositeNavigationProp<

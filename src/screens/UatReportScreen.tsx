@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { getUatReport, listUatBugs, UAT_SEV_COLOR, UAT_SEV_LABEL } from '../services/uat';
 import type { UatReport, UatBug } from '../types';
+import EmptyState from '../components/EmptyState';
 
 const STATUS_LABEL: Record<UatBug['status'], string> = { open: 'Açık', fixed: 'Düzeltildi', wontfix: 'Yapılmayacak' };
 const STATUS_COLOR: Record<UatBug['status'], string> = { open: '#ef4444', fixed: '#22c55e', wontfix: '#64748b' };
@@ -24,7 +25,11 @@ export default function UatReportScreen() {
   }, []));
 
   if (!report) {
-    return <SafeAreaView style={s.safe} edges={['bottom']}><View style={s.empty}><Ionicons name="hourglass" size={48} color={colors.text.muted} /><Text style={s.emptyT}>Yükleniyor…</Text></View></SafeAreaView>;
+    return (
+      <SafeAreaView style={s.safe} edges={['bottom']}>
+        <EmptyState icon="analytics-outline" title="Yükleniyor…" subtitle="UAT test sonuçları hesaplanıyor." />
+      </SafeAreaView>
+    );
   }
 
   const sortedBugs = [...bugs].sort((a, b) => {

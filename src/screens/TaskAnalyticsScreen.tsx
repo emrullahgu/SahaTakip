@@ -8,6 +8,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import type { Task, TaskStatus, TaskPriority } from '../types';
 import { listTasks, TASK_STATUS_LABEL, TASK_STATUS_COLOR, TASK_PRIORITY_LABEL, TASK_PRIORITY_COLOR } from '../services/tasks';
 import { useAppContext } from '../context/AppContext';
+import MiniBarChart from '../components/MiniBarChart';
 
 export default function TaskAnalyticsScreen() {
   const { employees } = useAppContext();
@@ -74,26 +75,16 @@ export default function TaskAnalyticsScreen() {
         </View>
 
         <Text style={s.sectionTitle}>Durum Dağılımı</Text>
-        {byStatus.map(([k, v]) => (
-          <View key={k} style={s.barRow}>
-            <Text style={s.barLabel}>{TASK_STATUS_LABEL[k]}</Text>
-            <View style={s.barTrack}>
-              <View style={[s.barFill, { width: `${(v / maxStatus) * 100}%`, backgroundColor: TASK_STATUS_COLOR[k] }]} />
-            </View>
-            <Text style={s.barValue}>{v}</Text>
-          </View>
-        ))}
+        <MiniBarChart
+          data={byStatus.map(([k, v]) => ({ label: TASK_STATUS_LABEL[k], value: v }))}
+          barColor="#0ea5e9"
+        />
 
         <Text style={s.sectionTitle}>Öncelik Dağılımı</Text>
-        {byPriority.map(([k, v]) => (
-          <View key={k} style={s.barRow}>
-            <Text style={s.barLabel}>{TASK_PRIORITY_LABEL[k]}</Text>
-            <View style={s.barTrack}>
-              <View style={[s.barFill, { width: `${(v / maxPriority) * 100}%`, backgroundColor: TASK_PRIORITY_COLOR[k] }]} />
-            </View>
-            <Text style={s.barValue}>{v}</Text>
-          </View>
-        ))}
+        <MiniBarChart
+          data={byPriority.map(([k, v]) => ({ label: TASK_PRIORITY_LABEL[k], value: v }))}
+          barColor="#8b5cf6"
+        />
 
         <Text style={s.sectionTitle}>Personel Performansı</Text>
         {byEmployee.length === 0 && <Text style={s.empty}>Atanmış görev yok</Text>}

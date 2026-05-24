@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaModules } from '../services/codeQuality';
 import type { QaModuleAudit } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const COH_LABEL: Record<QaModuleAudit['cohesion'], string> = { good: 'İyi', mixed: 'Karışık', poor: 'Zayıf' };
 const COH_COLOR: Record<QaModuleAudit['cohesion'], string> = { good: '#22c55e', mixed: '#f59e0b', poor: '#ef4444' };
@@ -17,14 +20,26 @@ export default function QaModulesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="folder" size={48} color="#10b981" />
-          <Text style={s.heroT}>Modül Yapısı</Text>
-          <Text style={s.heroD}>Klasör bazlı kohezyon, dosya yoğunluğu ve refactor önerileri</Text>
-        </View>
-
-        {items.map(m => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={m => m.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="folder" size={48} color="#10b981" />
+            <Text style={s.heroT}>Modül Yapısı</Text>
+            <Text style={s.heroD}>Klasör bazlı kohezyon, dosya yoğunluğu ve refactor önerileri</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="folder-outline"
+            title="Modül verisi yok"
+            subtitle="Klasör yapısı analizi henüz tamamlanmadı."
+          />
+        }
+        renderItem={({ item: m }) => (
           <View key={m.id} style={[s.card, { borderLeftColor: COH_COLOR[m.cohesion] }]}>
             <View style={s.headRow}>
               <Ionicons name="folder-open" size={20} color={COH_COLOR[m.cohesion]} />
@@ -38,8 +53,8 @@ export default function QaModulesScreen() {
             </View>
             <Text style={s.suggestion}>{m.suggestion}</Text>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

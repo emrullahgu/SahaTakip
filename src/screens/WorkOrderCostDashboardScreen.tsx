@@ -9,6 +9,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, WorkOrder } from '../types';
 import { useAppContext } from '../context/AppContext';
+import MiniBarChart from '../components/MiniBarChart';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -67,9 +68,14 @@ export default function WorkOrderCostDashboardScreen() {
 
         <View style={styles.breakdownCard}>
           <Text style={styles.cardTitle}>Maliyet Dağılımı</Text>
-          <BreakdownRow label="Malzeme" value={stats.material} total={stats.cost} color="#0ea5e9" />
-          <BreakdownRow label="İşçilik" value={stats.labor} total={stats.cost} color="#22c55e" />
-          <BreakdownRow label="Diğer" value={stats.other} total={stats.cost} color="#f59e0b" />
+          <MiniBarChart
+            data={[
+              { label: 'Malzeme', value: stats.material, color: '#0ea5e9' },
+              { label: 'İşçilik', value: stats.labor, color: '#22c55e' },
+              { label: 'Diğer', value: stats.other, color: '#f59e0b' },
+            ]}
+            formatValue={v => `${TL(v)} (${((v / (stats.cost || 1)) * 100).toFixed(0)}%)`}
+          />
         </View>
 
         <View style={styles.listCard}>

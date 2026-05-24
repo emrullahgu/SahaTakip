@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSyncLog, clearSyncLog } from '../services/offline';
 import type { SyncLogEntry } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const STATUS_COLOR: Record<SyncLogEntry['status'], string> = { success: '#22c55e', partial: '#f59e0b', failed: '#ef4444' };
 const STATUS_LABEL: Record<SyncLogEntry['status'], string> = { success: 'Başarılı', partial: 'Kısmi', failed: 'Başarısız' };
@@ -34,10 +36,17 @@ export default function SyncHistoryScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz senkron yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="sync-circle-outline"
+            title="Senkron kaydı yok"
+            subtitle="Geçmiş senkronizasyon işlemleri burada listelenir."
+          />
+        }
         renderItem={({ item }) => (
           <View style={[s.card, { borderLeftColor: STATUS_COLOR[item.status] }]}>
             <Ionicons name="sync-outline" size={22} color={STATUS_COLOR[item.status]} />

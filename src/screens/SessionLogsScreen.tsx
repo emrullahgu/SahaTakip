@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSessions, recordSession } from '../services/governance';
 import type { SessionLog } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function SessionLogsScreen() {
   const [items, setItems] = useState<SessionLog[]>([]);
@@ -32,10 +34,19 @@ export default function SessionLogsScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Oturum kaydı yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="key-outline"
+            title="Oturum kaydı yok"
+            subtitle="Henüz sisteme giriş kaydı bulunmuyor."
+            actionLabel="+ Demo Veri Oluştur"
+            onAction={seedDemo}
+          />
+        }
         renderItem={({ item }) => (
           <View style={[s.card, item.suspicious && { borderColor: '#ef4444' }]}>
             <View style={[s.iconWrap, { backgroundColor: (item.suspicious ? '#ef4444' : '#ec4899') + '22' }]}>

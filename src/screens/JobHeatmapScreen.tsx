@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { JobHeatPoint } from '../types';
 import { listHeat } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const heatColor = (i: number) => i >= 8 ? '#ef4444' : i >= 6 ? '#f97316' : i >= 4 ? '#f59e0b' : '#22c55e';
 
@@ -26,9 +28,17 @@ export default function JobHeatmapScreen() {
         <View style={s.statCard}><Text style={[s.sV, { color: '#ef4444' }]}>{max}</Text><Text style={s.sL}>Max Yoğunluk</Text></View>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items.sort((a, b) => b.intensity - a.intensity)}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        ListEmptyComponent={
+          <EmptyState
+            icon="flame-outline"
+            title="Yoğunluk verisi yok"
+            subtitle="Harita üzerinde henüz bir iş yoğunluğu oluşmadı."
+          />
+        }
         renderItem={({ item }) => {
           const c = heatColor(item.intensity);
           return (

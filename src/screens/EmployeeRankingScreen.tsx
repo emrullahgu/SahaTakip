@@ -1,12 +1,14 @@
 // Faz 47 — EmployeeRankingScreen (POZ-DEV-176)
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listEmployeeProductivity } from '../services/exec';
 import type { EmployeeProductivityEntry } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const effColor = (e: number) => e >= 85 ? '#22c55e' : e >= 75 ? '#f59e0b' : '#ef4444';
 const medal = (r: number) => r === 1 ? '#facc15' : r === 2 ? '#94a3b8' : r === 3 ? '#cd7f32' : '#475569';
@@ -20,9 +22,20 @@ export default function EmployeeRankingScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.section}>Personel verimlilik sıralaması</Text>
-        {sorted.map(e => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={sorted}
+        keyExtractor={e => e.employeeId}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={<Text style={s.section}>Personel verimlilik sıralaması</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="people-outline"
+            title="Veri bulunamadı"
+            subtitle="Personel performans verileri henüz hesaplanmamış."
+          />
+        }
+        renderItem={({ item: e }) => (
           <View key={e.employeeId} style={s.card}>
             <View style={s.row}>
               <View style={[s.medal, { backgroundColor: medal(e.ranking) }]}>
@@ -44,8 +57,8 @@ export default function EmployeeRankingScreen() {
               <Text style={s.metaV}>₺{e.revenueGenerated.toLocaleString('tr-TR')}</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

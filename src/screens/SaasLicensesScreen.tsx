@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSaasLicenses, toggleLicenseAutoRenew, SAAS_STATUS_LABEL, SAAS_STATUS_COLOR, SAAS_PLAN_LABEL, SAAS_PLAN_COLOR } from '../services/saas';
 import type { SaasLicense } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const fmtDate = (s: string) => new Date(s).toLocaleDateString('tr-TR');
 const daysUntil = (s: string) => Math.round((new Date(s).getTime() - Date.now()) / 86400000);
@@ -27,15 +30,27 @@ export default function SaasLicensesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.active}</Text><Text style={s.statL}>Aktif</Text></View>
-          <View style={[s.statBox, { borderColor: '#f59e0b' }]}><Text style={[s.statV, { color: '#f59e0b' }]}>{stats.expiring}</Text><Text style={s.statL}>Yakında</Text></View>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.expired}</Text><Text style={s.statL}>Bitti</Text></View>
-          <View style={s.statBox}><Text style={s.statV}>{stats.seats}</Text><Text style={s.statL}>Koltuk</Text></View>
-        </View>
-
-        {items.map(l => {
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={l => l.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.statRow}>
+            <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.active}</Text><Text style={s.statL}>Aktif</Text></View>
+            <View style={[s.statBox, { borderColor: '#f59e0b' }]}><Text style={[s.statV, { color: '#f59e0b' }]}>{stats.expiring}</Text><Text style={s.statL}>Yakında</Text></View>
+            <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.expired}</Text><Text style={s.statL}>Bitti</Text></View>
+            <View style={s.statBox}><Text style={s.statV}>{stats.seats}</Text><Text style={s.statL}>Koltuk</Text></View>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="card-outline"
+            title="Lisans yok"
+            subtitle="Sistemde henüz bir firma lisans kaydı bulunmuyor."
+          />
+        }
+        renderItem={({ item: l }) => {
           const d = daysUntil(l.endsAt);
           return (
             <View key={l.id} style={[s.card, { borderLeftColor: SAAS_STATUS_COLOR[l.status] }]}>
@@ -71,8 +86,8 @@ export default function SaasLicensesScreen() {
               </View>
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </SafeAreaView>
   );
 }

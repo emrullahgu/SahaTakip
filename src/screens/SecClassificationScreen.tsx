@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSecClassification, SEC_SENS_LABEL, SEC_SENS_COLOR } from '../services/secCenter';
 import type { SecClassificationItem, SecSensitivity } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const SENS_ORDER: SecSensitivity[] = ['phi', 'pii', 'confidential', 'internal', 'public'];
 
@@ -27,30 +30,44 @@ export default function SecClassificationScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.summary}>
-          <View style={s.sumBox}>
-            <Text style={s.sumV}>{list.length}</Text>
-            <Text style={s.sumL}>Etiketli Alan</Text>
-          </View>
-          <View style={[s.sumBox, { backgroundColor: '#22c55e22' }]}>
-            <Text style={[s.sumV, { color: '#22c55e' }]}>{encryptedCount}</Text>
-            <Text style={s.sumL}>Şifreli</Text>
-          </View>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={item => item.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.summary}>
+              <View style={s.sumBox}>
+                <Text style={s.sumV}>{list.length}</Text>
+                <Text style={s.sumL}>Etiketli Alan</Text>
+              </View>
+              <View style={[s.sumBox, { backgroundColor: '#22c55e22' }]}>
+                <Text style={[s.sumV, { color: '#22c55e' }]}>{encryptedCount}</Text>
+                <Text style={s.sumL}>Şifreli</Text>
+              </View>
+            </View>
 
-        <View style={s.legend}>
-          {SENS_ORDER.map(k => (
-            <TouchableOpacity key={k} style={[s.legendBox, { borderColor: SEC_SENS_COLOR[k] }, filter === k && { backgroundColor: SEC_SENS_COLOR[k] + '33' }]} onPress={() => setFilter(filter === k ? 'all' : k)}>
-              <View style={[s.dot, { backgroundColor: SEC_SENS_COLOR[k] }]} />
-              <Text style={s.legendT}>{SEC_SENS_LABEL[k]}</Text>
-              <Text style={[s.legendC, { color: SEC_SENS_COLOR[k] }]}>{counts[k]}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {filtered.map(item => (
-          <View key={item.id} style={[s.card, { borderLeftColor: SEC_SENS_COLOR[item.sensitivity] }]}>
+            <View style={s.legend}>
+              {SENS_ORDER.map(k => (
+                <TouchableOpacity key={k} style={[s.legendBox, { borderColor: SEC_SENS_COLOR[k] }, filter === k && { backgroundColor: SEC_SENS_COLOR[k] + '33' }]} onPress={() => setFilter(filter === k ? 'all' : k)}>
+                  <View style={[s.dot, { backgroundColor: SEC_SENS_COLOR[k] }]} />
+                  <Text style={s.legendT}>{SEC_SENS_LABEL[k]}</Text>
+                  <Text style={[s.legendC, { color: SEC_SENS_COLOR[k] }]}>{counts[k]}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="shield-outline"
+            title="Sınıflandırma yok"
+            subtitle="Henüz hassas veri sınıflandırması yapılmadı."
+          />
+        }
+        renderItem={({ item }) => (
+          <View style={[s.card, { borderLeftColor: SEC_SENS_COLOR[item.sensitivity] }]}>
             <View style={s.row}>
               <View style={{ flex: 1 }}>
                 <Text style={s.field}>{item.field}</Text>
@@ -71,8 +88,8 @@ export default function SecClassificationScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -11,6 +11,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { listInspections, deleteInspection, INSPECTION_TYPE_LABEL } from '../services/inspections';
 import { Inspection, InspectionType, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Inspections'>;
 type RP = RouteProp<RootStackParamList, 'Inspections'>;
@@ -71,14 +73,18 @@ export default function InspectionsScreen() {
       </View>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 80 }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="clipboard-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Denetim yok.</Text>
-          </View>
+          <EmptyState
+            icon="clipboard-outline"
+            title="Denetim bulunamadı"
+            subtitle="Filtreleri değiştirerek tekrar deneyebilir veya yeni bir denetim başlatabilirsiniz."
+            actionLabel="+ Yeni Denetim"
+            onAction={() => nav.navigate('InspectionForm', filterAssetId ? { assetId: filterAssetId } : undefined)}
+          />
         }
         renderItem={({ item }) => (
           <TouchableOpacity

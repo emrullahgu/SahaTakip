@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listQaShared } from '../services/codeQuality';
 import type { QaSharedComponent } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const CAT_LABEL: Record<QaSharedComponent['category'], string> = { form: 'Form', table: 'Tablo', modal: 'Modal', button: 'Buton', card: 'Kart', state: 'Durum' };
 const CAT_COLOR: Record<QaSharedComponent['category'], string> = { form: '#0ea5e9', table: '#a855f7', modal: '#f59e0b', button: '#22c55e', card: '#ec4899', state: '#3b82f6' };
@@ -23,14 +26,26 @@ export default function QaSharedScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="cube" size={48} color="#0ea5e9" />
-          <Text style={s.heroT}>Ortak Component Kataloğu</Text>
-          <Text style={s.heroD}>{stats.total} component • {stats.refactored} refactor edildi • {stats.totalUsage.toLocaleString('tr-TR')} kullanım</Text>
-        </View>
-
-        {items.map(c => (
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={c => c.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="cube" size={48} color="#0ea5e9" />
+            <Text style={s.heroT}>Ortak Component Kataloğu</Text>
+            <Text style={s.heroD}>{stats.total} component • {stats.refactored} refactor edildi • {stats.totalUsage.toLocaleString('tr-TR')} kullanım</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="cube-outline"
+            title="Bileşen yok"
+            subtitle="Sistemde henüz kayıtlı ortak bileşen bulunmuyor."
+          />
+        }
+        renderItem={({ item: c }) => (
           <View key={c.id} style={[s.card, { borderLeftColor: c.refactored ? '#22c55e' : '#f59e0b' }]}>
             <View style={s.headRow}>
               <View style={[s.iconBox, { backgroundColor: CAT_COLOR[c.category] + '33' }]}>
@@ -53,8 +68,8 @@ export default function QaSharedScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

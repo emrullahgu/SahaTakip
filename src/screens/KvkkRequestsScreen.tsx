@@ -10,6 +10,9 @@ import {
   KVKK_TYPE_LABEL, KVKK_STATUS_LABEL, KVKK_STATUS_COLOR,
 } from '../services/secCenter';
 import type { KvkkRequest, KvkkRequestType, KvkkRequestStatus } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const TYPES: KvkkRequestType[] = ['access', 'erasure', 'rectification', 'portability', 'objection'];
 const NEXT_STATUS: Record<KvkkRequestStatus, KvkkRequestStatus | null> = {
@@ -52,8 +55,21 @@ export default function KvkkRequestsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        {list.map(r => {
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={list}
+        keyExtractor={r => r.id}
+        contentContainerStyle={s.scroll}
+        ListEmptyComponent={
+          <EmptyState
+            icon="shield-checkmark-outline"
+            title="KVKK talebi yok"
+            subtitle="Vatandaşlardan gelen KVKK veri talepleri burada listelenir."
+            actionLabel="+ Yeni Talep"
+            onAction={() => setModal(true)}
+          />
+        }
+        renderItem={({ item: r }) => {
           const risk = dueRisk(r.dueDate);
           return (
             <View key={r.id} style={[s.card, { borderLeftColor: KVKK_STATUS_COLOR[r.status] }]}>
@@ -83,8 +99,8 @@ export default function KvkkRequestsScreen() {
               )}
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
 
       <TouchableOpacity style={s.fab} onPress={() => setModal(true)}>
         <Ionicons name="add" size={28} color="#fff" />

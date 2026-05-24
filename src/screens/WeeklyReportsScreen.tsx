@@ -1,6 +1,6 @@
 // WeeklyReportsScreen — POZ-DEV-249 Haftalık raporlar
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, WeeklyReport } from '../types';
 import { listWeeklyReports, generateWeeklyReport, currentWeekStart } from '../services/osos';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -26,17 +28,29 @@ export default function WeeklyReportsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.content}>
-        <View style={s.headerRow}>
-          <Text style={s.title}>Haftalık Raporlar</Text>
-          <TouchableOpacity style={s.genBtn} onPress={onGenerate}>
-            <Ionicons name="sync-outline" size={16} color="#fff" />
-            <Text style={s.genBtnText}>Bu hafta için oluştur</Text>
-          </TouchableOpacity>
-        </View>
-        {items.length === 0 && <Text style={s.empty}>Henüz rapor yok</Text>}
-        {items.map(r => (
-          <TouchableOpacity key={r.id} style={s.card} onPress={() => nav.navigate('WeeklyReportDetail', { reportId: r.id })}>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={r => r.id}
+        contentContainerStyle={s.content}
+        ListHeaderComponent={
+          <View style={s.headerRow}>
+            <Text style={s.title}>Haftalık Raporlar</Text>
+            <TouchableOpacity style={s.genBtn} onPress={onGenerate}>
+              <Ionicons name="sync-outline" size={16} color="#fff" />
+              <Text style={s.genBtnText}>Bu hafta için oluştur</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="bar-chart-outline"
+            title="Henüz rapor yok"
+            subtitle="Bu haftanın okumalarından rapor üretmek için üstteki butona basın."
+          />
+        }
+        renderItem={({ item: r }) => (
+          <TouchableOpacity style={s.card} onPress={() => nav.navigate('WeeklyReportDetail', { reportId: r.id })}>
             <View style={s.icon}><Ionicons name="bar-chart-outline" size={20} color="#eab308" /></View>
             <View style={{ flex: 1 }}>
               <Text style={s.cardTitle}>{r.weekStart.slice(0, 10)} — {r.weekEnd.slice(0, 10)}</Text>
@@ -45,8 +59,8 @@ export default function WeeklyReportsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

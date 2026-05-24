@@ -9,6 +9,8 @@ import { colors, spacing, radius, typography } from '../theme';
 import type { FieldJob, RootStackParamList } from '../types';
 import { smartSortJobs, PRIORITY_COLOR, PRIORITY_LABEL, STAGE_COLOR, STAGE_LABEL, getLiveStats } from '../services/fieldOps';
 import type { FieldOpsLiveStat } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -35,10 +37,17 @@ export default function FieldTodayScreen() {
       </View>
       <Text style={s.sectionH}>🧠 Akıllı Sıralama (Öncelik + SLA)</Text>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={jobs}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
-        ListEmptyComponent={<Text style={s.empty}>Bugün için iş yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="clipboard-outline"
+            title="Bugün için iş yok"
+            subtitle="Planlanmış görevleriniz olduğunda burada görünecek."
+          />
+        }
         renderItem={({ item, index }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('FieldJobDetail', { jobId: item.id })}>
             <View style={s.rank}><Text style={s.rankT}>{index + 1}</Text></View>

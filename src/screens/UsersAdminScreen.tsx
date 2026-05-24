@@ -1,6 +1,6 @@
 // UsersAdminScreen — POZ-DEV-096..098 users with bulk + filter + role mgmt
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, useWindowDimensions, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import SearchFilterBar, { FilterChip } from '../components/SearchFilterBar';
 import BulkSelectionBar from '../components/BulkSelectionBar';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 import {
   bulkUpdate, deleteUsers, listUsers, makeUser, ROLE_COLOR,
   ROLE_LABEL_TR, ROLE_ORDER, upsertUser,
@@ -128,17 +130,22 @@ export default function UsersAdminScreen() {
           onChipPress={k => setRoleFilter(k as RoleFilter)}
         />
 
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-          {filtered.length === 0 ? (
-            <View style={styles.empty}>
-              <Ionicons name="people-outline" size={36} color={colors.text.faint} />
-              <Text style={styles.emptyText}>Kullanıcı bulunamadı.</Text>
-            </View>
-          ) : filtered.map(u => {
+        <FlatList
+          {...FLATLIST_DEFAULTS}
+          data={filtered}
+          keyExtractor={u => u.id}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          ListEmptyComponent={
+            <EmptyState
+              icon="people-outline"
+              title="Kullanıcı bulunamadı"
+              subtitle="Arama kriterlerini değiştirerek tekrar deneyebilirsiniz."
+            />
+          }
+          renderItem={({ item: u }) => {
             const isSel = selected.has(u.id);
             return (
               <TouchableOpacity
-                key={u.id}
                 style={[styles.row, isSel && styles.rowSelected, wide && { paddingVertical: 14 }]}
                 onPress={() => selected.size > 0 ? toggle(u.id) : openEdit(u)}
                 onLongPress={() => toggle(u.id)}
@@ -162,8 +169,8 @@ export default function UsersAdminScreen() {
                 {wide && <Text style={styles.dateText}>{fmtDate(u.createdAt)}</Text>}
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+        />
       </View>
 
       <BulkSelectionBar

@@ -12,7 +12,7 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -33,6 +33,8 @@ import {
   toggleSchedule,
   updateSchedule,
 } from '../services/emailSchedules';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 const KINDS: ScheduleKind[] = ['daily', 'weekly', 'monthly', 'yearly'];
 const REPORT_TYPES: ReportType[] = ['summary', 'kpi', 'workorders', 'collections', 'custom'];
@@ -177,72 +179,78 @@ export default function ScheduledEmailsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ padding: spacing.lg }}
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={s => s.id}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 80 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.emerald.default} />}
-      >
-        {loading && !items.length ? (
-          <ActivityIndicator color={colors.emerald.default} style={{ marginTop: 40 }} />
-        ) : items.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="mail-outline" size={48} color={colors.text.muted} />
-            <Text style={styles.emptyText}>Henüz plan yok. "Yeni Plan" ile ekleyin.</Text>
-          </View>
-        ) : (
-          items.map(s => (
-            <View key={s.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.row}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{s.name}</Text>
-                    <View style={[styles.pill, s.active ? styles.pillOn : styles.pillOff]}>
-                      <Text style={[styles.pillText, s.active ? styles.pillTextOn : styles.pillTextOff]}>
-                        {s.active ? 'Aktif' : 'Pasif'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={[styles.row, { marginTop: 4, flexWrap: 'wrap' }]}>
-                    <Tag icon="calendar-outline" text={KIND_LABEL[s.kind]} />
-                    <Tag icon="document-text-outline" text={REPORT_TYPE_LABEL[s.report_type]} />
-                    <Tag icon="time-outline" text={`${String(s.hour_utc).padStart(2, '0')}:00 UTC`} />
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator color={colors.emerald.default} style={{ marginTop: 40 }} />
+          ) : (
+            <EmptyState
+              icon="mail-outline"
+              title="Henüz plan yok"
+              subtitle="Otomatik rapor gönderimi için yeni bir plan oluşturun."
+              actionLabel="+ Yeni Plan"
+              onAction={openCreate}
+            />
+          )
+        }
+        renderItem={({ item: s }) => (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.row}>
+                  <Text style={styles.cardTitle} numberOfLines={1}>{s.name}</Text>
+                  <View style={[styles.pill, s.active ? styles.pillOn : styles.pillOff]}>
+                    <Text style={[styles.pillText, s.active ? styles.pillTextOn : styles.pillTextOff]}>
+                      {s.active ? 'Aktif' : 'Pasif'}
+                    </Text>
                   </View>
                 </View>
-                <Switch
-                  value={s.active}
-                  onValueChange={() => toggle(s)}
-                  trackColor={{ false: colors.border.secondary, true: colors.emerald.default }}
-                />
+                <View style={[styles.row, { marginTop: 4, flexWrap: 'wrap' }]}>
+                  <Tag icon="calendar-outline" text={KIND_LABEL[s.kind]} />
+                  <Tag icon="document-text-outline" text={REPORT_TYPE_LABEL[s.report_type]} />
+                  <Tag icon="time-outline" text={`${String(s.hour_utc).padStart(2, '0')}:00 UTC`} />
+                </View>
               </View>
-
-              <Text style={styles.meta}>
-                Alıcı: {s.recipients?.length ?? 0} • Sonraki:{' '}
-                {s.next_run_at ? new Date(s.next_run_at).toLocaleString('tr-TR') : '—'}
-              </Text>
-              {s.last_run_at ? (
-                <Text style={[styles.meta, { color: s.last_status === 'success' ? colors.emerald.default : colors.rose.default }]}>
-                  Son: {new Date(s.last_run_at).toLocaleString('tr-TR')} • {s.last_status ?? '—'}
-                  {s.last_error ? ` • ${s.last_error}` : ''}
-                </Text>
-              ) : null}
-
-              <View style={[styles.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
-                <TouchableOpacity style={styles.smallBtn} onPress={() => openEdit(s)}>
-                  <Ionicons name="create-outline" size={14} color={colors.text.primary} />
-                  <Text style={styles.smallBtnText}>Düzenle</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.smallBtn} onPress={() => runOnce(s)}>
-                  <Ionicons name="play-outline" size={14} color={colors.text.primary} />
-                  <Text style={styles.smallBtnText}>Hemen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.smallBtn, styles.smallBtnDanger]} onPress={() => remove(s)}>
-                  <Ionicons name="trash-outline" size={14} color="#fff" />
-                  <Text style={[styles.smallBtnText, { color: '#fff' }]}>Sil</Text>
-                </TouchableOpacity>
-              </View>
+              <Switch
+                value={s.active}
+                onValueChange={() => toggle(s)}
+                trackColor={{ false: colors.border.secondary, true: colors.emerald.default }}
+              />
             </View>
-          ))
+
+            <Text style={styles.meta}>
+              Alıcı: {s.recipients?.length ?? 0} • Sonraki:{' '}
+              {s.next_run_at ? new Date(s.next_run_at).toLocaleString('tr-TR') : '—'}
+            </Text>
+            {s.last_run_at ? (
+              <Text style={[styles.meta, { color: s.last_status === 'success' ? colors.emerald.default : colors.rose.default }]}>
+                Son: {new Date(s.last_run_at).toLocaleString('tr-TR')} • {s.last_status ?? '—'}
+                {s.last_error ? ` • ${s.last_error}` : ''}
+              </Text>
+            ) : null}
+
+            <View style={[styles.row, { marginTop: spacing.sm, gap: spacing.sm }]}>
+              <TouchableOpacity style={styles.smallBtn} onPress={() => openEdit(s)}>
+                <Ionicons name="create-outline" size={14} color={colors.text.primary} />
+                <Text style={styles.smallBtnText}>Düzenle</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.smallBtn} onPress={() => runNow(s.id)}>
+                <Ionicons name="play-outline" size={14} color={colors.text.primary} />
+                <Text style={styles.smallBtnText}>Hemen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.smallBtn, styles.smallBtnDanger]} onPress={() => remove(s)}>
+                <Ionicons name="trash-outline" size={14} color="#fff" />
+                <Text style={[styles.smallBtnText, { color: '#fff' }]}>Sil</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
-      </ScrollView>
+      />
 
       <EditModal
         editing={editing}

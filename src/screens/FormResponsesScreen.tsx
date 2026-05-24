@@ -10,6 +10,8 @@ import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, FormResponse, FormTemplate } from '../types';
 import { listResponses } from '../services/formResponses';
 import { listTemplates } from '../services/formTemplates';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type RouteP = RouteProp<RootStackParamList, 'FormResponses'>;
@@ -86,6 +88,7 @@ export default function FormResponsesScreen() {
       </View>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={r => r.id}
         renderItem={({ item }) => {
@@ -130,11 +133,11 @@ export default function FormResponsesScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="clipboard-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Form yanıtı yok</Text>
-            <Text style={styles.emptySub}>Bir form doldurulduğunda burada görünür.</Text>
-          </View>
+          <EmptyState
+            icon="clipboard-outline"
+            title="Form yanıtı yok"
+            subtitle="Bir form doldurulduğunda burada görünür."
+          />
         }
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.text.muted} />}

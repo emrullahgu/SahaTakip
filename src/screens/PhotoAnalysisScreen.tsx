@@ -25,7 +25,7 @@ export default function PhotoAnalysisScreen() {
     }
     const res = source === 'camera'
       ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
     if (!res.canceled && res.assets?.[0]?.uri) {
       setImageUri(res.assets[0].uri);
       setResult(null);

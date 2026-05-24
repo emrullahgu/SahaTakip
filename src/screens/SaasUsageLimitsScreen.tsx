@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listSaasUsage } from '../services/saas';
 import type { SaasUsageMetric } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const ICON: Record<SaasUsageMetric['metric'], string> = {
   users: 'people', workorders: 'clipboard', storage_mb: 'cloud',
@@ -25,14 +28,26 @@ export default function SaasUsageLimitsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="speedometer" size={48} color="#ec4899" />
-          <Text style={s.heroT}>Kullanım Limitleri</Text>
-          <Text style={s.heroD}>Plan limitleri ve mevcut kullanım. %90 üzerinde uyarı tetiklenir.</Text>
-        </View>
-
-        {items.map(m => {
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={m => m.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.heroCard}>
+            <Ionicons name="speedometer" size={48} color="#ec4899" />
+            <Text style={s.heroT}>Kullanım Limitleri</Text>
+            <Text style={s.heroD}>Plan limitleri ve mevcut kullanım. %90 üzerinde uyarı tetiklenir.</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="speedometer-outline"
+            title="Limit verisi yok"
+            subtitle="Mevcut paketinize ait limit bilgileri bulunamadı."
+          />
+        }
+        renderItem={({ item: m }) => {
           const pct = Math.min(100, Math.round((m.current / m.limit) * 100));
           const c = pctColor(pct);
           return (
@@ -53,8 +68,8 @@ export default function SaasUsageLimitsScreen() {
               )}
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </SafeAreaView>
   );
 }

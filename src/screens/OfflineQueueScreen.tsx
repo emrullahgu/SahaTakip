@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { listOps, runSync, enqueueOp, clearSynced, OP_KIND_LABEL, OP_KIND_ICON, OP_STATUS_LABEL, OP_STATUS_COLOR } from '../services/offline';
 import type { OfflineOperation, OfflineOpStatus, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'OfflineQueue'>;
 type R = RouteProp<RootStackParamList, 'OfflineQueue'>;
@@ -84,10 +86,19 @@ export default function OfflineQueueScreen() {
       </ScrollView>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Bu filtrede işlem yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="İşlem yok"
+            subtitle="Bu filtreye uygun offline işlem kaydı bulunamadı."
+            actionLabel="+ Demo İşlemler"
+            onAction={seedDemo}
+          />
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={[s.card, { borderLeftColor: OP_STATUS_COLOR[item.status] }]} onPress={() => item.status === 'conflict' ? nav.navigate('ConflictResolver', { opId: item.id }) : nav.navigate('OfflineOpDetail', { opId: item.id })}>
             <Ionicons name={OP_KIND_ICON[item.kind] as never} size={22} color={OP_STATUS_COLOR[item.status]} />

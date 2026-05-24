@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-} from 'react-native';
+ FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
@@ -25,6 +25,8 @@ import {
   Warehouse,
   RootStackParamList,
 } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Rt = RouteProp<RootStackParamList, 'StockMovements'>;
 
@@ -96,55 +98,59 @@ export default function StockMovementsScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="time-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>Hareket yok.</Text>
-          </View>
-        ) : (
-          filtered.map(mv => {
-            const meta = KIND_META[mv.kind];
-            const fromName = mv.fromWarehouseId ? warehouses[mv.fromWarehouseId]?.name : null;
-            const toName = mv.toWarehouseId ? warehouses[mv.toWarehouseId]?.name : null;
-            return (
-              <View key={mv.id} style={styles.card}>
-                <View
-                  style={[
-                    styles.icon,
-                    { borderColor: meta.color, backgroundColor: meta.color + '22' },
-                  ]}
-                >
-                  <Ionicons name={meta.icon} size={16} color={meta.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{mv.materialName}</Text>
-                  <Text style={styles.meta}>
-                    {meta.label} ·{' '}
-                    {new Date(mv.createdAt).toLocaleString('tr-TR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  {(fromName || toName) && (
-                    <Text style={styles.meta}>
-                      {fromName ? `${fromName} ` : ''}
-                      {fromName && toName ? '→ ' : ''}
-                      {toName ? toName : ''}
-                    </Text>
-                  )}
-                  {mv.note ? <Text style={styles.note}>{mv.note}</Text> : null}
-                </View>
-                <Text style={[styles.qty, { color: meta.color }]}>
-                  {mv.qty} {mv.materialUnit}
-                </Text>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={filtered}
+        keyExtractor={mv => mv.id}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <EmptyState
+            icon="time-outline"
+            title="Hareket yok"
+            subtitle="Filtreyi değiştirerek tekrar deneyebilirsiniz."
+          />
+        }
+        renderItem={({ item: mv }) => {
+          const meta = KIND_META[mv.kind];
+          const fromName = mv.fromWarehouseId ? warehouses[mv.fromWarehouseId]?.name : null;
+          const toName = mv.toWarehouseId ? warehouses[mv.toWarehouseId]?.name : null;
+          return (
+            <View style={styles.card}>
+              <View
+                style={[
+                  styles.icon,
+                  { borderColor: meta.color, backgroundColor: meta.color + '22' },
+                ]}
+              >
+                <Ionicons name={meta.icon} size={16} color={meta.color} />
               </View>
-            );
-          })
-        )}
-      </ScrollView>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>{mv.materialName}</Text>
+                <Text style={styles.meta}>
+                  {meta.label} ·{' '}
+                  {new Date(mv.createdAt).toLocaleString('tr-TR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+                {(fromName || toName) && (
+                  <Text style={styles.meta}>
+                    {fromName ? `${fromName} ` : ''}
+                    {fromName && toName ? '→ ' : ''}
+                    {toName ? toName : ''}
+                  </Text>
+                )}
+                {mv.note ? <Text style={styles.note}>{mv.note}</Text> : null}
+              </View>
+              <Text style={[styles.qty, { color: meta.color }]}>
+                {mv.qty} {mv.materialUnit}
+              </Text>
+            </View>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

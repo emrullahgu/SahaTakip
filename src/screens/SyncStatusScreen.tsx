@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, spacing, radius, typography } from '../theme';
 import { isOnlineMode, getSyncQueue, drainSyncQueue } from '../services/data';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 interface SyncOp { id: string; table: string; action: string; payload: any; createdAt: number; }
 
@@ -89,15 +91,17 @@ export default function SyncStatusScreen() {
       </View>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={queue}
         keyExtractor={(o) => o.id}
         contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={48} color="#22c55e" />
-            <Text style={styles.emptyText}>Senkronizasyon kuyruğu boş.</Text>
-            <Text style={styles.emptyHint}>Tüm değişiklikler aktarıldı.</Text>
-          </View>
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title="Kuyruk boş"
+            subtitle="Tüm değişiklikler başarıyla aktarıldı."
+            iconColor="#22c55e"
+          />
         }
         renderItem={({ item }) => {
           const c = actionColor(item.action);

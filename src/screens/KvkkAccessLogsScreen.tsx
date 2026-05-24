@@ -7,6 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listKvkk, recordKvkk, KVKK_KIND_LABEL, KVKK_KIND_COLOR } from '../services/governance';
 import type { KvkkAccessLog } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function KvkkAccessLogsScreen() {
   const [items, setItems] = useState<KvkkAccessLog[]>([]);
@@ -31,10 +33,19 @@ export default function KvkkAccessLogsScreen() {
         </TouchableOpacity>
       </View>
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>KVKK erişim kaydı yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-lock-outline"
+            title="KVKK kaydı yok"
+            subtitle="Hassas verilere erişim logları burada listelenir."
+            actionLabel="+ Demo Veri Oluştur"
+            onAction={seedDemo}
+          />
+        }
         renderItem={({ item }) => (
           <View style={s.card}>
             <View style={[s.iconWrap, { backgroundColor: KVKK_KIND_COLOR[item.kind] + '22' }]}>

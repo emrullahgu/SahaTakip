@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { findByBarcode } from '../services/materials';
 import { RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'BarcodeScan'>;
 type Rt = RouteProp<RootStackParamList, 'BarcodeScan'>;
@@ -70,16 +71,13 @@ export default function BarcodeScanScreen() {
   if (!permission?.granted) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.permBox}>
-          <Ionicons name="camera-outline" size={56} color={colors.text.faint} />
-          <Text style={styles.permTitle}>Kamera İzni Gerekli</Text>
-          <Text style={styles.permText}>
-            Barkod taraması için kamera izni gerekiyor.
-          </Text>
-          <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-            <Text style={styles.permBtnTxt}>İzin Ver</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="camera-outline"
+          title="Kamera İzni Gerekli"
+          subtitle="Barkod taraması için kamera izni gerekiyor."
+          actionLabel="İzin Ver"
+          onAction={requestPermission}
+        />
       </SafeAreaView>
     );
   }

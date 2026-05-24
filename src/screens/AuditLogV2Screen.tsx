@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { listAudit, clearAudit, recordAudit, AUDIT_ACTION_LABEL, AUDIT_ACTION_COLOR } from '../services/governance';
 import type { AuditLogEntry, AuditAction, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AuditLogV2'>;
 
@@ -66,10 +68,17 @@ export default function AuditLogV2Screen() {
       </ScrollView>
 
       <FlatList
+        {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Audit kaydı yok.</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-text-outline"
+            title="Audit kaydı yok"
+            subtitle="Henüz sistemde denetim kaydı bulunmuyor."
+          />
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('AuditDetail', { entryId: item.id })}>
             <View style={[s.actionDot, { backgroundColor: AUDIT_ACTION_COLOR[item.action] }]} />

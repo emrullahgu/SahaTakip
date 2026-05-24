@@ -14,6 +14,8 @@ import MapView, { Marker, Circle, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'reac
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { geofencesRepo, Geofence } from '../services/data/geofencesRepo';
 import { requestAndGetPosition } from '../services/location';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 export default function GeofencesScreen() {
   const [list, setList] = useState<Geofence[]>([]);
@@ -149,16 +151,16 @@ export default function GeofencesScreen() {
         <ActivityIndicator color={brand.green} size="large" style={{ marginTop: 40 }} />
       ) : (
         <FlatList
+          {...FLATLIST_DEFAULTS}
           data={list}
           keyExtractor={g => g.id}
           contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
           ListEmptyComponent={
-            <View style={{ alignItems: 'center', padding: spacing.lg }}>
-              <Ionicons name="locate-outline" size={48} color={colors.text.faint} />
-              <Text style={{ color: colors.text.muted, marginTop: spacing.sm }}>
-                Tanımlı bölge yok.
-              </Text>
-            </View>
+            <EmptyState
+              icon="locate-outline"
+              title="Tanımlı bölge yok"
+              subtitle="Yeni bir bölge eklemek için üstteki butona basın."
+            />
           }
           renderItem={({ item }) => (
             <View style={styles.card}>

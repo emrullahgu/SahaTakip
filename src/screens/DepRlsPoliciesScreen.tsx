@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDepRls } from '../services/deploy';
 import type { DepRlsPolicy } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const CMD_COLOR: Record<DepRlsPolicy['command'], string> = {
   select: '#0ea5e9', insert: '#22c55e', update: '#f59e0b', delete: '#ef4444', all: '#a855f7',
@@ -25,15 +28,27 @@ export default function DepRlsPoliciesScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.statRow}>
-          <View style={s.statBox}><Text style={s.statV}>{stats.total}</Text><Text style={s.statL}>Tablo</Text></View>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.ok}</Text><Text style={s.statL}>Geçti</Text></View>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.fail}</Text><Text style={s.statL}>Sorun</Text></View>
-          <View style={[s.statBox, { borderColor: '#64748b' }]}><Text style={[s.statV, { color: '#64748b' }]}>{stats.disabled}</Text><Text style={s.statL}>Kapalı</Text></View>
-        </View>
-
-        {items.map(i => {
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <View style={s.statRow}>
+            <View style={s.statBox}><Text style={s.statV}>{stats.total}</Text><Text style={s.statL}>Tablo</Text></View>
+            <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.ok}</Text><Text style={s.statL}>Geçti</Text></View>
+            <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.fail}</Text><Text style={s.statL}>Sorun</Text></View>
+            <View style={[s.statBox, { borderColor: '#64748b' }]}><Text style={[s.statV, { color: '#64748b' }]}>{stats.disabled}</Text><Text style={s.statL}>Kapalı</Text></View>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="shield-outline"
+            title="Politika verisi yok"
+            subtitle="DB seviyesinde güvenlik politikası verisi bulunamadı."
+          />
+        }
+        renderItem={({ item: i }) => {
           const ok = i.enabled && i.checkPassed;
           return (
             <View key={i.id} style={[s.card, { borderLeftColor: ok ? '#22c55e' : '#ef4444' }]}>
@@ -54,8 +69,8 @@ export default function DepRlsPoliciesScreen() {
               </View>
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </SafeAreaView>
   );
 }

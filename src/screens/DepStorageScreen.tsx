@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listDepStorage } from '../services/deploy';
 import type { DepStorageBucket } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function DepStorageScreen() {
   const [items, setItems] = useState<DepStorageBucket[]>([]);
@@ -22,20 +25,34 @@ export default function DepStorageScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.heroCard}>
-          <Ionicons name="folder-open" size={48} color="#a855f7" />
-          <Text style={s.heroT}>Storage Bucket Yönetimi</Text>
-          <Text style={s.heroD}>{stats.total} bucket • {(stats.sizeMb / 1024).toFixed(2)} GB • {stats.fileCount.toLocaleString('tr-TR')} dosya</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={b => b.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.heroCard}>
+              <Ionicons name="folder-open" size={48} color="#a855f7" />
+              <Text style={s.heroT}>Storage Bucket Yönetimi</Text>
+              <Text style={s.heroD}>{stats.total} bucket • {(stats.sizeMb / 1024).toFixed(2)} GB • {stats.fileCount.toLocaleString('tr-TR')} dosya</Text>
+            </View>
 
-        <View style={s.statRow}>
-          <View style={[s.statBox, { borderColor: '#0ea5e9' }]}><Text style={[s.statV, { color: '#0ea5e9' }]}>{stats.publicCount}</Text><Text style={s.statL}>Public</Text></View>
-          <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.total - stats.failCount}</Text><Text style={s.statL}>Upload OK</Text></View>
-          <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.failCount}</Text><Text style={s.statL}>Sorun</Text></View>
-        </View>
-
-        {items.map(b => (
+            <View style={s.statRow}>
+              <View style={[s.statBox, { borderColor: '#0ea5e9' }]}><Text style={[s.statV, { color: '#0ea5e9' }]}>{stats.publicCount}</Text><Text style={s.statL}>Public</Text></View>
+              <View style={[s.statBox, { borderColor: '#22c55e' }]}><Text style={[s.statV, { color: '#22c55e' }]}>{stats.total - stats.failCount}</Text><Text style={s.statL}>Upload OK</Text></View>
+              <View style={[s.statBox, { borderColor: '#ef4444' }]}><Text style={[s.statV, { color: '#ef4444' }]}>{stats.failCount}</Text><Text style={s.statL}>Sorun</Text></View>
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="folder-outline"
+            title="Bucket yok"
+            subtitle="Storage üzerinde yapılandırılmış bir bucket bulunamadı."
+          />
+        }
+        renderItem={({ item: b }) => (
           <View key={b.id} style={[s.card, { borderLeftColor: b.uploadTestOk ? '#22c55e' : '#ef4444' }]}>
             <View style={s.headRow}>
               <Ionicons name={b.public ? 'globe' : 'lock-closed'} size={20} color={b.public ? '#0ea5e9' : '#64748b'} />
@@ -55,8 +72,8 @@ export default function DepStorageScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -122,7 +122,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         return;
       }
       const res = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         videoMaxDuration: 60,
         quality: 0.7,
       });
@@ -143,7 +143,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         return;
       }
       const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         quality: 0.7,
       });
       if (!res.canceled && res.assets[0]?.uri) {

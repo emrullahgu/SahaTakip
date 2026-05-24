@@ -2,7 +2,7 @@
 // SLA / planlanan bitişi geçmiş, hâlâ tamamlanmamış iş emirleri.
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,8 @@ import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { listSlaItems } from '../services/reports';
 import { RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Sla'>;
 
@@ -40,62 +42,66 @@ export default function SlaScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {items.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={42} color={colors.text.faint} />
-            <Text style={styles.emptyText}>SLA ihlali yok.</Text>
-          </View>
-        ) : (
-          items.map(it => {
-            const severity =
-              it.hoursOverdue >= 48 ? '#dc2626' : it.hoursOverdue >= 8 ? '#f97316' : '#f59e0b';
-            return (
-              <TouchableOpacity
-                key={it.workOrderId}
-                style={styles.card}
-                onPress={() =>
-                  navigation.navigate('WorkOrderDetail', { workOrderId: it.workOrderId })
-                }
-                activeOpacity={0.85}
-              >
-                <View style={[styles.sevBar, { backgroundColor: severity }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.client}>{it.client}</Text>
-                  <Text style={styles.service}>{it.serviceName}</Text>
-                  <View style={styles.metaRow}>
-                    <View style={[styles.statusChip, { borderColor: severity }]}>
-                      <Text style={[styles.statusText, { color: severity }]}>
-                        {it.status}
-                      </Text>
-                    </View>
-                    {it.assignedToName ? (
-                      <Text style={styles.meta}>{it.assignedToName}</Text>
-                    ) : null}
-                  </View>
-                  {it.plannedEnd ? (
-                    <Text style={styles.meta}>
-                      Planlanan bitiş:{' '}
-                      {new Date(it.plannedEnd).toLocaleString('tr-TR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={it => it.workOrderId}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title="SLA ihlali yok"
+            subtitle="Tüm iş emirleri planlanan süreler içinde devam ediyor."
+            iconColor={colors.emerald.default}
+          />
+        }
+        renderItem={({ item: it }) => {
+          const severity =
+            it.hoursOverdue >= 48 ? '#dc2626' : it.hoursOverdue >= 8 ? '#f97316' : '#f59e0b';
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() =>
+                navigation.navigate('WorkOrderDetail', { workOrderId: it.workOrderId })
+              }
+              activeOpacity={0.85}
+            >
+              <View style={[styles.sevBar, { backgroundColor: severity }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.client}>{it.client}</Text>
+                <Text style={styles.service}>{it.serviceName}</Text>
+                <View style={styles.metaRow}>
+                  <View style={[styles.statusChip, { borderColor: severity }]}>
+                    <Text style={[styles.statusText, { color: severity }]}>
+                      {it.status}
                     </Text>
+                  </View>
+                  {it.assignedToName ? (
+                    <Text style={styles.meta}>{it.assignedToName}</Text>
                   ) : null}
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.overdue, { color: severity }]}>
-                    +{fmtHours(it.hoursOverdue)}
+                {it.plannedEnd ? (
+                  <Text style={styles.meta}>
+                    Planlanan bitiş:{' '}
+                    {new Date(it.plannedEnd).toLocaleString('tr-TR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                ) : null}
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.overdue, { color: severity }]}>
+                  +{fmtHours(it.hoursOverdue)}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }

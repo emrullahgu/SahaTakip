@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { OperationReplayFrame } from '../types';
 import { listReplay } from '../services/liveOps';
+import EmptyState from '../components/EmptyState';
 
 const PALETTE = ['#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -46,7 +47,13 @@ export default function OperationReplayScreen() {
     }));
   }, [frames, idx, current]);
 
-  if (!current || !bounds) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  if (!current || !bounds) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <EmptyState icon="play-circle-outline" title="Yükleniyor..." subtitle="Operasyon geçmişi kareleri hazırlanıyor." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
