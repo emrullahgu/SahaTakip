@@ -10,6 +10,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { CustomerBalance, RootStackParamList } from '../types';
 import { useAppContext } from '../context/AppContext';
 import { computeCustomerBalances } from '../services/payments';
+import { useHasRole } from '../components/RoleGuard';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -47,6 +48,14 @@ function classify(b: CustomerBalance): { bucket: Bucket; days: number } {
 }
 
 export default function AgingReportScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) {
+    return null;
+  }
+  return <AgingReportInner />;
+}
+
+function AgingReportInner() {
   const nav = useNavigation<Nav>();
   const { customers, workOrders, quotes } = useAppContext();
   const [balances, setBalances] = useState<CustomerBalance[]>([]);

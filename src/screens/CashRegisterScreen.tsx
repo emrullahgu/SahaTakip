@@ -26,6 +26,7 @@ import {
 } from '../services/cashRegister';
 import { useAppContext } from '../context/AppContext';
 import { CashEntry, CashEntryKind, CashSummary, RootStackParamList } from '../types';
+import { useHasRole } from '../components/RoleGuard';
 
 type Rt = RouteProp<RootStackParamList, 'CashRegister'>;
 
@@ -57,6 +58,14 @@ const KIND_ICON: Record<CashEntryKind, keyof typeof import('@expo/vector-icons')
 };
 
 export default function CashRegisterScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) {
+    return null;
+  }
+  return <CashRegisterInner />;
+}
+
+function CashRegisterInner() {
   const route = useRoute<Rt>();
   const initEmpId = route.params?.employeeId;
   const { employees } = useAppContext();

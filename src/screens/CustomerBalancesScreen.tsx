@@ -19,6 +19,7 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { computeCustomerBalances } from '../services/payments';
 import { useAppContext } from '../context/AppContext';
 import { CustomerBalance, RootStackParamList } from '../types';
+import { useHasRole } from '../components/RoleGuard';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'CustomerBalances'>;
 
@@ -27,6 +28,14 @@ function fmtMoney(n: number): string {
 }
 
 export default function CustomerBalancesScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) {
+    return null;
+  }
+  return <CustomerBalancesInner />;
+}
+
+function CustomerBalancesInner() {
   const navigation = useNavigation<Nav>();
   const { customers, workOrders, quotes } = useAppContext();
   const [items, setItems] = useState<CustomerBalance[]>([]);

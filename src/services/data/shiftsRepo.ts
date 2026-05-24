@@ -129,4 +129,19 @@ export const shiftsRepo = {
     if (error) return [];
     return (data ?? []).map(fromRow);
   },
+
+  /** Şu anda aktif olan tüm vardiyaları getir (admin canlı izleme için). */
+  async listActive(): Promise<Shift[]> {
+    if (!isOnlineMode()) return [];
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('*')
+      .is('end_at', null)
+      .order('start_at', { ascending: false });
+    if (error) {
+      console.warn('[shifts.listActive]', error.message);
+      return [];
+    }
+    return (data ?? []).map(fromRow);
+  },
 };

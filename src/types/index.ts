@@ -3847,6 +3847,7 @@ export type RootStackParamList = {
   SalesVisitForm: { visitId?: string; customerId?: string } | undefined;
   AiHub: undefined;
   AiSettings: undefined;
+  AdminShiftDashboard: undefined;
   SmartPozSuggest: { description?: string } | undefined;
   PhotoAnalysis: { workOrderId?: string } | undefined;
   VoiceReport: { workOrderId?: string; customerId?: string } | undefined;

@@ -10,8 +10,17 @@ import type { AdvCollectionForecast } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { FlatList } from 'react-native';
+import { useHasRole } from '../components/RoleGuard';
 
 export default function AdvCollectionForecastScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) {
+    return null;
+  }
+  return <AdvCollectionForecastInner />;
+}
+
+function AdvCollectionForecastInner() {
   const [items, setItems] = useState<AdvCollectionForecast[]>([]);
   useFocusEffect(useCallback(() => { (async () => setItems(await listCollectionForecasts()))(); }, []));
 

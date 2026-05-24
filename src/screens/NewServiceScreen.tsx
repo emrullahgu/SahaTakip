@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -23,8 +23,9 @@ import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
-import { SERVICE_CATALOG, MATERIAL_CATALOG, CLIENTS } from '../data/initialData';
-import { SelectedMaterial, ServiceCatalogItem, TabParamList, RootStackParamList } from '../types';
+import { SERVICE_CATALOG, MATERIAL_CATALOG } from '../data/initialData';
+import { createApproval } from '../services/governance';
+import { Customer, SelectedMaterial, ServiceCatalogItem, TabParamList, RootStackParamList } from '../types';
 
 type NavProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'NewService'>,
@@ -33,7 +34,7 @@ type NavProp = CompositeNavigationProp<
 
 export default function NewServiceScreen() {
   const navigation = useNavigation<NavProp>();
-  const { addWorkOrder, toast } = useAppContext();
+  const { addWorkOrder, addCustomer, customers, toast } = useAppContext();
   const { profile, user } = useAuth();
   const engineerName =
     profile?.full_name ||
@@ -41,7 +42,7 @@ export default function NewServiceScreen() {
     user?.email?.split('@')[0] ||
     'Saha';
 
-  const [selectedClient, setSelectedClient] = useState<string>(CLIENTS[0] ?? '');
+  const [selectedClient, setSelectedClient] = useState<string>(customers[0]?.shortName ?? '');
   const [selectedService, setSelectedService] = useState<ServiceCatalogItem>(
     SERVICE_CATALOG[0] ?? { id: 'custom', name: 'Saha Servisi', price: 0, estCost: 0 }
   );
@@ -53,6 +54,65 @@ export default function NewServiceScreen() {
 
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showServicePicker, setShowServicePicker] = useState(false);
+  const [showMaterialPicker, setShowMaterialPicker] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const [materialSearch, setMaterialSearch] = useState('');
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ shortName: '', title: '', phone: '' });
+
+  const filteredCustomers = useMemo(() => {
+    const q = clientSearch.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return customers;
+    return customers.filter(c =>
+      (c.shortName || '').toLocaleLowerCase('tr-TR').includes(q) ||
+      (c.title || '').toLocaleLowerCase('tr-TR').includes(q) ||
+      (c.taxNumber || '').includes(q) ||
+      (c.phone || '').includes(q),
+    );
+  }, [customers, clientSearch]);
+
+  const filteredMaterials = useMemo(() => {
+    const q = materialSearch.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return MATERIAL_CATALOG;
+    return MATERIAL_CATALOG.filter(m =>
+      (m.name || '').toLocaleLowerCase('tr-TR').includes(q),
+    );
+  }, [materialSearch]);
+
+  const handleCreateCustomer = () => {
+    const shortName = newCustomer.shortName.trim();
+    if (!shortName) {
+      Alert.alert('Eksik bilgi', 'En azından müşterinin kısa adını giriniz.');
+      return;
+    }
+    const dup = customers.find(
+      c => c.shortName.toLocaleLowerCase('tr-TR') === shortName.toLocaleLowerCase('tr-TR'),
+    );
+    if (dup) {
+      setSelectedClient(dup.shortName);
+      setShowNewCustomer(false);
+      setShowClientPicker(false);
+      return;
+    }
+    const c: Customer = {
+      id: `C-${Date.now()}`,
+      shortName,
+      title: newCustomer.title.trim() || shortName,
+      phone: newCustomer.phone.trim() || undefined,
+    };
+    addCustomer(c);
+    setSelectedClient(c.shortName);
+    setNewCustomer({ shortName: '', title: '', phone: '' });
+    setShowNewCustomer(false);
+    setShowClientPicker(false);
+  };
+
+  const updateMaterialQty = (id: string, delta: number) => {
+    setSelectedMaterials(prev => {
+      const next = prev.map(m => (m.id === id ? { ...m, qty: m.qty + delta } : m));
+      return next.filter(m => m.qty > 0);
+    });
+  };
 
   const pickPhoto = async (type: 'before' | 'after') => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -126,8 +186,9 @@ export default function NewServiceScreen() {
     const totalCost = laborCost + materialCost + extraCost;
     const profit = calculatedQuote - totalCost;
 
+    const workOrderId = `KOB-DRAFT-${Date.now().toString().slice(-4)}`;
     addWorkOrder({
-      id: `KOB-DRAFT-${Date.now().toString().slice(-4)}`,
+      id: workOrderId,
       client: selectedClient,
       serviceName: selectedService.name,
       date: new Date().toISOString().split('T')[0],
@@ -143,6 +204,23 @@ export default function NewServiceScreen() {
       afterPhoto,
       notes: notes || 'Saha bakımı tamamlandı, gerilim testleri yapıldı.',
     });
+
+    // Yönetici onay havuzuna ApprovalRequest olarak da düşür
+    createApproval({
+      kind: 'other',
+      title: `Servis Raporu Onayı: ${selectedClient}`,
+      description: `${selectedService.name} – Teklif ₺${Math.round(calculatedQuote).toLocaleString('tr-TR')}`,
+      resource: 'work_order',
+      resourceId: workOrderId,
+      requestedByName: engineerName,
+      payload: {
+        client: selectedClient,
+        materialCost,
+        laborCost,
+        extraCost,
+        quoteAmount: Math.round(calculatedQuote),
+      },
+    }).catch(e => console.warn('[approval.create]', e));
 
     // Reset form
     setBeforePhoto(null);
@@ -221,36 +299,43 @@ export default function NewServiceScreen() {
 
         {/* Step 4: Materials */}
         <Text style={styles.stepLabel}>4. Kullanılan Sarf Malzemeler</Text>
-        <View style={styles.materialGrid}>
-          {MATERIAL_CATALOG.map(m => (
-            <TouchableOpacity
-              key={m.id}
-              style={styles.materialBtn}
-              onPress={() => addMaterial(m)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.materialBtnName} numberOfLines={2}>
-                + {m.name}
-              </Text>
-              <Text style={styles.materialBtnPrice}>{m.price}₺</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={styles.addMaterialBtn}
+          onPress={() => { setMaterialSearch(''); setShowMaterialPicker(true); }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.emerald.default} />
+          <Text style={styles.addMaterialBtnText}>
+            Malzeme Ekle{MATERIAL_CATALOG.length > 0 ? ` (${MATERIAL_CATALOG.length} katalog kaydı)` : ''}
+          </Text>
+          <Ionicons name="search-outline" size={16} color={colors.text.muted} />
+        </TouchableOpacity>
 
-        {selectedMaterials.length > 0 && (
+        {selectedMaterials.length > 0 ? (
           <View style={styles.selectedMaterials}>
             {selectedMaterials.map(m => (
               <View key={m.id} style={styles.matRow}>
-                <Text style={styles.matName} numberOfLines={1}>
-                  {m.name} (x{m.qty})
-                </Text>
-                <Text style={styles.matPrice}>₺{(m.price * m.qty).toLocaleString('tr-TR')}</Text>
-                <TouchableOpacity onPress={() => removeMaterial(m.id)}>
-                  <Ionicons name="close-circle-outline" size={18} color={colors.rose.default} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.matName} numberOfLines={2}>{m.name}</Text>
+                  <Text style={styles.matPrice}>₺{(m.price * m.qty).toLocaleString('tr-TR')}</Text>
+                </View>
+                <View style={styles.qtyBox}>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, -1)}>
+                    <Ionicons name="remove" size={16} color={colors.text.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyVal}>{m.qty}</Text>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, 1)}>
+                    <Ionicons name="add" size={16} color={colors.text.primary} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity onPress={() => removeMaterial(m.id)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
+        ) : (
+          <Text style={styles.materialHint}>Henüz malzeme eklemediniz. Yukarıdaki butona dokunup arayarak hızlıca seçin.</Text>
         )}
 
         {/* Step 5: After Photo */}
@@ -347,28 +432,107 @@ export default function NewServiceScreen() {
         onRequestClose={() => setShowClientPicker(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Müşteri Seçin</Text>
-            {CLIENTS.length === 0 && (
-              <Text style={styles.modalItemSub}>Henüz müşteri tanımlanmamış. Müşteriler ekranından ekleyebilirsiniz.</Text>
-            )}
-            {CLIENTS.map(c => (
+          <View style={[styles.modalBox, { maxHeight: '85%' }]}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>Müşteri Seçin</Text>
               <TouchableOpacity
-                key={c}
-                style={styles.modalItem}
-                onPress={() => { setSelectedClient(c); setShowClientPicker(false); }}
+                style={styles.modalAddBtn}
+                onPress={() => setShowNewCustomer(v => !v)}
               >
-                <Text style={styles.modalItemText}>{c}</Text>
-                {selectedClient === c && (
-                  <Ionicons name="checkmark" size={16} color={colors.emerald.default} />
-                )}
+                <Ionicons
+                  name={showNewCustomer ? 'remove-circle-outline' : 'add-circle-outline'}
+                  size={16}
+                  color="#fff"
+                />
+                <Text style={styles.modalAddBtnText}>
+                  {showNewCustomer ? 'Kapat' : 'Yeni Müşteri'}
+                </Text>
               </TouchableOpacity>
-            ))}
+            </View>
+
+            {showNewCustomer && (
+              <View style={styles.newCustomerBox}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Kısa ad (zorunlu)"
+                  placeholderTextColor={colors.text.faint}
+                  value={newCustomer.shortName}
+                  onChangeText={t => setNewCustomer(s => ({ ...s, shortName: t }))}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Resmi ünvan (opsiyonel)"
+                  placeholderTextColor={colors.text.faint}
+                  value={newCustomer.title}
+                  onChangeText={t => setNewCustomer(s => ({ ...s, title: t }))}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Telefon (opsiyonel)"
+                  placeholderTextColor={colors.text.faint}
+                  keyboardType="phone-pad"
+                  value={newCustomer.phone}
+                  onChangeText={t => setNewCustomer(s => ({ ...s, phone: t }))}
+                />
+                <TouchableOpacity style={styles.saveCustomerBtn} onPress={handleCreateCustomer}>
+                  <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                  <Text style={styles.saveCustomerBtnText}>Kaydet ve Seç</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.searchRow}>
+              <Ionicons name="search-outline" size={16} color={colors.text.muted} />
+              <TextInput
+                style={styles.searchInputInline}
+                placeholder="Müşteri ara (ad, ünvan, vergi no, telefon)"
+                placeholderTextColor={colors.text.faint}
+                value={clientSearch}
+                onChangeText={setClientSearch}
+                autoCapitalize="none"
+              />
+              {clientSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setClientSearch('')}>
+                  <Ionicons name="close-circle" size={16} color={colors.text.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <FlatList
+              data={filteredCustomers}
+              keyExtractor={c => c.id}
+              keyboardShouldPersistTaps="handled"
+              style={{ maxHeight: 320 }}
+              ListEmptyComponent={
+                <Text style={[styles.modalItemSub, { textAlign: 'center', marginVertical: spacing.lg }]}>
+                  {customers.length === 0
+                    ? 'Henüz müşteri yok. Yukarıdaki “Yeni Müşteri” butonunu kullanın.'
+                    : 'Arama sonucu boş.'}
+                </Text>
+              }
+              renderItem={({ item: c }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => { setSelectedClient(c.shortName); setShowClientPicker(false); }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalItemText} numberOfLines={1}>{c.shortName}</Text>
+                    {c.title && c.title !== c.shortName && (
+                      <Text style={styles.modalItemSub} numberOfLines={1}>{c.title}</Text>
+                    )}
+                  </View>
+                  {selectedClient === c.shortName && (
+                    <Ionicons name="checkmark" size={16} color={colors.emerald.default} />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+
             <TouchableOpacity
               style={styles.modalCancel}
               onPress={() => setShowClientPicker(false)}
             >
-              <Text style={styles.modalCancelText}>İptal</Text>
+              <Text style={styles.modalCancelText}>Kapat</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -409,6 +573,81 @@ export default function NewServiceScreen() {
               onPress={() => setShowServicePicker(false)}
             >
               <Text style={styles.modalCancelText}>İptal</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Material Picker Modal */}
+      <Modal
+        visible={showMaterialPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMaterialPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { maxHeight: '85%' }]}>
+            <Text style={styles.modalTitle}>Malzeme Seçin</Text>
+
+            <View style={styles.searchRow}>
+              <Ionicons name="search-outline" size={16} color={colors.text.muted} />
+              <TextInput
+                style={styles.searchInputInline}
+                placeholder="Malzeme adında ara"
+                placeholderTextColor={colors.text.faint}
+                value={materialSearch}
+                onChangeText={setMaterialSearch}
+                autoCapitalize="none"
+              />
+              {materialSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setMaterialSearch('')}>
+                  <Ionicons name="close-circle" size={16} color={colors.text.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <FlatList
+              data={filteredMaterials}
+              keyExtractor={m => m.id}
+              keyboardShouldPersistTaps="handled"
+              style={{ maxHeight: 380 }}
+              ListEmptyComponent={
+                <Text style={[styles.modalItemSub, { textAlign: 'center', marginVertical: spacing.lg }]}>
+                  Arama sonucu boş.
+                </Text>
+              }
+              renderItem={({ item: m }) => {
+                const inList = selectedMaterials.find(x => x.id === m.id);
+                return (
+                  <TouchableOpacity
+                    style={styles.modalItem}
+                    onPress={() => addMaterial(m)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalItemText} numberOfLines={2}>{m.name}</Text>
+                      <Text style={styles.modalItemSub}>₺{m.price.toLocaleString('tr-TR')}</Text>
+                    </View>
+                    {inList ? (
+                      <View style={styles.qtyBadge}>
+                        <Text style={styles.qtyBadgeText}>x{inList.qty}</Text>
+                      </View>
+                    ) : (
+                      <Ionicons name="add-circle" size={20} color={colors.emerald.default} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+
+            <TouchableOpacity
+              style={styles.modalDone}
+              onPress={() => setShowMaterialPicker(false)}
+            >
+              <Ionicons name="checkmark" size={16} color="#fff" />
+              <Text style={styles.modalDoneText}>
+                Tamam{selectedMaterials.length > 0 ? ` (${selectedMaterials.length} kalem)` : ''}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -625,4 +864,129 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   modalCancelText: { color: colors.rose.default, fontSize: typography.sm, fontWeight: '700' },
+  addMaterialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  addMaterialBtnText: {
+    flex: 1,
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: '700',
+  },
+  materialHint: {
+    color: colors.text.muted,
+    fontSize: typography.xs,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
+  },
+  qtyBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.primary,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    overflow: 'hidden',
+  },
+  qtyBtn: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyVal: {
+    minWidth: 24,
+    textAlign: 'center',
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: '700',
+  },
+  qtyBadge: {
+    backgroundColor: colors.emerald.default,
+    borderRadius: radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  qtyBadgeText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  modalAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.emerald.default,
+    borderRadius: radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  modalAddBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
+  newCustomerBox: {
+    backgroundColor: colors.bg.primary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  searchInput: {
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  saveCustomerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.indigo.default,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+  },
+  saveCustomerBtnText: { color: '#fff', fontSize: typography.sm, fontWeight: '700' },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.bg.primary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  searchInputInline: {
+    flex: 1,
+    color: colors.text.primary,
+    fontSize: typography.sm,
+  },
+  modalDone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.emerald.default,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+  },
+  modalDoneText: { color: '#fff', fontSize: typography.sm, fontWeight: '800' },
 });

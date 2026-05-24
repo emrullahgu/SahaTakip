@@ -97,6 +97,7 @@ import SalesVisitsScreen from '../screens/SalesVisitsScreen';
 import SalesVisitFormScreen from '../screens/SalesVisitFormScreen';
 import AiHubScreen from '../screens/AiHubScreen';
 import AiSettingsScreen from '../screens/AiSettingsScreen';
+import AdminShiftDashboardScreen from '../screens/AdminShiftDashboardScreen';
 import SmartPozSuggestScreen from '../screens/SmartPozSuggestScreen';
 import PhotoAnalysisScreen from '../screens/PhotoAnalysisScreen';
 import VoiceReportScreen from '../screens/VoiceReportScreen';
@@ -1409,6 +1410,7 @@ function MainStack() {
       <Stack.Screen name="SalesVisitForm" component={SalesVisitFormScreen} options={({ route }) => ({ headerShown: true, title: (route.params as any)?.visitId ? 'Ziyaret Düzenle' : 'Yeni Ziyaret', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } })} />
       <Stack.Screen name="AiHub" component={AiHubScreen} options={{ headerShown: true, title: 'AI Asistan', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiSettings" component={AiSettingsScreen} options={{ headerShown: true, title: 'AI Ayarları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AdminShiftDashboard" component={AdminShiftDashboardScreen} options={{ headerShown: true, title: 'Canlı Mesai', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="SmartPozSuggest" component={SmartPozSuggestScreen} options={{ headerShown: true, title: 'Akıllı POZ Önerisi', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="PhotoAnalysis" component={PhotoAnalysisScreen} options={{ headerShown: true, title: 'Fotoğraf Analizi', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="VoiceReport" component={VoiceReportScreen} options={{ headerShown: true, title: 'Sesli Rapor', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

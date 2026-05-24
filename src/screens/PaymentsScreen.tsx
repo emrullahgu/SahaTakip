@@ -26,6 +26,7 @@ import {
 import { Payment, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { useHasRole } from '../components/RoleGuard';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Payments'>;
 type Rt = RouteProp<RootStackParamList, 'Payments'>;
@@ -54,6 +55,14 @@ function fmtDate(iso: string): string {
 }
 
 export default function PaymentsScreen() {
+  const canSee = useHasRole(['admin', 'manager']);
+  if (!canSee) {
+    return null;
+  }
+  return <PaymentsScreenInner />;
+}
+
+function PaymentsScreenInner() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
   const filterCustomerId = route.params?.customerId;

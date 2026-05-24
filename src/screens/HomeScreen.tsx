@@ -334,6 +334,19 @@ export default function HomeScreen() {
           {canSeeAdminTools && (
             <TouchableOpacity
               style={styles.gridItem}
+              onPress={() => navigation.navigate('AdminShiftDashboard')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+                <Ionicons name="pulse-outline" size={26} color={colors.emerald.default} />
+              </View>
+              <Text style={styles.gridLabel}>Canlı Mesai</Text>
+            </TouchableOpacity>
+          )}
+
+          {canSeeAdminTools && (
+            <TouchableOpacity
+              style={styles.gridItem}
               onPress={() => navigation.navigate('AiSettings')}
               activeOpacity={0.75}
             >
