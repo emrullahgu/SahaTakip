@@ -21,6 +21,7 @@ const SECTIONS: Section[] = [
     title: 'Entegrasyon',
     tiles: [
       { label: 'API Anahtarları', desc: 'REST API erişim kontrolü', icon: 'key-outline', color: '#0ea5e9', route: 'ApiKeys', poz: 'POZ-DEV-101' },
+      { label: 'Dış Servis Anahtarları', desc: 'Maps, Resend, Netgsm, WhatsApp, S3', icon: 'lock-closed-outline', color: '#10b981', route: 'ExternalApiKeys', poz: 'POZ-DEV-101' },
       { label: 'Webhook', desc: 'Olay tabanlı dış sistem bildirimi', icon: 'send-outline', color: '#8b5cf6', route: 'Webhooks', poz: 'POZ-DEV-102' },
       { label: 'Excel İçe Aktar', desc: 'Müşteri, POZ ve personel toplu yükleme', icon: 'cloud-upload-outline', color: '#16a34a', route: 'ExcelImport', poz: 'POZ-DEV-103' },
       { label: 'ERP / CRM', desc: 'Logo, Netsis, Mikro adaptörleri', icon: 'cube-outline', color: '#f59e0b', route: 'ErpAdapters', poz: 'POZ-DEV-104' },

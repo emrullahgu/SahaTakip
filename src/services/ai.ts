@@ -10,6 +10,7 @@ const VOICE_KEY = '@SahaTakip:voice_reports';
 const DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: 'gpt-4o-mini',
   claude: 'claude-3-5-sonnet-20241022',
+  gemini: 'gemini-1.5-flash',
   mock: 'mock',
 };
 
@@ -28,6 +29,7 @@ export async function setAiSettings(s: AiSettings): Promise<void> {
 export const AI_PROVIDER_LABEL: Record<AiProvider, string> = {
   openai: 'OpenAI (ChatGPT)',
   claude: 'Anthropic (Claude)',
+  gemini: 'Google (Gemini)',
   mock: 'Demo (yerel)',
 };
 
@@ -75,6 +77,23 @@ async function chat(prompt: string, settings: AiSettings, systemPrompt?: string)
     if (!res.ok) throw new Error(`Claude HTTP ${res.status}`);
     const json = await res.json();
     return json.content?.[0]?.text ?? '';
+  }
+  if (settings.provider === 'gemini') {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(settings.apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3 },
+        }),
+      },
+    );
+    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+    const json = await res.json();
+    return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   }
   throw new Error('Bilinmeyen sağlayıcı');
 }

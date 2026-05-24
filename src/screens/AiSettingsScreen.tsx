@@ -9,12 +9,13 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { AI_PROVIDER_LABEL, getAiSettings, setAiSettings } from '../services/ai';
 import { AiProvider, AiSettings } from '../types';
 
-const PROVIDERS: AiProvider[] = ['mock', 'openai', 'claude'];
+const PROVIDERS: AiProvider[] = ['mock', 'openai', 'claude', 'gemini'];
 
 const HINTS: Record<AiProvider, { defaultModel: string; help: string }> = {
   mock: { defaultModel: '—', help: 'Tüm AI çıktıları yerel demo verisi olur. API gerekmez.' },
   openai: { defaultModel: 'gpt-4o-mini', help: 'platform.openai.com adresinden API anahtarı alın.' },
   claude: { defaultModel: 'claude-3-5-sonnet-20241022', help: 'console.anthropic.com adresinden API anahtarı alın.' },
+  gemini: { defaultModel: 'gemini-1.5-flash', help: 'aistudio.google.com adresinden API anahtarı alın.' },
 };
 
 export default function AiSettingsScreen() {
@@ -58,7 +59,7 @@ export default function AiSettingsScreen() {
             return (
               <TouchableOpacity key={p} style={[styles.pCard, active && styles.pCardActive]} onPress={() => setProvider(p)}>
                 <Ionicons
-                  name={p === 'openai' ? 'sparkles' : p === 'claude' ? 'flash' : 'flask-outline'}
+                  name={p === 'openai' ? 'sparkles' : p === 'claude' ? 'flash' : p === 'gemini' ? 'planet-outline' : 'flask-outline'}
                   size={20}
                   color={active ? '#fff' : colors.text.muted}
                 />
@@ -81,7 +82,7 @@ export default function AiSettingsScreen() {
                 style={[styles.input, { flex: 1 }]}
                 value={apiKey}
                 onChangeText={setApiKey}
-                placeholder={provider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                placeholder={provider === 'openai' ? 'sk-...' : provider === 'claude' ? 'sk-ant-...' : 'AIza...'}
                 placeholderTextColor={colors.text.faint}
                 secureTextEntry={!showKey}
                 autoCapitalize="none"

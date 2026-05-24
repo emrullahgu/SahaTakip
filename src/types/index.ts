@@ -864,7 +864,7 @@ export interface SalesVisit {
 // =============================================================
 // FAZ 13 — Yapay Zeka (POZ-DEV-090..094)
 // =============================================================
-export type AiProvider = 'openai' | 'claude' | 'mock';
+export type AiProvider = 'openai' | 'claude' | 'gemini' | 'mock';
 export interface AiSettings {
   provider: AiProvider;
   apiKey?: string;
@@ -3854,6 +3854,7 @@ export type RootStackParamList = {
   WebAdmin: undefined;
   UsersAdmin: undefined;
   UserApprovals: undefined;
+  ExternalApiKeys: undefined;
   LiveTracking: undefined;
   IntegrationsHub: undefined;
   ApiKeys: undefined;

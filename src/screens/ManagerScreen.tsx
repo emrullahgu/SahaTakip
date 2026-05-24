@@ -19,6 +19,10 @@ import type { RootStackParamList } from '../types';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
+import SearchFilterBar, { FilterChip } from '../components/SearchFilterBar';
+import MiniBarChart from '../components/MiniBarChart';
+import { SkeletonBlock } from '../components/LoadingSkeleton';
 import { WorkOrder } from '../types';
 import {
   generateAndShareAttendancePdf,
@@ -71,6 +75,12 @@ export default function ManagerScreen() {
       o.engineer.toLowerCase().includes(searchQuery.toLowerCase());
     return matchYear && matchSearch;
   });
+
+  const archiveChips: FilterChip[] = ARCHIVE_YEARS.map(y => ({
+    key: y,
+    label: y,
+    count: y === 'Hepsi' ? workOrders.length : workOrders.filter(o => o.date.startsWith(y)).length,
+  }));
 
   const runAiAnalysis = () => {
     setAiLoading(true);
@@ -730,30 +740,16 @@ export default function ManagerScreen() {
 
           {/* Year Performance Bars */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>3 Yıllık Performans</Text>
-            {[
-              { year: '2024', ciro: 240000, margin: 52 },
-              { year: '2025', ciro: 380000, margin: 61 },
-              { year: '2026 (Aktif)', ciro: totalRevenue, margin: Math.round(margin) },
-            ].map((row, i) => (
-              <View key={i} style={styles.barRow}>
-                <Text style={styles.barYear}>{row.year}</Text>
-                <View style={styles.barTrack}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${Math.min(row.margin, 100)}%`,
-                        backgroundColor: i === 2 ? colors.amber.default : colors.emerald.default,
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.barLabel}>
-                  ₺{row.ciro.toLocaleString('tr-TR')} · %{row.margin}
-                </Text>
-              </View>
-            ))}
+            <Text style={styles.sectionTitle}>3 Yıllık Performans (Kâr Marjı %)</Text>
+            <MiniBarChart
+              data={[
+                { label: '2024', value: 52 },
+                { label: '2025', value: 61 },
+                { label: '2026 (Aktif)', value: Math.round(margin) },
+              ]}
+              formatValue={v => `%${v}`}
+              barColor={colors.emerald.default}
+            />
           </View>
 
           {/* AI Analysis */}
@@ -772,7 +768,14 @@ export default function ManagerScreen() {
               </TouchableOpacity>
             </View>
 
-            {aiResult ? (
+            {aiLoading ? (
+              <View style={styles.aiLoadingWrap}>
+                <SkeletonBlock height={14} width="90%" />
+                <SkeletonBlock height={14} width="70%" style={{ marginTop: 8 }} />
+                <SkeletonBlock height={60} style={{ marginTop: 12 }} />
+                <SkeletonBlock height={60} style={{ marginTop: 8 }} />
+              </View>
+            ) : aiResult ? (
               <View style={styles.aiResult}>
                 <Text style={styles.aiSummary}>"{aiResult.summary}"</Text>
                 {aiResult.insights.map((ins, i) => (
@@ -783,11 +786,12 @@ export default function ManagerScreen() {
                 ))}
               </View>
             ) : (
-              <View style={styles.aiEmpty}>
-                <Text style={styles.aiEmptyText}>
-                  3 yıllık verileri analiz etmek için "Analiz Başlat" butonuna basın.
-                </Text>
-              </View>
+              <EmptyState
+                icon="sparkles-outline"
+                title="Hazır mısınız?"
+                subtitle="3 yıllık verileri analiz etmek için 'Analiz Başlat' butonuna basın."
+                iconColor={colors.emerald.default}
+              />
             )}
           </View>
         </ScrollView>
@@ -806,13 +810,12 @@ export default function ManagerScreen() {
           </Text>
 
           {pendingApprovals.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="checkmark-done-circle-outline" size={48} color={colors.text.faint} />
-              <Text style={styles.emptyTitle}>Bekleyen onay yok</Text>
-              <Text style={styles.emptyDesc}>
-                Tüm raporlar işlendi veya henüz yeni rapor gönderilmedi.
-              </Text>
-            </View>
+            <EmptyState
+              icon="checkmark-done-circle-outline"
+              title="Bekleyen onay yok"
+              subtitle="Tüm raporlar işlendi veya henüz yeni rapor gönderilmedi."
+              iconColor={colors.emerald.default}
+            />
           ) : (
             pendingApprovals.map(order => {
               const cost = order.laborCost + order.materialCost + order.otherCost;
@@ -967,34 +970,15 @@ export default function ManagerScreen() {
       {/* TAB: ARŞİV */}
       {activeTab === 'arsiv' && (
         <View style={[styles.scroll, { flex: 1 }]}>
-          {/* Filter Row */}
-          <View style={styles.archiveFilters}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.yearRow}>
-                {ARCHIVE_YEARS.map(y => (
-                  <TouchableOpacity
-                    key={y}
-                    style={[styles.yearBtn, archiveYear === y && styles.yearBtnActive]}
-                    onPress={() => setArchiveYear(y)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.yearBtnText, archiveYear === y && styles.yearBtnTextActive]}>
-                      {y}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-            <View style={styles.archiveSearch}>
-              <Ionicons name="search-outline" size={14} color={colors.text.faint} />
-              <TextInput
-                style={styles.archiveSearchInput}
-                placeholder="Müşteri, mühendis veya iş..."
-                placeholderTextColor={colors.text.faint}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
+          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+            <SearchFilterBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Müşteri, mühendis veya iş..."
+              chips={archiveChips}
+              activeKey={archiveYear}
+              onChipPress={setArchiveYear}
+            />
           </View>
 
           <FlatList
@@ -1019,10 +1003,11 @@ export default function ManagerScreen() {
               </View>
             )}
             ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Ionicons name="folder-open-outline" size={48} color={colors.text.faint} />
-                <Text style={styles.emptyTitle}>Kayıt bulunamadı</Text>
-              </View>
+              <EmptyState
+                icon="folder-open-outline"
+                title="Kayıt bulunamadı"
+                subtitle="Filtreleri değiştirerek tekrar deneyebilirsiniz."
+              />
             }
           />
         </View>
@@ -1306,6 +1291,7 @@ const styles = StyleSheet.create({
   },
   aiBtnText: { color: colors.bg.primary, fontSize: typography.xs, fontWeight: '800' },
   aiResult: { gap: spacing.md },
+  aiLoadingWrap: { gap: spacing.sm, paddingVertical: spacing.md },
   aiSummary: {
     fontSize: typography.xs,
     color: colors.text.secondary,
@@ -1321,19 +1307,6 @@ const styles = StyleSheet.create({
   },
   insightNum: { fontSize: typography.sm, color: colors.emerald.default, fontWeight: '800' },
   insightText: { flex: 1, fontSize: typography.xs, color: colors.text.secondary, lineHeight: 17 },
-  aiEmpty: {
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.border.secondary,
-  },
-  aiEmptyText: { fontSize: typography.xs, color: colors.text.faint, textAlign: 'center', lineHeight: 18 },
-  emptyState: { alignItems: 'center', paddingVertical: 60, gap: spacing.md },
-  emptyTitle: { fontSize: typography.sm, color: colors.text.faint, fontWeight: '600' },
-  emptyDesc: { fontSize: typography.xs, color: colors.text.faint, textAlign: 'center', lineHeight: 18, paddingHorizontal: 24 },
   empCard: {
     backgroundColor: colors.bg.secondary,
     borderRadius: radius.xl,
@@ -1401,32 +1374,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   wageCurrency: { fontSize: typography.sm, color: colors.text.muted },
-  archiveFilters: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  yearRow: { flexDirection: 'row', gap: spacing.sm, paddingBottom: spacing.md },
-  yearBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-    backgroundColor: colors.bg.secondary,
-    borderWidth: 1,
-    borderColor: colors.border.primary,
-  },
-  yearBtnActive: { backgroundColor: colors.emerald.default, borderColor: colors.emerald.default },
-  yearBtnText: { fontSize: typography.xs, color: colors.text.muted, fontWeight: '600' },
-  yearBtnTextActive: { color: colors.bg.primary },
-  archiveSearch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  archiveSearchInput: { flex: 1, color: colors.text.primary, fontSize: typography.sm },
   archiveList: { paddingHorizontal: spacing.lg, paddingBottom: 24 },
   archiveCard: {
     flexDirection: 'row',
