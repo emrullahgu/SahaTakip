@@ -34,15 +34,7 @@ const uid = (p: string) => `${p}-${Date.now()}-${Math.floor(Math.random() * 9999
 
 // === Surveys ===
 async function seedSurveys(): Promise<SurveyForm[]> {
-  const now = new Date().toISOString();
-  return [
-    { id: uid('sv'), customerName: 'Akın Otomotiv', title: 'Trafo merkezi keşif', createdAt: now, updatedAt: now, notes: '1250kVA trafo', items: [
-      { id: uid('si'), kind: 'product', description: '1250kVA Kuru Tip Trafo', unit: 'adet', qty: 1, unitPrice: 450000 },
-      { id: uid('si'), kind: 'cable', description: '3x150+95mm² NYY', unit: 'm', qty: 80, unitPrice: 1200 },
-      { id: uid('si'), kind: 'panel', description: 'OG hücre', unit: 'adet', qty: 2, unitPrice: 85000 },
-      { id: uid('si'), kind: 'labor', description: 'Montaj işçiliği', unit: 'adam-gün', qty: 8, unitPrice: 4500 },
-    ]},
-  ];
+  return [];
 }
 export async function listSurveys(): Promise<SurveyForm[]> {
   const cur = await get<SurveyForm[] | null>(K.surveys, null);
@@ -82,14 +74,7 @@ export async function generateQuoteItemsFromSurvey(surveyId: string): Promise<Su
 
 // === POZ Library ===
 async function seedPoz(): Promise<PozLibraryItem[]> {
-  return [
-    { id: 'p-001', code: 'EL-100', category: 'Elektrik', name: 'Sigorta otomatik 1P 16A', unit: 'adet', laborCost: 25, materialCost: 85, active: true },
-    { id: 'p-002', code: 'EL-200', category: 'Elektrik', name: 'Kablo NYY 3x2.5', unit: 'm', laborCost: 8, materialCost: 32, active: true },
-    { id: 'p-003', code: 'TR-100', category: 'Trafo', name: 'OG Kesici 36kV', unit: 'adet', laborCost: 850, materialCost: 12500, active: true },
-    { id: 'p-004', code: 'GES-100', category: 'GES', name: 'Mono 450W panel', unit: 'adet', laborCost: 50, materialCost: 2800, active: true },
-    { id: 'p-005', code: 'KMP-100', category: 'Kompanzasyon', name: 'Şönt reaktör 25kVAr', unit: 'adet', laborCost: 350, materialCost: 6800, active: true },
-    { id: 'p-006', code: 'BAK-100', category: 'Bakım', name: 'Periyodik kontrol işçiliği', unit: 'pano', laborCost: 1500, materialCost: 0, active: true },
-  ];
+  return [];
 }
 export async function listPoz(): Promise<PozLibraryItem[]> {
   const cur = await get<PozLibraryItem[] | null>(K.poz, null);
@@ -103,11 +88,7 @@ export async function togglePoz(id: string): Promise<void> {
 
 // === Price Lists ===
 async function seedPrices(): Promise<PriceListVersion[]> {
-  return [
-    { id: 'pl-2025', version: '2025-Q4', name: '2025 Q4 Fiyat Listesi', createdAt: '2025-10-01T00:00:00Z', activeFrom: '2025-10-01T00:00:00Z', isCurrent: false, itemCount: 124 },
-    { id: 'pl-2026q1', version: '2026-Q1', name: '2026 Q1 Fiyat Listesi', createdAt: '2026-01-01T00:00:00Z', activeFrom: '2026-01-01T00:00:00Z', isCurrent: false, itemCount: 138 },
-    { id: 'pl-2026q2', version: '2026-Q2', name: '2026 Q2 Fiyat Listesi', createdAt: '2026-04-01T00:00:00Z', activeFrom: '2026-04-01T00:00:00Z', isCurrent: true, itemCount: 142 },
-  ];
+  return [];
 }
 export async function listPriceVersions(): Promise<PriceListVersion[]> {
   const cur = await get<PriceListVersion[] | null>(K.prices, null);
@@ -191,10 +172,7 @@ export async function listComp(): Promise<CompensationQuoteInput[]> { return get
 
 // === Quote Revision Diffs ===
 async function seedDiffs(): Promise<QuoteRevisionDiff[]> {
-  return [
-    { id: uid('df'), baseQuoteId: 'Q-2026-0042', revisionQuoteId: 'Q-2026-0042-R1', basePrice: 485000, revisionPrice: 512000, delta: 27000, deltaPercent: 5.6, addedItems: 3, removedItems: 1, changedItems: 2, createdAt: new Date(Date.now() - 86400000).toISOString() },
-    { id: uid('df'), baseQuoteId: 'Q-2026-0038', revisionQuoteId: 'Q-2026-0038-R2', basePrice: 1250000, revisionPrice: 1195000, delta: -55000, deltaPercent: -4.4, addedItems: 0, removedItems: 4, changedItems: 6, createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
-  ];
+  return [];
 }
 export async function listDiffs(): Promise<QuoteRevisionDiff[]> {
   const cur = await get<QuoteRevisionDiff[] | null>(K.diffs, null);
@@ -204,12 +182,7 @@ export async function listDiffs(): Promise<QuoteRevisionDiff[]> {
 
 // === Outcomes ===
 async function seedOutcomes(): Promise<QuoteOutcomeRecord[]> {
-  return [
-    { id: uid('oc'), quoteId: 'Q-2026-0040', customerName: 'Akın Otomotiv', amount: 485000, outcome: 'won', decidedAt: new Date(Date.now() - 5 * 86400000).toISOString() },
-    { id: uid('oc'), quoteId: 'Q-2026-0036', customerName: 'Beta Tekstil', amount: 285000, outcome: 'lost', reason: 'price', competitorName: 'XYZ Elektrik', notes: '%12 düşük teklif', decidedAt: new Date(Date.now() - 8 * 86400000).toISOString() },
-    { id: uid('oc'), quoteId: 'Q-2026-0028', customerName: 'Cem Mobilya', amount: 165000, outcome: 'lost', reason: 'scope', notes: 'Kapsam çok geniş', decidedAt: new Date(Date.now() - 14 * 86400000).toISOString() },
-    { id: uid('oc'), quoteId: 'Q-2026-0044', customerName: 'Demir Plastik', amount: 92000, outcome: 'pending', decidedAt: new Date().toISOString() },
-  ];
+  return [];
 }
 export async function listOutcomes(): Promise<QuoteOutcomeRecord[]> {
   const cur = await get<QuoteOutcomeRecord[] | null>(K.outcomes, null);
@@ -232,11 +205,7 @@ export async function outcomeStats(): Promise<{ won: number; lost: number; pendi
 
 // === AI Quote Improvements ===
 async function seedImprove(): Promise<AiQuoteImprovementSuggestion[]> {
-  return [
-    { id: uid('im'), customerName: 'Beta Tekstil', category: 'price', suggestion: 'Rakip %12 düşük teklif vermiş. Hizmet kalitesi ve garanti süresi vurgulanarak +%6 indirim verilirse kazanma şansı 60%→78% olabilir.', impactScore: 82, createdAt: new Date().toISOString() },
-    { id: uid('im'), customerName: 'Cem Mobilya', category: 'scope', suggestion: 'Periyodik bakım ve acil müdahale paketini opsiyonel ek olarak ayırmak temel teklifi %25 küçültür.', impactScore: 74, createdAt: new Date(Date.now() - 86400000).toISOString() },
-    { id: uid('im'), customerName: 'Demir Plastik', category: 'timing', suggestion: 'Müşteri Q3 yatırım bütçesini gözden geçiriyor. 15 gün sonra revize teklif gönderin.', impactScore: 68, createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
-  ];
+  return [];
 }
 export async function listImprovements(): Promise<AiQuoteImprovementSuggestion[]> {
   const cur = await get<AiQuoteImprovementSuggestion[] | null>(K.improve, null);

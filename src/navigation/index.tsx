@@ -493,6 +493,7 @@ import OrdAnalyticsScreen from '../screens/OrdAnalyticsScreen';
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const GateStackNav = createNativeStackNavigator();
 
 function MainTabs() {
   const { profile, isDemoMode } = useAuth();
@@ -598,6 +599,14 @@ function AuthFlow() {
   );
 }
 
+function GateFlow() {
+  return (
+    <GateStackNav.Navigator screenOptions={{ headerShown: false }}>
+      <GateStackNav.Screen name="PendingApproval" component={PendingApprovalScreen} />
+    </GateStackNav.Navigator>
+  );
+}
+
 export default function AppNavigator() {
   const { session, isDemoMode, loading, profile, user } = useAuth();
 
@@ -628,7 +637,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       {blockedByApproval ? (
-        <PendingApprovalScreen />
+        <GateFlow />
       ) : session || isDemoMode ? (
         <>
           <MainStack />

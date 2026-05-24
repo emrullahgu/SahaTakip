@@ -32,15 +32,7 @@ export const COMPONENT_LABEL: Record<SystemHealthCheck['component'], string> = {
 
 // Tenants
 async function seedTenants(): Promise<Tenant[]> {
-  const list = await load<Tenant>(K.tenants);
-  if (list.length) return list;
-  const seed: Tenant[] = [
-    { id: 't1', name: 'Demo Firma A.Ş.', plan: 'pro', status: 'active', createdAt: now(), memberCount: 8, storageMb: 240, isCurrent: true },
-    { id: 't2', name: 'Test Mühendislik Ltd.', plan: 'starter', status: 'trial', createdAt: now(), memberCount: 3, storageMb: 80, expiresAt: new Date(Date.now() + 14 * 86400000).toISOString() },
-  ];
-  await save(K.tenants, seed);
-  await AsyncStorage.setItem(K.current, 't1');
-  return seed;
+  return [];
 }
 export async function listTenants() { return seedTenants(); }
 export async function getCurrentTenantId() { return (await AsyncStorage.getItem(K.current)) || 't1'; }
@@ -65,15 +57,7 @@ export async function deleteTenant(id: string) {
 
 // Members
 async function seedMembers(): Promise<TenantMember[]> {
-  const list = await load<TenantMember>(K.members);
-  if (list.length) return list;
-  const seed: TenantMember[] = [
-    { id: uid(), tenantId: 't1', email: 'owner@demo.com', role: 'owner', joinedAt: now() },
-    { id: uid(), tenantId: 't1', email: 'admin@demo.com', role: 'admin', joinedAt: now() },
-    { id: uid(), tenantId: 't1', email: 'manager@demo.com', role: 'manager', joinedAt: now() },
-    { id: uid(), tenantId: 't2', email: 'demo@test.com', role: 'owner', joinedAt: now() },
-  ];
-  await save(K.members, seed); return seed;
+  return [];
 }
 export async function listMembers(tenantId?: string) {
   const all = await seedMembers();
@@ -110,21 +94,7 @@ export async function updateSetting(id: string, value: string) {
 
 // Modules
 async function seedModules(): Promise<AppModule[]> {
-  const list = await load<AppModule>(K.modules);
-  if (list.length) return list;
-  const seed: AppModule[] = [
-    { id: uid(), code: 'workorders', name: 'İş Emirleri', category: 'core', enabled: true, requiredPlan: 'starter' },
-    { id: uid(), code: 'quotes', name: 'Teklifler', category: 'core', enabled: true, requiredPlan: 'starter' },
-    { id: uid(), code: 'finance', name: 'Finans / Gider', category: 'finance', enabled: true, requiredPlan: 'starter' },
-    { id: uid(), code: 'invoicing', name: 'Faturalama', category: 'finance', enabled: true, requiredPlan: 'pro' },
-    { id: uid(), code: 'route_optimization', name: 'Rota Optimizasyonu', category: 'field', enabled: true, requiredPlan: 'pro' },
-    { id: uid(), code: 'bi', name: 'BI & Raporlar', category: 'analytics', enabled: true, requiredPlan: 'pro' },
-    { id: uid(), code: 'erp', name: 'ERP Entegrasyonu', category: 'integration', enabled: false, requiredPlan: 'enterprise' },
-    { id: uid(), code: 'crm', name: 'CRM Entegrasyonu', category: 'integration', enabled: false, requiredPlan: 'enterprise' },
-    { id: uid(), code: 'webhooks', name: 'Webhook', category: 'integration', enabled: true, requiredPlan: 'pro' },
-    { id: uid(), code: 'multi_tenant', name: 'Çoklu Firma', category: 'core', enabled: true, requiredPlan: 'enterprise' },
-  ];
-  await save(K.modules, seed); return seed;
+  return [];
 }
 export async function listModules() { return seedModules(); }
 export async function toggleModule(id: string) {
@@ -146,28 +116,13 @@ export async function getCurrentPackage(): Promise<PackagePlan> {
 
 // Licenses
 async function seedLicenses(): Promise<LicenseRecord[]> {
-  const list = await load<LicenseRecord>(K.licenses);
-  if (list.length) return list;
-  const seed: LicenseRecord[] = [
-    { id: uid(), tenantId: 't1', plan: 'pro', seats: 20, startsAt: now(), endsAt: new Date(Date.now() + 365 * 86400000).toISOString(), active: true },
-    { id: uid(), tenantId: 't2', plan: 'starter', seats: 5, startsAt: now(), endsAt: new Date(Date.now() + 14 * 86400000).toISOString(), active: true },
-  ];
-  await save(K.licenses, seed); return seed;
+  return [];
 }
 export async function listLicenses() { return seedLicenses(); }
 
 // Usage limits
 async function seedUsage(): Promise<UsageMetric[]> {
-  const list = await load<UsageMetric>(K.usage);
-  if (list.length) return list;
-  const seed: UsageMetric[] = [
-    { id: uid(), metric: 'users', current: 8, limit: 20 },
-    { id: uid(), metric: 'storage_mb', current: 240, limit: 5000 },
-    { id: uid(), metric: 'api_calls', current: 1248, limit: 50000, resetAt: new Date(Date.now() + 30 * 86400000).toISOString() },
-    { id: uid(), metric: 'workorders', current: 327, limit: 5000 },
-    { id: uid(), metric: 'sms', current: 84, limit: 500, resetAt: new Date(Date.now() + 30 * 86400000).toISOString() },
-  ];
-  await save(K.usage, seed); return seed;
+  return [];
 }
 export async function listUsage() { return seedUsage(); }
 export const USAGE_LABEL: Record<UsageMetric['metric'], string> = {
@@ -176,16 +131,7 @@ export const USAGE_LABEL: Record<UsageMetric['metric'], string> = {
 
 // DB Index hints
 async function seedIdx(): Promise<DbIndexHint[]> {
-  const list = await load<DbIndexHint>(K.idx);
-  if (list.length) return list;
-  const seed: DbIndexHint[] = [
-    { id: uid(), table: 'workorders', column: 'customer_id', suggested: true, rowCount: 12450, estimatedGainPct: 65, applied: false },
-    { id: uid(), table: 'services', column: 'created_at', suggested: true, rowCount: 8932, estimatedGainPct: 42, applied: true },
-    { id: uid(), table: 'quotes', column: 'status', suggested: true, rowCount: 3421, estimatedGainPct: 28, applied: false },
-    { id: uid(), table: 'expenses', column: 'category_id', suggested: true, rowCount: 6210, estimatedGainPct: 35, applied: false },
-    { id: uid(), table: 'customers', column: 'phone', suggested: false, rowCount: 1840, estimatedGainPct: 15, applied: false },
-  ];
-  await save(K.idx, seed); return seed;
+  return [];
 }
 export async function listIndexHints() { return seedIdx(); }
 export async function applyIndex(id: string) {
@@ -196,16 +142,7 @@ export async function applyIndex(id: string) {
 
 // Archive
 async function seedArcPol(): Promise<ArchivePolicy[]> {
-  const list = await load<ArchivePolicy>(K.arcPol);
-  if (list.length) return list;
-  const seed: ArchivePolicy[] = [
-    { id: uid(), entity: 'workorders', olderThanDays: 365, active: true, archivedCount: 1240, lastRunAt: now() },
-    { id: uid(), entity: 'services', olderThanDays: 365, active: true, archivedCount: 892, lastRunAt: now() },
-    { id: uid(), entity: 'quotes', olderThanDays: 730, active: false, archivedCount: 0 },
-    { id: uid(), entity: 'expenses', olderThanDays: 1095, active: true, archivedCount: 312, lastRunAt: now() },
-    { id: uid(), entity: 'logs', olderThanDays: 90, active: true, archivedCount: 5420, lastRunAt: now() },
-  ];
-  await save(K.arcPol, seed); return seed;
+  return [];
 }
 export async function listArchivePolicies() { return seedArcPol(); }
 export async function toggleArchivePolicy(id: string) {
@@ -236,18 +173,7 @@ export const ENTITY_LABEL: Record<ArchivePolicy['entity'], string> = {
 
 // Backups
 async function seedBackups(): Promise<PlatformBackup[]> {
-  const list = await load<PlatformBackup>(K.backups);
-  if (list.length) return list;
-  const seed: PlatformBackup[] = Array.from({ length: 7 }).map((_, i) => ({
-    id: uid(),
-    startedAt: new Date(Date.now() - i * 86400000).toISOString(),
-    finishedAt: new Date(Date.now() - i * 86400000 + 240000).toISOString(),
-    sizeMb: 120 + Math.floor(Math.random() * 80),
-    status: (i === 3 ? 'failed' : 'success') as PlatformBackup['status'],
-    location: (i % 2 === 0 ? 'cloud' : 'local') as PlatformBackup['location'],
-    errorMessage: i === 3 ? 'S3 yükleme zaman aşımı' : undefined,
-  }));
-  await save(K.backups, seed); return seed;
+  return [];
 }
 export async function listBackups() { return seedBackups(); }
 export async function triggerBackup(): Promise<PlatformBackup> {
@@ -264,17 +190,7 @@ export async function triggerBackup(): Promise<PlatformBackup> {
 
 // Restore tests
 async function seedRestore(): Promise<RestoreTest[]> {
-  const list = await load<RestoreTest>(K.restore);
-  if (list.length) return list;
-  const backups = await seedBackups();
-  const seed: RestoreTest[] = backups.slice(0, 3).map((b, i) => ({
-    id: uid(), backupId: b.id,
-    runAt: new Date(Date.now() - i * 7 * 86400000).toISOString(),
-    durationSec: 45 + Math.floor(Math.random() * 60),
-    success: i !== 1,
-    message: i === 1 ? 'Şema uyumsuzluğu uyarısı' : 'OK',
-  }));
-  await save(K.restore, seed); return seed;
+  return [];
 }
 export async function listRestoreTests() { return seedRestore(); }
 export async function runRestoreTest(backupId: string): Promise<RestoreTest> {
@@ -286,13 +202,7 @@ export async function runRestoreTest(backupId: string): Promise<RestoreTest> {
 
 // System Health
 async function seedHealth(): Promise<SystemHealthCheck[]> {
-  const list = await load<SystemHealthCheck>(K.health);
-  if (list.length) return list;
-  const comps: SystemHealthCheck['component'][] = ['database', 'storage', 'auth', 'jobs', 'notifications', 'integrations'];
-  const seed: SystemHealthCheck[] = comps.map(c => ({
-    id: uid(), component: c, status: 'ok', latencyMs: 20 + Math.floor(Math.random() * 80), checkedAt: now(), message: 'Çalışıyor',
-  }));
-  await save(K.health, seed); return seed;
+  return [];
 }
 export async function listSystemHealth() { return seedHealth(); }
 export async function refreshSystemHealth() {

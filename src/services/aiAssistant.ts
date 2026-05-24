@@ -39,19 +39,7 @@ export const RISK_TYPE_LABEL: Record<AiRiskType, string> = {
 
 // Permissions
 async function seedPerms(): Promise<AiPermission[]> {
-  const list = await load<AiPermission>(K.perms);
-  if (list.length) return list;
-  const roles: AiUserRole[] = ['admin', 'manager', 'staff', 'sales'];
-  const features: AiFeature[] = ['chat', 'poz_suggest', 'quote_draft', 'workorder_summary', 'customer_summary', 'risk_analysis', 'daily_report', 'logs'];
-  const seed: AiPermission[] = [];
-  roles.forEach(r => features.forEach(f => {
-    const enabled = r === 'admin' ? true
-      : r === 'manager' ? f !== 'logs'
-      : r === 'sales' ? ['chat', 'quote_draft', 'customer_summary'].includes(f)
-      : ['chat', 'poz_suggest', 'workorder_summary'].includes(f);
-    seed.push({ id: uid(), role: r, feature: f, enabled });
-  }));
-  await save(K.perms, seed); return seed;
+  return [];
 }
 export async function listPermissions() { return seedPerms(); }
 export async function togglePermission(id: string) {
@@ -62,19 +50,7 @@ export async function togglePermission(id: string) {
 
 // Sessions & Messages
 async function seedSessions(): Promise<AiSession[]> {
-  const list = await load<AiSession>(K.sessions);
-  if (list.length) return list;
-  const seed: AiSession[] = [
-    { id: 's1', title: 'Trafo bakım planı', feature: 'chat', createdAt: now(), updatedAt: now(), messageCount: 6, tokenTotal: 842 },
-    { id: 's2', title: 'GES teklif taslağı', feature: 'quote_draft', createdAt: now(), updatedAt: now(), messageCount: 4, tokenTotal: 1284 },
-  ];
-  await save(K.sessions, seed);
-  const msgs: AiMessage[] = [
-    { id: uid(), sessionId: 's1', role: 'user', content: '50kVA trafo bakımı için POZ önerir misin?', createdAt: now() },
-    { id: uid(), sessionId: 's1', role: 'assistant', content: 'POZ-26.110.1001 (Trafo Periyodik Bakım) öneririm. Test+temizlik+yağ analizi içerir.', createdAt: now(), tokens: 120, sources: ['POZ Kataloğu', 'TEDAŞ-2024'], approved: true },
-  ];
-  await save(K.messages, msgs);
-  return seed;
+  return [];
 }
 export async function listSessions() { return seedSessions(); }
 export async function createSession(title: string, feature: AiFeature): Promise<AiSession> {
@@ -130,14 +106,7 @@ function mockReply(q: string): string {
 
 // POZ suggestion
 async function seedPoz(): Promise<AiPozSuggestion[]> {
-  const list = await load<AiPozSuggestion>(K.poz);
-  if (list.length) return list;
-  const seed: AiPozSuggestion[] = [
-    { id: uid(), description: '50kVA trafo periyodik bakım', pozCode: '26.110.1001', pozName: 'Trafo Bakım', confidence: 0.92, unitPrice: 4500, createdAt: now() },
-    { id: uid(), description: 'GES panel temizliği 100 panel', pozCode: '26.220.1051', pozName: 'PV Panel Temizlik', confidence: 0.84, unitPrice: 28, createdAt: now() },
-    { id: uid(), description: 'OSOS sayaç kurulumu', pozCode: '26.310.2010', pozName: 'AMR Sayaç', confidence: 0.78, unitPrice: 850, createdAt: now() },
-  ];
-  await save(K.poz, seed); return seed;
+  return [];
 }
 export async function listPozSuggestions() { return seedPoz(); }
 export async function suggestPoz(description: string): Promise<AiPozSuggestion> {
@@ -163,19 +132,7 @@ export async function acceptPoz(id: string, accepted: boolean) {
 
 // Quote draft
 async function seedQuotes(): Promise<AiQuoteDraft[]> {
-  const list = await load<AiQuoteDraft>(K.quotes);
-  if (list.length) return list;
-  const seed: AiQuoteDraft[] = [
-    {
-      id: 'qd1', customerName: 'Demo Elektrik A.Ş.', surveyText: '3 trafo + 2 km OG hat bakımı',
-      items: [
-        { pozCode: '26.110.1001', pozName: 'Trafo Bakım', qty: 3, unitPrice: 4500 },
-        { pozCode: '26.450.5001', pozName: 'OG Hat Kesim', qty: 2, unitPrice: 12000 },
-      ],
-      totalAmount: 3 * 4500 + 2 * 12000, createdAt: now(), status: 'draft',
-    },
-  ];
-  await save(K.quotes, seed); return seed;
+  return [];
 }
 export async function listQuoteDrafts() { return seedQuotes(); }
 export async function generateQuoteDraft(customerName: string, surveyText: string): Promise<AiQuoteDraft> {
@@ -202,13 +159,7 @@ export async function getQuoteDraft(id: string): Promise<AiQuoteDraft | undefine
 
 // Work order summaries
 async function seedWoSum(): Promise<AiWorkOrderSummary[]> {
-  const list = await load<AiWorkOrderSummary>(K.woSum);
-  if (list.length) return list;
-  const seed: AiWorkOrderSummary[] = [
-    { id: uid(), workOrderId: 'WO-2024-0451', summary: '3 saatte tamamlandı. Trafo yağı temizlendi, koruma röleleri test edildi. Sonuç: OK.', highlights: ['Yağ değişimi', 'Röle testi başarılı', 'Müşteri imzası alındı'], createdAt: now() },
-    { id: uid(), workOrderId: 'WO-2024-0452', summary: 'Panel temizliği 4 saatte 80 panelde uygulandı. 2 panelde kablo gevşekliği tespit edildi.', highlights: ['80 panel temizlendi', '2 kablo onarımı', 'Verim ölçümü +%4'], createdAt: now() },
-  ];
-  await save(K.woSum, seed); return seed;
+  return [];
 }
 export async function listWoSummaries() { return seedWoSum(); }
 export async function summarizeWorkOrder(workOrderId: string): Promise<AiWorkOrderSummary> {
@@ -226,13 +177,7 @@ export async function summarizeWorkOrder(workOrderId: string): Promise<AiWorkOrd
 
 // Customer insight
 async function seedCust(): Promise<AiCustomerInsight[]> {
-  const list = await load<AiCustomerInsight>(K.custIns);
-  if (list.length) return list;
-  const seed: AiCustomerInsight[] = [
-    { id: uid(), customerId: 'c1', customerName: 'Demo Elektrik A.Ş.', summary: 'Son 12 ayda 18 iş emri, 4 teklif. Ortalama ödeme süresi 24 gün. SLA uyumu %94.', quotesCount: 4, workOrdersCount: 18, totalRevenue: 248000, lastVisitAt: now(), createdAt: now() },
-    { id: uid(), customerId: 'c2', customerName: 'Test Mühendislik Ltd.', summary: 'Yeni müşteri, 2 teklif gönderildi 1 onaylandı. Tahsilat sorunu yok.', quotesCount: 2, workOrdersCount: 3, totalRevenue: 42000, createdAt: now() },
-  ];
-  await save(K.custIns, seed); return seed;
+  return [];
 }
 export async function listCustomerInsights() { return seedCust(); }
 export async function generateCustomerInsight(customerId: string, customerName: string): Promise<AiCustomerInsight> {
@@ -250,16 +195,7 @@ export async function generateCustomerInsight(customerId: string, customerName: 
 
 // Risk alerts
 async function seedRisks(): Promise<AiRiskAlert[]> {
-  const list = await load<AiRiskAlert>(K.risks);
-  if (list.length) return list;
-  const seed: AiRiskAlert[] = [
-    { id: uid(), type: 'delay', level: 'high', title: '3 iş emri SLA sınırında', message: 'WO-0451, WO-0452, WO-0453 son 4 saat içinde tamamlanmalı.', createdAt: now() },
-    { id: uid(), type: 'low_stock', level: 'medium', title: 'Trafo yağı azaldı', message: '50 lt kaldı, kritik eşik 100 lt.', createdAt: now() },
-    { id: uid(), type: 'vehicle_maintenance', level: 'medium', title: '2 araç bakım zamanı geldi', message: 'Plaka A: 5000 km, Plaka B: 10000 km bakım yaklaşıyor.', createdAt: now() },
-    { id: uid(), type: 'sla', level: 'critical', title: 'Müşteri SLA ihlali risk', message: 'Demo Elektrik A.Ş. için yanıt süresi %85’in altına düştü.', createdAt: now() },
-    { id: uid(), type: 'customer_churn', level: 'low', title: 'Pasif müşteri', message: 'Test Mühendislik 60 gündür yeni teklif almadı.', createdAt: now() },
-  ];
-  await save(K.risks, seed); return seed;
+  return [];
 }
 export async function listRiskAlerts() { return seedRisks(); }
 export async function dismissRisk(id: string) {
@@ -270,22 +206,7 @@ export async function dismissRisk(id: string) {
 
 // Daily report
 async function seedDaily(): Promise<AiDailyReport[]> {
-  const list = await load<AiDailyReport>(K.daily);
-  if (list.length) return list;
-  const seed: AiDailyReport[] = [
-    {
-      id: uid(), date: new Date().toISOString().slice(0, 10),
-      text: 'Bugün 14 iş emri açıldı, 12 tamamlandı. 3 acil durum kaydı. 5 yeni teklif gönderildi.',
-      metrics: [
-        { label: 'Açılan İş', value: '14' },
-        { label: 'Tamamlanan', value: '12' },
-        { label: 'Yeni Teklif', value: '5' },
-        { label: 'SLA Uyumu', value: '%94' },
-      ],
-      createdAt: now(),
-    },
-  ];
-  await save(K.daily, seed); return seed;
+  return [];
 }
 export async function listDailyReports() { return seedDaily(); }
 export async function generateDailyReport(): Promise<AiDailyReport> {
@@ -308,24 +229,7 @@ export async function generateDailyReport(): Promise<AiDailyReport> {
 
 // Usage logs
 async function seedUsage(): Promise<AiUsageLog[]> {
-  const list = await load<AiUsageLog>(K.usage);
-  if (list.length) return list;
-  const features: AiFeature[] = ['chat', 'poz_suggest', 'quote_draft', 'workorder_summary'];
-  const providers: AiAssistantProvider[] = ['openai', 'anthropic'];
-  const seed: AiUsageLog[] = Array.from({ length: 12 }).map((_, i) => {
-    const pTok = 100 + Math.floor(Math.random() * 400);
-    const cTok = 100 + Math.floor(Math.random() * 300);
-    return {
-      id: uid(), feature: features[i % features.length], provider: providers[i % providers.length],
-      promptTokens: pTok, completionTokens: cTok,
-      costUsd: ((pTok * 0.003 + cTok * 0.006) / 1000),
-      durationMs: 800 + Math.floor(Math.random() * 4000),
-      createdAt: new Date(Date.now() - i * 3600000).toISOString(),
-      success: i !== 4,
-      errorMessage: i === 4 ? 'Rate limit' : undefined,
-    };
-  });
-  await save(K.usage, seed); return seed;
+  return [];
 }
 export async function listUsageLogs() { return seedUsage(); }
 async function logUsage(feature: AiFeature, provider: AiAssistantProvider, pTok: number, cTok: number, success: boolean, errorMessage?: string) {

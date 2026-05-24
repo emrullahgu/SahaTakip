@@ -17,7 +17,7 @@ function listScreenFiles() {
 
 function extractStackRegistrations() {
   const src = fs.readFileSync(NAV_FILE, 'utf8');
-  const re = /(Stack|Tab|AuthStack)\.Screen\s+name=["']([^"']+)["']/g;
+  const re = /(Stack|Tab|AuthStack|GateStackNav)\.Screen\s+name=["']([^"']+)["']/g;
   const names = new Set();
   let m;
   while ((m = re.exec(src))) names.add(m[2]);

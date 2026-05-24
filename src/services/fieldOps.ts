@@ -35,7 +35,7 @@ function uid(p: string) { return `${p}-${Date.now()}-${Math.floor(Math.random() 
 
 // === SHIFT ===
 async function seedShift(): Promise<FieldShift> {
-  return { id: 'shift-self', userId: 'u-1', userName: 'Saha Personeli', status: 'idle', totalMinutes: 0, breakMinutes: 0 };
+  return { id: 'shift-self', userId: '', userName: '', status: 'idle', totalMinutes: 0, breakMinutes: 0 };
 }
 export async function getShift(): Promise<FieldShift> {
   const cur = await get<FieldShift | null>(K.shift, null);
@@ -63,13 +63,7 @@ export async function toggleBreak(): Promise<FieldShift> {
 
 // === JOBS ===
 async function seedJobs(): Promise<FieldJob[]> {
-  const now = Date.now();
-  return [
-    { id: uid('fj'), customerName: 'Akın Otomotiv', address: 'Bornova, İzmir', priority: 'urgent', stage: 'assigned', slaAt: new Date(now + 90 * 60000).toISOString(), assignedUserId: 'u-1', assignedUserName: 'Ahmet Y.', scheduledAt: new Date(now + 30 * 60000).toISOString(), estimatedMinutes: 60, zoneId: 'z-1', lat: 38.46, lng: 27.21 },
-    { id: uid('fj'), customerName: 'Beta Tekstil', address: 'Çiğli, İzmir', priority: 'high', stage: 'enroute', assignedUserId: 'u-1', assignedUserName: 'Ahmet Y.', scheduledAt: new Date(now + 60 * 60000).toISOString(), estimatedMinutes: 90, zoneId: 'z-1' },
-    { id: uid('fj'), customerName: 'Cem Mobilya', address: 'Karşıyaka, İzmir', priority: 'normal', stage: 'in_progress', assignedUserId: 'u-2', assignedUserName: 'Mehmet K.', scheduledAt: new Date(now).toISOString(), startedAt: new Date(now - 30 * 60000).toISOString(), arrivedAt: new Date(now - 20 * 60000).toISOString(), estimatedMinutes: 120, zoneId: 'z-2' },
-    { id: uid('fj'), customerName: 'Demir Plastik', address: 'Buca, İzmir', priority: 'low', stage: 'completed', assignedUserId: 'u-1', assignedUserName: 'Ahmet Y.', scheduledAt: new Date(now - 4 * 3600000).toISOString(), completedAt: new Date(now - 3 * 3600000).toISOString(), estimatedMinutes: 45, zoneId: 'z-1' },
-  ];
+  return [];
 }
 export async function listJobs(): Promise<FieldJob[]> {
   const cur = await get<FieldJob[] | null>(K.jobs, null);
@@ -156,12 +150,7 @@ export async function saveQC(q: Omit<FieldQualityCheck, 'id' | 'reviewedAt'>): P
 
 // === PERFORMANCE ===
 async function seedPerf(): Promise<FieldPerformance[]> {
-  return [
-    { userId: 'u-1', userName: 'Ahmet Yılmaz', onTimeRate: 92, qualityScore: 88, customerScore: 94, totalJobs: 156, totalOnTime: 143, totalRating: 488 },
-    { userId: 'u-2', userName: 'Mehmet Kara', onTimeRate: 85, qualityScore: 91, customerScore: 89, totalJobs: 142, totalOnTime: 121, totalRating: 462 },
-    { userId: 'u-3', userName: 'Ayşe Demir', onTimeRate: 96, qualityScore: 93, customerScore: 97, totalJobs: 168, totalOnTime: 161, totalRating: 502 },
-    { userId: 'u-4', userName: 'Hasan Şahin', onTimeRate: 78, qualityScore: 82, customerScore: 80, totalJobs: 128, totalOnTime: 100, totalRating: 422 },
-  ];
+  return [];
 }
 export async function listPerformance(): Promise<FieldPerformance[]> {
   const cur = await get<FieldPerformance[] | null>(K.perf, null);
@@ -173,11 +162,7 @@ export async function listPerformance(): Promise<FieldPerformance[]> {
 
 // === ZONES ===
 async function seedZones(): Promise<FieldZone[]> {
-  return [
-    { id: 'z-1', name: 'İzmir Kuzey', color: '#0ea5e9', leaderUserId: 'u-1', leaderUserName: 'Ahmet Y.', memberCount: 4, activeJobs: 7 },
-    { id: 'z-2', name: 'İzmir Güney', color: '#22c55e', leaderUserId: 'u-2', leaderUserName: 'Mehmet K.', memberCount: 3, activeJobs: 5 },
-    { id: 'z-3', name: 'Manisa', color: '#f59e0b', leaderUserId: 'u-3', leaderUserName: 'Ayşe D.', memberCount: 2, activeJobs: 3 },
-  ];
+  return [];
 }
 export async function listZones(): Promise<FieldZone[]> {
   const cur = await get<FieldZone[] | null>(K.zones, null);
@@ -187,12 +172,7 @@ export async function listZones(): Promise<FieldZone[]> {
 
 // === SHIFT PLAN ===
 async function seedPlan(): Promise<FieldShiftPlan[]> {
-  const d = new Date().toISOString().slice(0, 10);
-  return [
-    { id: uid('sp'), zoneId: 'z-1', userId: 'u-1', userName: 'Ahmet Y.', date: d, startTime: '08:00', endTime: '17:00' },
-    { id: uid('sp'), zoneId: 'z-1', userId: 'u-2', userName: 'Mehmet K.', date: d, startTime: '09:00', endTime: '18:00' },
-    { id: uid('sp'), zoneId: 'z-2', userId: 'u-3', userName: 'Ayşe D.', date: d, startTime: '08:30', endTime: '17:30' },
-  ];
+  return [];
 }
 export async function listPlan(): Promise<FieldShiftPlan[]> {
   const cur = await get<FieldShiftPlan[] | null>(K.plan, null);
@@ -210,10 +190,7 @@ export async function deletePlan(id: string): Promise<void> {
 
 // === EMERGENCY ===
 async function seedEmerg(): Promise<FieldEmergencyDispatch[]> {
-  return [
-    { id: uid('ed'), title: 'Boru patlağı', address: 'Alsancak, İzmir', createdAt: new Date(Date.now() - 8 * 60000).toISOString(), status: 'pending', priority: 'urgent' },
-    { id: uid('ed'), title: 'Elektrik arızası', address: 'Karşıyaka, İzmir', createdAt: new Date(Date.now() - 32 * 60000).toISOString(), status: 'dispatched', priority: 'high', dispatchedUserId: 'u-2', dispatchedUserName: 'Mehmet K.', etaMinutes: 12 },
-  ];
+  return [];
 }
 export async function listEmergencies(): Promise<FieldEmergencyDispatch[]> {
   const cur = await get<FieldEmergencyDispatch[] | null>(K.emerg, null);

@@ -6,10 +6,53 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RecurringTemplate, WorkOrder } from '../types';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
 const KEY = '@SahaTakip:recurring_templates';
 
+function fromRow(r: any): RecurringTemplate {
+  return {
+    id: r.id,
+    title: r.title ?? '',
+    serviceName: r.service_name ?? '',
+    client: r.client ?? '',
+    priority: r.priority ?? 'Normal',
+    intervalDays: Number(r.interval_days ?? 30),
+    nextRunDate: r.next_run_date,
+    defaultEngineer: r.default_engineer ?? undefined,
+    active: r.active !== false,
+    notes: r.notes ?? undefined,
+  };
+}
+function toRow(t: RecurringTemplate): Record<string, any> {
+  return {
+    id: t.id,
+    title: t.title,
+    service_name: t.serviceName,
+    client: t.client,
+    priority: t.priority,
+    interval_days: t.intervalDays,
+    next_run_date: t.nextRunDate,
+    default_engineer: t.defaultEngineer ?? null,
+    active: t.active,
+    notes: t.notes ?? null,
+  };
+}
+
 export async function listTemplates(): Promise<RecurringTemplate[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase
+        .from('recurring_templates')
+        .select('*')
+        .order('next_run_date', { ascending: true });
+      if (!error && data) {
+        const list = data.map(fromRow);
+        await AsyncStorage.setItem(KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : [];
@@ -23,6 +66,9 @@ export async function saveTemplates(list: RecurringTemplate[]): Promise<void> {
 }
 
 export async function upsertTemplate(t: RecurringTemplate): Promise<void> {
+  if (SUPABASE_CONFIGURED) {
+    try { await supabase.from('recurring_templates').upsert(toRow(t), { onConflict: 'id' }); } catch { /* ignore */ }
+  }
   const list = await listTemplates();
   const idx = list.findIndex(x => x.id === t.id);
   if (idx >= 0) list[idx] = t;
@@ -31,6 +77,9 @@ export async function upsertTemplate(t: RecurringTemplate): Promise<void> {
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED) {
+    try { await supabase.from('recurring_templates').delete().eq('id', id); } catch { /* ignore */ }
+  }
   const list = await listTemplates();
   await saveTemplates(list.filter(t => t.id !== id));
 }
@@ -78,6 +127,13 @@ export async function runDueTemplates(): Promise<WorkOrder[]> {
       updated.push(t);
     }
   }
-  if (newOrders.length) await saveTemplates(updated);
+  if (newOrders.length) {
+    if (SUPABASE_CONFIGURED) {
+      for (const t of updated) {
+        try { await supabase.from('recurring_templates').upsert(toRow(t), { onConflict: 'id' }); } catch { /* ignore */ }
+      }
+    }
+    await saveTemplates(updated);
+  }
   return newOrders;
 }
