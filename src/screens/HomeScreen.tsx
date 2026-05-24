@@ -175,6 +175,17 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.gridLabel}>Firma Bilgisi</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('Reports')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.indigo.bg }]}>
+              <Ionicons name="stats-chart-outline" size={26} color={colors.indigo.default} />
+            </View>
+            <Text style={styles.gridLabel}>Raporlar</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Report CTA */}

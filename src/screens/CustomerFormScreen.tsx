@@ -17,6 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
+import { useVisit } from '../context/VisitContext';
 import type { Customer, RootStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CustomerForm'>;
@@ -26,6 +27,7 @@ export default function CustomerFormScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteProps>();
   const { customers, addCustomer, updateCustomer } = useAppContext();
+  const { activeVisit, checkIn, checkOut, loading: visitLoading } = useVisit();
 
   const editingId = route.params?.customerId;
   const existing = editingId ? customers.find(c => c.id === editingId) : null;
@@ -95,6 +97,43 @@ export default function CustomerFormScreen() {
             <Ionicons name={isEdit ? 'save-outline' : 'add-circle-outline'} size={18} color="#fff" />
             <Text style={styles.saveBtnText}>{isEdit ? 'Güncelle' : 'Müşteri Ekle'}</Text>
           </TouchableOpacity>
+
+          {isEdit && (
+            <View style={{ marginTop: spacing.md }}>
+              {activeVisit?.customerId === form.id ? (
+                <TouchableOpacity
+                  style={[styles.visitBtn, { backgroundColor: colors.rose.default }]}
+                  onPress={() => checkOut()}
+                  disabled={visitLoading}
+                >
+                  <Ionicons name="log-out-outline" size={18} color="#fff" />
+                  <Text style={styles.visitBtnText}>Ziyareti Sonlandır (Check-out)</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.visitBtn}
+                  onPress={() => checkIn(form.id, form.shortName)}
+                  disabled={visitLoading || !!activeVisit}
+                >
+                  <Ionicons name="location-outline" size={18} color="#fff" />
+                  <Text style={styles.visitBtnText}>
+                    {activeVisit ? 'Başka bir ziyarette...' : 'Ziyaret Başlat (Check-in)'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {isEdit && (
+            <View style={styles.historySection}>
+              <Text style={styles.section}>Ziyaret Geçmişi</Text>
+              <View style={styles.historyCard}>
+                <HistoryRow date="Bugün 09:45" action="Check-in Yapıldı" icon="enter-outline" color={brand.green} />
+                <HistoryRow date="22 May 2026" action="Teklif Sunuldu" icon="document-text-outline" color={brand.blueLight} />
+                <HistoryRow date="15 May 2026" action="Periyodik Bakım" icon="construct-outline" color={colors.amber.default} />
+              </View>
+            </View>
+          )}
 
           {isEdit && (
             <View style={styles.linksGrid}>
@@ -213,6 +252,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   saveBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  visitBtn: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: brand.blue,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  visitBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
   linksGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -231,4 +281,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   linkBtnText: { color: brand.green, fontWeight: '800', fontSize: typography.xs },
+  historySection: { marginTop: spacing.lg },
+  historyCard: { backgroundColor: colors.bg.secondary, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border.primary },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border.primary },
+  historyIcon: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  historyInfo: { flex: 1 },
+  historyDate: { color: colors.text.faint, fontSize: 10, fontWeight: '600' },
+  historyAction: { color: colors.text.primary, fontSize: typography.xs, fontWeight: '700', marginTop: 1 },
 });
+
+function HistoryRow({ date, action, icon, color }: { date: string; action: string; icon: any; color: string }) {
+  return (
+    <View style={styles.historyRow}>
+      <View style={[styles.historyIcon, { backgroundColor: color + '22' }]}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
+      <View style={styles.historyInfo}>
+        <Text style={styles.historyDate}>{date}</Text>
+        <Text style={styles.historyAction}>{action}</Text>
+      </View>
+    </View>
+  );
+}

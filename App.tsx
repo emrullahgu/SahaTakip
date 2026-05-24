@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider } from './src/context/AppContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { VisitProvider } from './src/context/VisitContext';
 import AppNavigator from './src/navigation';
 import ConnectionBanner from './src/components/ConnectionBanner';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -16,13 +17,15 @@ export default function App() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <AuthProvider>
-          <AppProvider>
-            <View style={{ flex: 1 }}>
-              <ConnectionBanner />
-              <AppNavigator />
-            </View>
-            <StatusBar style="light" />
-          </AppProvider>
+          <VisitProvider>
+            <AppProvider>
+              <View style={{ flex: 1 }}>
+                <ConnectionBanner />
+                <AppNavigator />
+              </View>
+              <StatusBar style="light" />
+            </AppProvider>
+          </VisitProvider>
         </AuthProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

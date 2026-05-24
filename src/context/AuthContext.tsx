@@ -27,14 +27,49 @@ interface AuthContextValue {
   // Demo mode bypass — Supabase olmadan da uygulamayı kullanabilmek için
   enterDemoMode: () => void;
   isDemoMode: boolean;
+  hasPermission: (resource: string, action: 'R' | 'W') => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const SUPABASE_CONFIGURED =
-  !!process.env.EXPO_PUBLIC_SUPABASE_URL &&
-  process.env.EXPO_PUBLIC_SUPABASE_URL !== 'https://YOUR-PROJECT.supabase.co' &&
-  !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const PERMISSIONS: Record<UserRole, Record<string, 'R' | 'W' | '-'>> = {
+  admin: {
+    customers: 'W',
+    quotes: 'W',
+    workOrders: 'W',
+    employees: 'W',
+    reports: 'W',
+    finance: 'W',
+    settings: 'W',
+  },
+  manager: {
+    customers: 'W',
+    quotes: 'W',
+    workOrders: 'W',
+    employees: 'W',
+    reports: 'W',
+    finance: 'R',
+    settings: '-',
+  },
+  engineer: {
+    customers: 'R',
+    quotes: 'W',
+    workOrders: 'W',
+    employees: 'R',
+    reports: 'R',
+    finance: '-',
+    settings: '-',
+  },
+  field: {
+    customers: 'R',
+    quotes: 'R',
+    workOrders: 'W',
+    employees: '-',
+    reports: '-',
+    finance: '-',
+    settings: '-',
+  },
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -113,6 +148,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const enterDemoMode = () => setIsDemoMode(true);
 
+  const hasPermission = (resource: string, action: 'R' | 'W'): boolean => {
+    const role = profile?.role || (isDemoMode ? 'engineer' : 'field');
+    const perm = PERMISSIONS[role as UserRole]?.[resource];
+    if (!perm || perm === '-') return false;
+    if (action === 'W') return perm === 'W';
+    return perm === 'R' || perm === 'W';
+  };
+
   const resetPassword = async (email: string) => {
     if (!SUPABASE_CONFIGURED) return { error: 'Supabase yapılandırılmamış.' };
     const { error } = await supabase.auth.resetPasswordForEmail(email);
@@ -153,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
         enterDemoMode,
         isDemoMode,
+        hasPermission,
       }}
     >
       {children}

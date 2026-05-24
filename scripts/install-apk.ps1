@@ -2,8 +2,8 @@ $ErrorActionPreference = 'Stop'
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 $env:Path = "$env:ANDROID_HOME\platform-tools;$env:Path"
 
-$apkUrl = 'https://expo.dev/artifacts/eas/XXcVaHLPGdYVVvaJ66y9d.apk'
-$apkPath = "$env:TEMP\sahatakip-build5.apk"
+$apkUrl = 'https://expo.dev/artifacts/eas/a51kk5hHdLRJkpQqWhstvY.apk'
+$apkPath = "$env:TEMP\sahatakip-build6.apk"
 
 Write-Host "=== Downloading APK ==="
 Invoke-WebRequest -Uri $apkUrl -OutFile $apkPath -UseBasicParsing

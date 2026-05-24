@@ -1190,18 +1190,23 @@ const approvalStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
-  quickRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   quickBtn: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 'auto',
+    minWidth: 150,
+    maxWidth: '100%',
     flexDirection: 'row',
     backgroundColor: colors.emerald.default,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
-  quickText: { color: '#fff', fontWeight: '700' },
+  quickText: { color: '#fff', fontWeight: '700', flexShrink: 1 },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.bg.secondary,

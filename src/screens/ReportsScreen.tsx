@@ -31,6 +31,7 @@ import {
   setWeeklyEmail,
   getWeeklyEmail,
 } from '../services/reportSchedule';
+import { generateAndShareActivityPdf } from '../services/activityPdf';
 import { useAppContext } from '../context/AppContext';
 import {
   Report,
@@ -137,10 +138,10 @@ export default function ReportsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.linkBtn}
-            onPress={() => navigation.navigate('Sla')}
+            onPress={() => generateAndShareActivityPdf(new Date().toISOString().slice(0,10), workOrders, quotes)}
           >
-            <Ionicons name="alarm-outline" size={16} color={colors.rose.default} />
-            <Text style={styles.linkText}>Geciken İşler</Text>
+            <Ionicons name="document-text-outline" size={16} color={brand.green} />
+            <Text style={styles.linkText}>Aktivite PDF</Text>
           </TouchableOpacity>
         </View>
 

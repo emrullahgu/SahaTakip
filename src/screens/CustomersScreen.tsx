@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import type { Customer, RootStackParamList } from '../types';
 
@@ -23,7 +24,10 @@ type NavProp = NativeStackNavigationProp<RootStackParamList, 'Customers'>;
 export default function CustomersScreen() {
   const navigation = useNavigation<NavProp>();
   const { customers, deleteCustomer, toast } = useAppContext();
+  const { hasPermission } = useAuth();
   const [query, setQuery] = useState('');
+
+  const canWrite = hasPermission('customers', 'W');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -68,13 +72,15 @@ export default function CustomersScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('CustomerForm')}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={20} color="#fff" />
-        </TouchableOpacity>
+        {canWrite && (
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('CustomerForm')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text style={styles.count}>{filtered.length} müşteri</Text>
@@ -113,13 +119,15 @@ export default function CustomersScreen() {
                 )}
               </View>
             </View>
-            <TouchableOpacity
-              onPress={() => confirmDelete(item)}
-              style={styles.deleteBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
-            </TouchableOpacity>
+            {canWrite && (
+              <TouchableOpacity
+                onPress={() => confirmDelete(item)}
+                style={styles.deleteBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+              </TouchableOpacity>
+            )}
           </TouchableOpacity>
         )}
         ListEmptyComponent={

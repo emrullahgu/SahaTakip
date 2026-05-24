@@ -36,6 +36,7 @@ import {
   startAudioRecording,
   stopAudioRecording,
 } from '../services/audioRecorder';
+import { generateAndShareWorkOrderPdf } from '../services/workOrderPdf';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkOrderDetail'>;
 
@@ -66,6 +67,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   const [slaHours, setSlaHours] = useState(String(wo?.slaHours ?? ''));
   const [signOpen, setSignOpen] = useState(false);
   const [audioRecording, setAudioRecording] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   if (!wo) {
     return (
@@ -267,6 +269,26 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
       )}
 
       {/* FAZ 5 — POZ-DEV-047 Müşteri puanı */}
+      <TouchableOpacity
+        style={styles.pdfCta}
+        onPress={async () => {
+          setPdfLoading(true);
+          try {
+            await generateAndShareWorkOrderPdf(wo);
+          } catch (e: any) {
+            Alert.alert('Hata', 'PDF üretilemedi.');
+          } finally {
+            setPdfLoading(false);
+          }
+        }}
+        disabled={pdfLoading}
+      >
+        <Ionicons name="document-text-outline" size={18} color="#fff" />
+        <Text style={styles.ratingCtaText}>
+          {pdfLoading ? 'Hazırlanıyor...' : 'Servis Formu PDF Al'}
+        </Text>
+      </TouchableOpacity>
+
       {wo.status === 'Tamamlandı' && (
         <TouchableOpacity
           style={styles.ratingCta}
@@ -609,6 +631,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ratingCtaText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  pdfCta: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#dc2626',
+    paddingVertical: 12,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 12,
+    marginBottom: 10,
+  },
   formsCta: {
     flexDirection: 'row',
     gap: 8,
