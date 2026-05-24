@@ -186,46 +186,7 @@ const INTEGRATIONS: ExtIntegration[] = [
   },
 ];
 
-const DEMO_LOGS: Record<string, ExtLogEntry[]> = {
-  whatsapp: [
-    { id: 'l1', at: '2026-05-24 09:12', level: 'info', message: 'Entegrasyon henüz yapılandırılmadı' },
-    { id: 'l2', at: '2026-05-22 14:00', level: 'success', message: 'Test mesajı başarıyla iletildi (sandbox)' },
-  ],
-  sms: [
-    { id: 'l1', at: '2026-05-23 10:00', level: 'warn', message: 'Provider seçimi eksik' },
-  ],
-  calendar: [
-    { id: 'l1', at: '2026-05-20 16:42', level: 'info', message: 'Senkronizasyon yapılandırması bekleniyor' },
-  ],
-  bank: [
-    { id: 'l1', at: '2026-05-15 09:00', level: 'info', message: 'Banka API\'leri için onay süreci başlatıldı' },
-  ],
-  pos: [
-    { id: 'l1', at: '2026-05-18 11:30', level: 'info', message: 'Sanal POS başvurusu pilotu tanımlandı' },
-  ],
-  warehouse: [
-    { id: 'l1', at: '2026-05-24 08:00', level: 'success', message: 'Detaylı depo modülü hazır, aktivasyon bekliyor' },
-  ],
-  erp: [
-    { id: 'l1', at: '2026-05-22 13:15', level: 'pending' as any, message: 'ERP vendor seçimi yöneticiden bekleniyor' },
-    { id: 'l2', at: '2026-05-20 09:00', level: 'info', message: 'Logo Tiger pilot bağlantısı test edildi' },
-  ],
-  market: [
-    { id: 'l1', at: '2026-05-19 22:00', level: 'info', message: 'Pazar zekası entegrasyonu kurgu aşamasında' },
-  ],
-  ocr: [
-    { id: 'l1', at: '2026-05-21 14:30', level: 'info', message: 'Sağlayıcı kıyaslaması yapılıyor' },
-  ],
-  theme: [
-    { id: 'l1', at: '2026-05-24 09:00', level: 'success', message: 'Karanlık mod ön ayarları hazırlandı' },
-  ],
-  traffic: [
-    { id: 'l1', at: '2026-05-23 17:00', level: 'info', message: 'API anahtar talebi gönderildi' },
-  ],
-  shift: [
-    { id: 'l1', at: '2026-05-24 07:30', level: 'success', message: 'Vardiya kuralları taslağı tamamlandı' },
-  ],
-};
+const DEMO_LOGS: Record<string, ExtLogEntry[]> = {};
 
 export async function listExtIntegrations(): Promise<ExtIntegration[]> { return INTEGRATIONS; }
 
