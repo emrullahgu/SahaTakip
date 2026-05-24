@@ -124,6 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         if (data) setProfile(data as UserProfile);
       });
+    // Kullanıcı giriş yaptığında paylaşımlı AI ayarlarını arka planda senkronize et.
+    import('../services/ai')
+      .then(m => m.syncRemoteAiSettings?.())
+      .catch(() => { /* ignore */ });
   }, [user]);
 
   const signIn = async (email: string, password: string) => {
@@ -171,7 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const enterDemoMode = () => setIsDemoMode(true);
 
   const hasPermission = (resource: string, action: 'R' | 'W'): boolean => {
-    const role = profile?.role || (isDemoMode ? 'engineer' : 'field');
+    // Demo mode = admin (her şeyi görür ve düzenler). Profil yoksa "field" (en kısıtlı).
+    const role = profile?.role || (isDemoMode ? 'admin' : 'field');
     const perm = PERMISSIONS[role as UserRole]?.[resource];
     if (!perm || perm === '-') return false;
     if (action === 'W') return perm === 'W';

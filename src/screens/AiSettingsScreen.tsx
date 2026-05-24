@@ -1,4 +1,4 @@
-// AiSettingsScreen — sağlayıcı + apiKey + model
+// AiSettingsScreen — sağlayıcı + apiKey + model (admin-only)
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,8 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
-import { AI_PROVIDER_LABEL, getAiSettings, setAiSettings, pingAi } from '../services/ai';
+import { AI_PROVIDER_LABEL, getAiSettings, setAiSettings, pingAi, getBuiltinKey } from '../services/ai';
 import { AiProvider, AiSettings } from '../types';
+import { useHasRole } from '../components/RoleGuard';
 
 const PROVIDERS: AiProvider[] = ['mock', 'openai', 'claude', 'gemini'];
 
@@ -20,6 +21,7 @@ const HINTS: Record<AiProvider, { defaultModel: string; help: string }> = {
 
 export default function AiSettingsScreen() {
   const nav = useNavigation();
+  const isAdmin = useHasRole(['admin']);
   const [provider, setProvider] = useState<AiProvider>('mock');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
@@ -27,13 +29,28 @@ export default function AiSettingsScreen() {
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
+    if (!isAdmin) return;
     (async () => {
       const s = await getAiSettings();
       setProvider(s.provider);
       setApiKey(s.apiKey || '');
       setModel(s.model || '');
     })();
-  }, []);
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.lockBox}>
+          <Ionicons name="lock-closed-outline" size={48} color={colors.text.muted} />
+          <Text style={styles.lockTitle}>Yetki Gerekli</Text>
+          <Text style={styles.lockDesc}>
+            AI sağlayıcı anahtarlarını yalnızca yönetici (admin) görüntüleyebilir/düzenleyebilir.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const onSave = async () => {
     const payload: AiSettings = {
@@ -79,7 +96,14 @@ export default function AiSettingsScreen() {
           {PROVIDERS.map(p => {
             const active = provider === p;
             return (
-              <TouchableOpacity key={p} style={[styles.pCard, active && styles.pCardActive]} onPress={() => setProvider(p)}>
+              <TouchableOpacity key={p} style={[styles.pCard, active && styles.pCardActive]} onPress={() => {
+                setProvider(p);
+                // Boş ise built-in anahtarı otomatik doldur
+                if (!apiKey && p !== 'mock') {
+                  const def = getBuiltinKey(p);
+                  if (def) setApiKey(def);
+                }
+              }}>
                 <Ionicons
                   name={p === 'openai' ? 'sparkles' : p === 'claude' ? 'flash' : p === 'gemini' ? 'planet-outline' : 'flask-outline'}
                   size={20}
@@ -147,6 +171,9 @@ export default function AiSettingsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   content: { padding: spacing.lg, paddingBottom: 80 },
+  lockBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md },
+  lockTitle: { color: colors.text.primary, fontWeight: '700', fontSize: typography.lg },
+  lockDesc: { color: colors.text.muted, textAlign: 'center', fontSize: typography.sm, lineHeight: 20 },
   label: { color: colors.text.muted, fontSize: typography.xs, marginTop: spacing.md, marginBottom: 6, fontWeight: '700' },
   providerGrid: { flexDirection: 'row', gap: 6 },
   pCard: { flex: 1, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.secondary, alignItems: 'center', gap: 6 },

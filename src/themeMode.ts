@@ -1,8 +1,10 @@
-// themeMode.ts — POZ-DEV-328..330 Light/Dark token + useTheme hook
-// Mevcut `theme.ts` koyu tema varsayılan; bu modül light counterpart + toggle sağlar.
-import { useState, useCallback, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
-import { brand } from './theme';
+// themeMode.ts — Light/Dark token + tema değiştirme
+// `theme.ts` aktif modu modül yüklenirken senkron olarak belirler.
+// Buradaki setThemeMode kaydeder ve uygulamayı yeniden yükler.
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useColorScheme, Platform, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { brand, __activeThemeMode, THEME_STORAGE_KEY } from './theme';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -13,28 +15,112 @@ const DARK_PALETTE = {
 };
 
 const LIGHT_PALETTE = {
-  bg: { primary: '#ffffff', secondary: '#f8fafc', card: '#ffffff' },
+  bg: { primary: '#ffffff', secondary: '#f1f5f9', card: '#ffffff' },
   border: { primary: '#e2e8f0', secondary: '#cbd5e1' },
-  text: { primary: '#0f172a', secondary: '#334155', muted: '#64748b', faint: '#94a3b8' },
+  text: { primary: '#0f172a', secondary: '#334155', muted: '#475569', faint: '#94a3b8' },
 };
 
 export function getPalette(mode: 'light' | 'dark') {
   return mode === 'light' ? LIGHT_PALETTE : DARK_PALETTE;
 }
 
-let storedMode: ThemeMode = 'dark';
+let storedMode: ThemeMode = __activeThemeMode;
+let hydrated = false;
 
 export function getThemeMode(): ThemeMode {
   return storedMode;
 }
 
-export function setThemeMode(m: ThemeMode): void {
+/**
+ * AsyncStorage'tan kaydedilmiş modu yükler. Native'de aktiften farklıysa
+ * tek seferlik bundle reload yapar (sonsuz döngüyü önlemek için bayrak).
+ */
+export async function hydrateThemeMode(): Promise<void> {
+  if (hydrated) return;
+  hydrated = true;
+  try {
+    const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      storedMode = stored;
+      const effective = stored === 'system' ? 'dark' : stored;
+      if (Platform.OS !== 'web' && effective !== __activeThemeMode) {
+        const g: any = globalThis as any;
+        if (!g.__SAHATAKIP_THEME_RELOAD_DONE__) {
+          g.__SAHATAKIP_THEME_RELOAD_DONE__ = true;
+          g.__SAHATAKIP_THEME__ = effective;
+          tryReload();
+        }
+      }
+    }
+  } catch {
+    /* sessiz */
+  }
+}
+
+function tryReload(): boolean {
+  try {
+    if (typeof window !== 'undefined' && (window as any).location?.reload) {
+      (window as any).location.reload();
+      return true;
+    }
+  } catch {
+    /* sessiz */
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const RN = require('react-native');
+    if (RN?.DevSettings?.reload) {
+      RN.DevSettings.reload();
+      return true;
+    }
+  } catch {
+    /* sessiz */
+  }
+  return false;
+}
+
+export async function setThemeMode(m: ThemeMode): Promise<void> {
   storedMode = m;
+  const effective = m === 'system' ? 'dark' : m;
+  try {
+    (globalThis as any).__SAHATAKIP_THEME__ = effective;
+  } catch {
+    /* sessiz */
+  }
+  try {
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, m);
+  } catch {
+    /* sessiz */
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(THEME_STORAGE_KEY, effective);
+    }
+  } catch {
+    /* sessiz */
+  }
+  if (effective === __activeThemeMode) return;
+  try {
+    (globalThis as any).__SAHATAKIP_THEME_RELOAD_DONE__ = false;
+  } catch {
+    /* sessiz */
+  }
+  const ok = tryReload();
+  if (!ok) {
+    Alert.alert(
+      'Tema Değiştirildi',
+      'Yeni temanın uygulanması için uygulamayı kapatıp yeniden açın.'
+    );
+  }
 }
 
 export function useTheme() {
   const system = useColorScheme();
   const [mode, setMode] = useState<ThemeMode>(storedMode);
+
+  useEffect(() => {
+    hydrateThemeMode().then(() => setMode(storedMode));
+  }, []);
 
   const effective: 'light' | 'dark' = useMemo(() => {
     if (mode === 'system') return system === 'light' ? 'light' : 'dark';
@@ -44,13 +130,9 @@ export function useTheme() {
   const palette = useMemo(() => getPalette(effective), [effective]);
 
   const updateMode = useCallback((m: ThemeMode) => {
-    setStoredMode(m);
     setMode(m);
+    void setThemeMode(m);
   }, []);
 
   return { mode, effective, palette, brand, setMode: updateMode };
-}
-
-function setStoredMode(m: ThemeMode) {
-  storedMode = m;
 }

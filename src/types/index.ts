@@ -3975,6 +3975,7 @@ export type RootStackParamList = {
   SyncHistory: undefined;
   FieldFavorites: undefined;
   FieldSettings: undefined;
+  AppUpdate: undefined;
   ConnectivityMonitor: undefined;
   // FAZ 37 — Müşteri Deneyimi ve Dış Paylaşım
   CustomerExperienceHub: undefined;

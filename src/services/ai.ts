@@ -3,8 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { AiProvider, AiSettings, DamageAnalysis, DamageSeverity, PozSuggestion, VoiceReport } from '../types';
 import { POZ_CATALOG, PozItem } from '../data/pozCatalog';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
 const SETTINGS_KEY = '@SahaTakip:ai_settings';
+const SETTINGS_REMOTE_KEY = 'ai_settings'; // app_settings.key
 const VOICE_KEY = '@SahaTakip:voice_reports';
 
 const DEFAULT_MODEL: Record<AiProvider, string> = {
@@ -14,7 +16,51 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
   mock: 'mock',
 };
 
+// Sağlayıcı kartına tıklandığında otomatik dolduracağımız built-in anahtarlar —
+// kaynak koda gömmek yerine .env (EXPO_PUBLIC_*) üzerinden okunur.
+export function getBuiltinKey(p: AiProvider): string | undefined {
+  switch (p) {
+    case 'openai': return process.env.EXPO_PUBLIC_OPENAI_KEY;
+    case 'claude': return process.env.EXPO_PUBLIC_CLAUDE_KEY;
+    case 'gemini': return process.env.EXPO_PUBLIC_GEMINI_KEY;
+    default: return undefined;
+  }
+}
+
+// Remote (Supabase) → tüm kullanıcılar tarafından paylaşılan ayarları çek.
+// Admin bir kere yazar, herkes okur. RLS bunu zorunlu kılar.
+async function fetchRemoteAiSettings(): Promise<AiSettings | null> {
+  if (!SUPABASE_CONFIGURED) return null;
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', SETTINGS_REMOTE_KEY)
+      .maybeSingle();
+    if (error || !data?.value) return null;
+    const v = data.value as AiSettings;
+    if (v?.provider && v.provider !== 'mock' && v.apiKey) return v;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function pushRemoteAiSettings(s: AiSettings): Promise<void> {
+  if (!SUPABASE_CONFIGURED) return;
+  try {
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes?.user?.id ?? null;
+    await supabase
+      .from('app_settings')
+      .upsert({ key: SETTINGS_REMOTE_KEY, value: s, updated_by: uid, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  } catch {
+    // RLS reddi (non-admin) sessizce geçilir — yerel kayıt yine de yapılır.
+  }
+}
+
 export async function getAiSettings(): Promise<AiSettings> {
+  // 1) Yerel cache (en hızlı)
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
     if (raw) {
@@ -22,7 +68,15 @@ export async function getAiSettings(): Promise<AiSettings> {
       if (parsed.provider && parsed.provider !== 'mock' && parsed.apiKey) return parsed;
     }
   } catch { /* ignore */ }
-  // Fallback: .env'den seed et (yalnızca anahtar girilmemişse).
+
+  // 2) Supabase paylaşımlı ayar (admin'in yazdığı, herkes okuyabilir)
+  const remote = await fetchRemoteAiSettings();
+  if (remote) {
+    try { await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(remote)); } catch { /* ignore */ }
+    return remote;
+  }
+
+  // 3) Fallback: .env'den seed et (yalnızca anahtar girilmemişse).
   const envProv = (process.env.EXPO_PUBLIC_AI_DEFAULT_PROVIDER || '').toLowerCase() as AiProvider;
   const envKey =
     envProv === 'openai' ? process.env.EXPO_PUBLIC_OPENAI_KEY :
@@ -32,15 +86,26 @@ export async function getAiSettings(): Promise<AiSettings> {
   if (envProv && envKey && envProv !== 'mock') {
     return { provider: envProv, apiKey: envKey, model: DEFAULT_MODEL[envProv] };
   }
-  // İkincil: hangi anahtar varsa onu kullan (öncelik: openai > claude > gemini).
+  // İkincil: hangi anahtar varsa onu kullan (öncelik: gemini > openai > claude).
+  if (process.env.EXPO_PUBLIC_GEMINI_KEY) return { provider: 'gemini', apiKey: process.env.EXPO_PUBLIC_GEMINI_KEY, model: DEFAULT_MODEL.gemini };
   if (process.env.EXPO_PUBLIC_OPENAI_KEY) return { provider: 'openai', apiKey: process.env.EXPO_PUBLIC_OPENAI_KEY, model: DEFAULT_MODEL.openai };
   if (process.env.EXPO_PUBLIC_CLAUDE_KEY) return { provider: 'claude', apiKey: process.env.EXPO_PUBLIC_CLAUDE_KEY, model: DEFAULT_MODEL.claude };
-  if (process.env.EXPO_PUBLIC_GEMINI_KEY) return { provider: 'gemini', apiKey: process.env.EXPO_PUBLIC_GEMINI_KEY, model: DEFAULT_MODEL.gemini };
+
   return { provider: 'mock' };
 }
 
 export async function setAiSettings(s: AiSettings): Promise<void> {
   await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  // Admin yazdıysa Supabase'e de gönder ki diğer kullanıcılar da kullansın.
+  await pushRemoteAiSettings(s);
+}
+
+/** Uygulama açılışında çağrılır — remote ayarları cache'e indirip non-admin kullanıcıların hemen kullanmasını sağlar. */
+export async function syncRemoteAiSettings(): Promise<void> {
+  const remote = await fetchRemoteAiSettings();
+  if (remote) {
+    try { await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(remote)); } catch { /* ignore */ }
+  }
 }
 
 export const AI_PROVIDER_LABEL: Record<AiProvider, string> = {

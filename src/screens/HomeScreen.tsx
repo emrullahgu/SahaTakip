@@ -33,6 +33,14 @@ export default function HomeScreen() {
   const { profile, user, signOut, isDemoMode } = useAuth();
   const { mode, setMode } = useTheme();
 
+  // Rol bazlı görünürlük — saha personeli mali/yönetimsel kısımları görmez.
+  // isDemoMode = admin (her şeyi görür). Profil yoksa "field" varsayılır (en kısıtlı).
+  const role = profile?.role ?? (isDemoMode ? 'admin' : 'field');
+  const isField = !isDemoMode && role === 'field';
+  const canSeeFinance = isDemoMode || role === 'admin' || role === 'manager';
+  const canSeeReports = isDemoMode || role === 'admin' || role === 'manager' || role === 'engineer';
+  const canSeeAdminTools = isDemoMode || role === 'admin';
+
   const toggleTheme = () => {
     setMode(mode === 'dark' ? 'light' : 'dark');
   };
@@ -135,16 +143,18 @@ export default function HomeScreen() {
             <Text style={styles.gridLabel}>Servislerim</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('Expenses')}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.gridIcon, { backgroundColor: colors.amber.bg }]}>
-              <Ionicons name="card-outline" size={26} color={colors.amber.default} />
-            </View>
-            <Text style={styles.gridLabel}>Masraflarım</Text>
-          </TouchableOpacity>
+          {canSeeFinance && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('Expenses')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.amber.bg }]}>
+                <Ionicons name="card-outline" size={26} color={colors.amber.default} />
+              </View>
+              <Text style={styles.gridLabel}>Masraflarım</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.gridItem}
@@ -190,16 +200,18 @@ export default function HomeScreen() {
             <Text style={styles.gridLabel}>Firma Bilgisi</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('Reports')}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.gridIcon, { backgroundColor: colors.indigo.bg }]}>
-              <Ionicons name="stats-chart-outline" size={26} color={colors.indigo.default} />
-            </View>
-            <Text style={styles.gridLabel}>Raporlar</Text>
-          </TouchableOpacity>
+          {canSeeReports && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('Reports')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.indigo.bg }]}>
+                <Ionicons name="stats-chart-outline" size={26} color={colors.indigo.default} />
+              </View>
+              <Text style={styles.gridLabel}>Raporlar</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.gridItem}
@@ -256,49 +268,81 @@ export default function HomeScreen() {
             <Text style={styles.gridLabel}>Saha Ops</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('OrdHub')}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
-              <Ionicons name="bag-handle-outline" size={26} color={colors.rose.default} />
-            </View>
-            <Text style={styles.gridLabel}>Siparişler</Text>
-          </TouchableOpacity>
+          {canSeeFinance && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('OrdHub')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
+                <Ionicons name="bag-handle-outline" size={26} color={colors.rose.default} />
+              </View>
+              <Text style={styles.gridLabel}>Siparişler</Text>
+            </TouchableOpacity>
+          )}
+
+          {canSeeAdminTools && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('CpHub')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.blue.bg }]}>
+                <Ionicons name="people-circle-outline" size={26} color={colors.blue.default} />
+              </View>
+              <Text style={styles.gridLabel}>Müşteri Portalı</Text>
+            </TouchableOpacity>
+          )}
+
+          {canSeeFinance && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('InventoryHub')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+                <Ionicons name="cube-outline" size={26} color={colors.emerald.default} />
+              </View>
+              <Text style={styles.gridLabel}>Ürün & Envanter</Text>
+            </TouchableOpacity>
+          )}
+
+          {canSeeAdminTools && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('GovernanceHub')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
+                <Ionicons name="shield-checkmark-outline" size={26} color={colors.rose.default} />
+              </View>
+              <Text style={styles.gridLabel}>Yetki & Denetim</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.gridItem}
-            onPress={() => navigation.navigate('CpHub')}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.gridIcon, { backgroundColor: colors.blue.bg }]}>
-              <Ionicons name="people-circle-outline" size={26} color={colors.blue.default} />
-            </View>
-            <Text style={styles.gridLabel}>Müşteri Portalı</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('InventoryHub')}
+            onPress={() => navigation.navigate('AppUpdate')}
             activeOpacity={0.75}
           >
             <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
-              <Ionicons name="cube-outline" size={26} color={colors.emerald.default} />
+              <Ionicons name="cloud-download-outline" size={26} color={colors.emerald.default} />
             </View>
-            <Text style={styles.gridLabel}>Ürün & Envanter</Text>
+            <Text style={styles.gridLabel}>Güncelleme</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.gridItem}
-            onPress={() => navigation.navigate('GovernanceHub')}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
-              <Ionicons name="shield-checkmark-outline" size={26} color={colors.rose.default} />
-            </View>
-            <Text style={styles.gridLabel}>Yetki & Denetim</Text>
-          </TouchableOpacity>
+          {canSeeAdminTools && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('AiSettings')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.indigo.bg }]}>
+                <Ionicons name="key-outline" size={26} color={colors.indigo.default} />
+              </View>
+              <Text style={styles.gridLabel}>API Anahtarları</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Quick Report CTA */}

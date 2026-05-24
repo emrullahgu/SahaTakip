@@ -41,8 +41,10 @@ export default function NewServiceScreen() {
     user?.email?.split('@')[0] ||
     'Saha';
 
-  const [selectedClient, setSelectedClient] = useState(CLIENTS[0]);
-  const [selectedService, setSelectedService] = useState<ServiceCatalogItem>(SERVICE_CATALOG[0]);
+  const [selectedClient, setSelectedClient] = useState<string>(CLIENTS[0] ?? '');
+  const [selectedService, setSelectedService] = useState<ServiceCatalogItem>(
+    SERVICE_CATALOG[0] ?? { id: 'custom', name: 'Saha Servisi', price: 0, estCost: 0 }
+  );
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedMaterial[]>([]);
   const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
   const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
@@ -108,6 +110,10 @@ export default function NewServiceScreen() {
   };
 
   const handleSubmit = () => {
+    if (!selectedClient) {
+      Alert.alert('Müşteri Seçin', 'Devam etmek için bir müşteri seçin.');
+      return;
+    }
     if (!beforePhoto || !afterPhoto) {
       Alert.alert('Eksik Fotoğraf', 'Rapor için hem Öncesi hem Sonrası fotoğrafı zorunludur.');
       return;
@@ -168,7 +174,7 @@ export default function NewServiceScreen() {
           onPress={() => setShowClientPicker(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.pickerValue}>{selectedClient}</Text>
+          <Text style={styles.pickerValue}>{selectedClient || 'Müşteri seçin…'}</Text>
           <Ionicons name="chevron-down" size={16} color={colors.text.muted} />
         </TouchableOpacity>
 
@@ -343,6 +349,9 @@ export default function NewServiceScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Müşteri Seçin</Text>
+            {CLIENTS.length === 0 && (
+              <Text style={styles.modalItemSub}>Henüz müşteri tanımlanmamış. Müşteriler ekranından ekleyebilirsiniz.</Text>
+            )}
             {CLIENTS.map(c => (
               <TouchableOpacity
                 key={c}
@@ -375,6 +384,9 @@ export default function NewServiceScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Hizmet Seçin</Text>
+            {SERVICE_CATALOG.length === 0 && (
+              <Text style={styles.modalItemSub}>Hizmet kataloğu boş. Varsayılan “Saha Servisi” kullanılacak.</Text>
+            )}
             {SERVICE_CATALOG.map(s => (
               <TouchableOpacity
                 key={s.id}

@@ -227,6 +227,7 @@ import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import SyncHistoryScreen from '../screens/SyncHistoryScreen';
 import FieldFavoritesScreen from '../screens/FieldFavoritesScreen';
 import FieldSettingsScreen from '../screens/FieldSettingsScreen';
+import AppUpdateScreen from '../screens/AppUpdateScreen';
 import ConnectivityMonitorScreen from '../screens/ConnectivityMonitorScreen';
 // FAZ 37 — Müşteri Deneyimi & Dış Paylaşım
 import CustomerExperienceHubScreen from '../screens/CustomerExperienceHubScreen';
@@ -499,6 +500,8 @@ function MainTabs() {
   const { profile, isDemoMode } = useAuth();
   const role = profile?.role ?? 'engineer';
   const canSeeManager = isDemoMode || role === 'admin' || role === 'manager';
+  // Saha personeli: teklif/mali bölümleri gizle.
+  const canSeeQuotes = isDemoMode || role !== 'field';
   return (
     <Tab.Navigator
       screenOptions={{
@@ -568,6 +571,7 @@ function MainTabs() {
         component={QuotesScreen}
         options={{
           tabBarLabel: 'Teklifler',
+          tabBarItemStyle: canSeeQuotes ? undefined : { display: 'none' },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text-outline" color={color} size={size} />
           ),
@@ -1527,6 +1531,7 @@ function MainStack() {
       <Stack.Screen name="SyncHistory" component={SyncHistoryScreen} options={{ headerShown: true, title: 'Senkron Geçmişi', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="FieldFavorites" component={FieldFavoritesScreen} options={{ headerShown: true, title: 'Favoriler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="FieldSettings" component={FieldSettingsScreen} options={{ headerShown: true, title: 'Saha Ayarları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AppUpdate" component={AppUpdateScreen} options={{ headerShown: true, title: 'Uygulama Güncelleme', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ConnectivityMonitor" component={ConnectivityMonitorScreen} options={{ headerShown: true, title: 'Bağlantı Monitörü', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       {/* FAZ 37 — Müşteri Deneyimi & Dış Paylaşım */}
       <Stack.Screen name="CustomerExperienceHub" component={CustomerExperienceHubScreen} options={{ headerShown: true, title: 'Müşteri Deneyimi', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

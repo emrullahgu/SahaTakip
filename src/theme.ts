@@ -9,22 +9,57 @@ export const brand = {
   greenDark: '#16a34a',
 };
 
+// ─────────────────────────────────────────────────────────────
+// Tema modu: ekranlar StyleSheet.create ile module-scope'ta
+// renkleri donduruyor. Bu yüzden mod, modül yüklenmeden ÖNCE
+// senkron olarak tespit edilmeli (web: localStorage, native:
+// global stamp). Mod değişimi themeMode.setThemeMode() içinden
+// yeniden yüklemeyle uygulanır.
+// ─────────────────────────────────────────────────────────────
+export const THEME_STORAGE_KEY = 'sahatakip.themeMode';
+
+function readInitialMode(): 'light' | 'dark' {
+  try {
+    const g: any = typeof globalThis !== 'undefined' ? globalThis : undefined;
+    if (g && (g.__SAHATAKIP_THEME__ === 'light' || g.__SAHATAKIP_THEME__ === 'dark')) {
+      return g.__SAHATAKIP_THEME__;
+    }
+    if (typeof localStorage !== 'undefined') {
+      const v = localStorage.getItem(THEME_STORAGE_KEY);
+      if (v === 'light' || v === 'dark') return v;
+    }
+  } catch {
+    /* sessiz */
+  }
+  return 'dark';
+}
+
+export const __activeThemeMode: 'light' | 'dark' = readInitialMode();
+
+try {
+  (globalThis as any).__SAHATAKIP_THEME__ = __activeThemeMode;
+} catch {
+  /* sessiz */
+}
+
+const DARK_TOKENS = {
+  bg: { primary: '#020617', secondary: '#0f172a', card: '#1e293b' },
+  border: { primary: '#1e293b', secondary: '#334155' },
+  text: { primary: '#f1f5f9', secondary: '#cbd5e1', muted: '#94a3b8', faint: '#64748b' },
+};
+
+const LIGHT_TOKENS = {
+  bg: { primary: '#ffffff', secondary: '#f1f5f9', card: '#ffffff' },
+  border: { primary: '#e2e8f0', secondary: '#cbd5e1' },
+  text: { primary: '#0f172a', secondary: '#334155', muted: '#475569', faint: '#94a3b8' },
+};
+
+const __TOKENS = __activeThemeMode === 'light' ? LIGHT_TOKENS : DARK_TOKENS;
+
 export const colors = {
-  bg: {
-    primary: '#020617',
-    secondary: '#0f172a',
-    card: '#1e293b',
-  },
-  border: {
-    primary: '#1e293b',
-    secondary: '#334155',
-  },
-  text: {
-    primary: '#f1f5f9',
-    secondary: '#cbd5e1',
-    muted: '#94a3b8',
-    faint: '#64748b',
-  },
+  bg: __TOKENS.bg,
+  border: __TOKENS.border,
+  text: __TOKENS.text,
   // PRIMARY (yeşil) — logo yeşili
   emerald: {
     default: brand.green,

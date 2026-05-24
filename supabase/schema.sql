@@ -1563,3 +1563,30 @@ begin
 end;
 $$;
 grant execute on function public.complete_email_dispatch(uuid, text[], text, text, text) to service_role;
+
+
+-- =============================================================
+-- app_settings — Paylaþýmlý uygulama ayarlarý (örn. AI API anahtarlarý)
+-- Tüm authenticated kullanýcýlar OKUYABÝLÝR; yalnýzca admin YAZABÝLÝR.
+-- Bu sayede admin bir kere anahtarlarý girer, herkes uygulamadan kullanýr.
+-- =============================================================
+create table if not exists public.app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz default now(),
+  updated_by uuid references public.profiles(id)
+);
+
+alter table public.app_settings enable row level security;
+
+drop policy if exists "app_settings_read_all_auth" on public.app_settings;
+create policy "app_settings_read_all_auth" on public.app_settings
+  for select using (auth.role() = 'authenticated');
+
+drop policy if exists "app_settings_admin_write" on public.app_settings;
+create policy "app_settings_admin_write" on public.app_settings
+  for all using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  ) with check (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
