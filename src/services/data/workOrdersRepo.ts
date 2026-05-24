@@ -55,7 +55,13 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await enqueueSync({ id, table: 'work_orders', action: 'update', payload: w });
       return w;
     }
-    const { error } = await supabase.from('work_orders').update(workOrderToRow(w)).eq('id', id);
+    let userId: string | undefined;
+    try {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id;
+    } catch { /* ignore */ }
+    // App id `number` kolonunda saklanır (DB id = uuid).
+    const { error } = await supabase.from('work_orders').update(workOrderToRow(w, userId)).eq('number', id);
     if (error) throw new Error(`[workOrders.update] ${error.message}`);
     return w;
   },
@@ -65,7 +71,7 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await enqueueSync({ id, table: 'work_orders', action: 'delete', payload: { id } });
       return;
     }
-    const { error } = await supabase.from('work_orders').delete().eq('id', id);
+    const { error } = await supabase.from('work_orders').delete().eq('number', id);
     if (error) throw new Error(`[workOrders.delete] ${error.message}`);
   },
 };

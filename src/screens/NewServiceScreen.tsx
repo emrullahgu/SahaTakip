@@ -177,10 +177,7 @@ export default function NewServiceScreen() {
       Alert.alert('Müşteri Seçin', 'Devam etmek için bir müşteri seçin.');
       return;
     }
-    if (!beforePhoto || !afterPhoto) {
-      Alert.alert('Eksik Fotoğraf', 'Rapor için hem Öncesi hem Sonrası fotoğrafı zorunludur.');
-      return;
-    }
+    // Fotoğraflar artık opsiyonel — saha hızlı kayıt için engel olmaz.
 
     const materialCost = selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0);
     const laborCost = selectedService.estCost;
@@ -203,8 +200,8 @@ export default function NewServiceScreen() {
       quoteAmount: Math.round(calculatedQuote),
       profit: Math.round(profit),
       status: 'Onay Bekliyor',
-      beforePhoto,
-      afterPhoto,
+      beforePhoto: beforePhoto || '',
+      afterPhoto: afterPhoto || '',
       formPhoto: formPhoto || undefined,
       notes: notes || 'Saha bakımı tamamlandı, gerilim testleri yapıldı.',
     });

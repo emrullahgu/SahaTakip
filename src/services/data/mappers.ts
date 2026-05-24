@@ -107,7 +107,9 @@ export const customerToRow = (c: Customer, userId?: string) => ({
 
 // ========== WORK ORDERS ==========
 export const workOrderFromRow = (row: any): WorkOrder => ({
-  id: row.id,
+  // App tarafı w.id'yi `number` kolonunda tutuyor (DB id = uuid).
+  // Geri okurken `number`'ı tercih et ki saha & admin aynı id'yi görsün.
+  id: row.number ?? row.id,
   client: row.customer_name ?? '',
   serviceName: row.service_name ?? row.title ?? '',
   date: row.date,
@@ -144,9 +146,10 @@ export const workOrderFromRow = (row: any): WorkOrder => ({
 });
 
 export const workOrderToRow = (w: WorkOrder, userId?: string) => ({
-  id: w.id,
+  // DB id = uuid (default uuid_generate_v4) — id'yi gönderme.
+  // App tarafı id'yi text olarak `number` kolonunda tutar.
   number: w.id,
-  title: w.serviceName,
+  title: w.serviceName || w.client || w.id,
   service_name: w.serviceName,
   customer_name: w.client,
   date: w.date,
