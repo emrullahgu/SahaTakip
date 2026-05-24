@@ -18,6 +18,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import type { Customer, RootStackParamList } from '../types';
 
@@ -42,17 +43,6 @@ export default function CustomersScreen() {
         (c.phone ?? '').includes(q)
     );
   }, [customers, query]);
-
-  const confirmDelete = (cust: Customer) => {
-    Alert.alert(
-      'Silinsin mi?',
-      `${cust.shortName} müşterisi silinecek. Emin misiniz?`,
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        { text: 'Sil', style: 'destructive', onPress: () => deleteCustomer(cust.id) },
-      ]
-    );
-  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -123,13 +113,23 @@ export default function CustomersScreen() {
               </View>
             </View>
             {canWrite && (
-              <TouchableOpacity
-                onPress={() => confirmDelete(item)}
-                style={styles.deleteBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
-              </TouchableOpacity>
+              <RowMenu
+                items={[
+                  {
+                    label: 'Düzenle',
+                    icon: 'create-outline',
+                    onPress: () => navigation.navigate('CustomerForm', { customerId: item.id }),
+                  },
+                  {
+                    label: 'Sil',
+                    icon: 'trash-outline',
+                    destructive: true,
+                    confirm: `${item.shortName} müşterisi silinecek. Emin misiniz?`,
+                    confirmTitle: 'Silinsin mi?',
+                    onPress: () => deleteCustomer(item.id),
+                  },
+                ]}
+              />
             )}
           </TouchableOpacity>
         )}

@@ -19,6 +19,7 @@ import { useAppContext } from '../context/AppContext';
 import { Quote, QuoteStatus, RootStackParamList } from '../types';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -246,9 +247,19 @@ function QuoteCard({
             ₺{quote.grandTotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
           </Text>
         </View>
-        <TouchableOpacity onPress={onDelete} style={styles.deleteBtn} activeOpacity={0.7}>
-          <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
-        </TouchableOpacity>
+        <RowMenu
+          items={[
+            { label: 'Aç', icon: 'open-outline', onPress },
+            {
+              label: 'Sil',
+              icon: 'trash-outline',
+              destructive: true,
+              confirm: `${quote.number} numaralı teklif silinecek.`,
+              confirmTitle: 'Silinsin mi?',
+              onPress: onDelete,
+            },
+          ]}
+        />
       </View>
     </TouchableOpacity>
   );

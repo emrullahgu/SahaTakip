@@ -94,7 +94,8 @@ interface AppContextType {
   setWorkOrderSchedule: (id: string, plannedStart?: string, plannedEnd?: string, slaHours?: number) => void;
   startWorkTimer: (id: string, userId?: string, note?: string) => void;
   stopWorkTimer: (id: string) => void;
-  attachWorkOrderMedia: (id: string, media: { videoUri?: string; audioUri?: string; signatureUri?: string }) => void;
+  attachWorkOrderMedia: (id: string, media: { videoUri?: string; audioUri?: string; signatureUri?: string; beforePhoto?: string; afterPhoto?: string; formPhoto?: string }) => void;
+  deleteWorkOrder: (id: string) => void;
   generateFromRecurring: () => Promise<number>;
   toggleAttendance: (empId: string, day: string, currentStatus: string) => void;
   updateWage: (empId: string, newWage: number) => void;
@@ -604,7 +605,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const attachWorkOrderMedia = (
     id: string,
-    media: { videoUri?: string; audioUri?: string; signatureUri?: string },
+    media: { videoUri?: string; audioUri?: string; signatureUri?: string; beforePhoto?: string; afterPhoto?: string; formPhoto?: string },
   ) => {
     setWorkOrders(prev =>
       prev.map(w => {
@@ -615,6 +616,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }),
     );
     auditRepo.log(userId, { action: 'work_order.media', tableName: 'work_orders', refId: id, meta: media });
+  };
+
+  const deleteWorkOrder = (id: string) => {
+    setWorkOrders(prev => prev.filter(w => w.id !== id));
+    workOrdersRepo.delete(id).catch(e => console.warn('[work_order.delete]', e));
+    auditRepo.log(userId, { action: 'work_order.delete', tableName: 'work_orders', refId: id });
   };
 
   const generateFromRecurring = async (): Promise<number> => {
@@ -650,6 +657,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         startWorkTimer,
         stopWorkTimer,
         attachWorkOrderMedia,
+        deleteWorkOrder,
         generateFromRecurring,
         toggleAttendance,
         updateWage,

@@ -13,6 +13,7 @@ import {
   Alert,
   TextInput,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -194,8 +195,12 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
     showToast('İmza kaydedildi.');
   };
 
-  const clearMedia = (kind: 'video' | 'audio' | 'signature') => {
-    Alert.alert('Sil', `${kind === 'video' ? 'Video' : kind === 'audio' ? 'Ses' : 'İmza'} kaldırılsın mı?`, [
+  const clearMedia = (kind: 'video' | 'audio' | 'signature' | 'beforePhoto' | 'afterPhoto') => {
+    const labelMap: Record<string, string> = {
+      video: 'Video', audio: 'Ses', signature: 'İmza',
+      beforePhoto: 'İş Öncesi Foto', afterPhoto: 'İş Sonrası Foto',
+    };
+    Alert.alert('Sil', `${labelMap[kind]} kaldırılsın mı?`, [
       { text: 'Vazgeç', style: 'cancel' },
       {
         text: 'Sil',
@@ -203,9 +208,41 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         onPress: () => {
           if (kind === 'video') attachWorkOrderMedia(wo.id, { videoUri: undefined });
           else if (kind === 'audio') attachWorkOrderMedia(wo.id, { audioUri: undefined });
-          else attachWorkOrderMedia(wo.id, { signatureUri: undefined });
+          else if (kind === 'signature') attachWorkOrderMedia(wo.id, { signatureUri: undefined });
+          else if (kind === 'beforePhoto') attachWorkOrderMedia(wo.id, { beforePhoto: '' });
+          else if (kind === 'afterPhoto') attachWorkOrderMedia(wo.id, { afterPhoto: '' });
         },
       },
+    ]);
+  };
+
+  // ---- Foto: İş Öncesi / İş Sonrası ----
+  const pickPhoto = async (slot: 'beforePhoto' | 'afterPhoto', source: 'camera' | 'library') => {
+    try {
+      const perm = source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('İzin gerekli', source === 'camera' ? 'Kamera izni verilmedi.' : 'Galeri izni verilmedi.');
+        return;
+      }
+      const res = source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: false })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+      if (!res.canceled && res.assets[0]?.uri) {
+        attachWorkOrderMedia(wo.id, { [slot]: res.assets[0].uri });
+        showToast(slot === 'beforePhoto' ? 'İş öncesi foto eklendi.' : 'İş sonrası foto eklendi.');
+      }
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Foto alınamadı.');
+    }
+  };
+
+  const choosePhotoSource = (slot: 'beforePhoto' | 'afterPhoto') => {
+    Alert.alert('Foto Ekle', 'Kaynak seçin', [
+      { text: 'Kamera', onPress: () => pickPhoto(slot, 'camera') },
+      { text: 'Galeri', onPress: () => pickPhoto(slot, 'library') },
+      { text: 'İptal', style: 'cancel' },
     ]);
   };
 
@@ -462,6 +499,48 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         <KV k="Diğer" v={wo.otherCost} />
         <KV k="Teklif" v={wo.quoteAmount} />
         <KV k="Kâr" v={wo.profit} highlight />
+      </View>
+
+      {/* FOTOĞRAFLAR — İş Öncesi / Sonrası */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Fotoğraflar</Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          {(['beforePhoto', 'afterPhoto'] as const).map(slot => {
+            const uri = slot === 'beforePhoto' ? wo.beforePhoto : wo.afterPhoto;
+            const label = slot === 'beforePhoto' ? 'İş Öncesi' : 'İş Sonrası';
+            return (
+              <View key={slot} style={{ flex: 1 }}>
+                <Text style={[styles.mediaLabel, { marginBottom: 6 }]}>{label}</Text>
+                {uri ? (
+                  <View style={photoStyles.box}>
+                    <Image source={{ uri }} style={photoStyles.img} />
+                    <View style={photoStyles.actions}>
+                      <TouchableOpacity
+                        style={[photoStyles.actionBtn, { backgroundColor: '#1e40af' }]}
+                        onPress={() => choosePhotoSource(slot)}
+                      >
+                        <Ionicons name="refresh" size={12} color="#fff" />
+                        <Text style={photoStyles.actionText}> Değiştir</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[photoStyles.actionBtn, { backgroundColor: '#dc2626' }]}
+                        onPress={() => clearMedia(slot)}
+                      >
+                        <Ionicons name="trash-outline" size={12} color="#fff" />
+                        <Text style={photoStyles.actionText}> Sil</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={photoStyles.placeholder} onPress={() => choosePhotoSource(slot)}>
+                    <Ionicons name="camera-outline" size={24} color={colors.text.muted} />
+                    <Text style={photoStyles.placeholderText}>Foto Ekle</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       {/* FAZ 19 — POZ-DEV-031/032/033 Medya */}
@@ -739,4 +818,37 @@ const styles = StyleSheet.create({
   },
   kvKey: { color: colors.text.muted, fontSize: 13 },
   kvVal: { color: colors.text.primary, fontSize: 13 },
+});
+
+const photoStyles = StyleSheet.create({
+  box: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: colors.bg.primary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  img: { width: '100%', height: 120 },
+  actions: { flexDirection: 'row', gap: 4, padding: 4 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  actionText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  placeholder: {
+    height: 120,
+    borderRadius: 10,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    backgroundColor: colors.bg.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  placeholderText: { color: colors.text.muted, fontSize: 11 },
 });

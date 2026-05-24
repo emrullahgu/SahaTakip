@@ -19,6 +19,7 @@ import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { TabParamList, RootStackParamList } from '../types';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
@@ -52,7 +53,7 @@ const ASSIGNED_ORDERS = [
 
 export default function WorkOrdersScreen() {
   const navigation = useNavigation<WorkOrdersNavProp>();
-  const { toast, workOrders } = useAppContext();
+  const { toast, workOrders, deleteWorkOrder } = useAppContext();
   const [activeFilter, setActiveFilter] = useState('Tümü');
   const [searchText, setSearchText] = useState('');
 
@@ -182,8 +183,29 @@ export default function WorkOrdersScreen() {
                     </View>
                   )}
                 </View>
-                <View style={[styles.statusPill, { backgroundColor: statusColor(item.status as any) }]}>
-                  <Text style={styles.statusPillText}>{item.status}</Text>
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <View style={[styles.statusPill, { backgroundColor: statusColor(item.status as any) }]}>
+                    <Text style={styles.statusPillText}>{item.status}</Text>
+                  </View>
+                  {!!realOrders.find(r => r.id === item.id) && (
+                    <RowMenu
+                      items={[
+                        {
+                          label: 'Detay',
+                          icon: 'open-outline',
+                          onPress: () => navigation.navigate('WorkOrderDetail', { workOrderId: item.id }),
+                        },
+                        {
+                          label: 'Sil',
+                          icon: 'trash-outline',
+                          destructive: true,
+                          confirm: `${item.title} iş emri silinecek. Emin misiniz?`,
+                          confirmTitle: 'Silinsin mi?',
+                          onPress: () => deleteWorkOrder(item.id),
+                        },
+                      ]}
+                    />
+                  )}
                 </View>
               </View>
               <View style={styles.cardBottom}>

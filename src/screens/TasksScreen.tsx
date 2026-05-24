@@ -13,6 +13,7 @@ import {
   TASK_PRIORITY_LABEL, TASK_PRIORITY_COLOR,
 } from '../services/tasks';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -90,12 +91,19 @@ export default function TasksScreen() {
               <TouchableOpacity style={[s.statusBtn, { backgroundColor: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] + '33', borderColor: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] }]} onPress={() => cycleStatus(t)}>
                 <Text style={[s.statusBtnText, { color: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] }]}>{TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL]}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => Alert.alert('Sil', 'Görev silinsin mi?', [
-                { text: 'Vazgeç', style: 'cancel' },
-                { text: 'Sil', style: 'destructive', onPress: async () => { await deleteTask(t.id); refresh(); } },
-              ])}>
-                <Ionicons name="trash-outline" size={16} color="#ef4444" />
-              </TouchableOpacity>
+              <RowMenu
+                items={[
+                  { label: 'Düzenle', icon: 'create-outline', onPress: () => nav.navigate('TaskForm', { taskId: t.id }) },
+                  {
+                    label: 'Sil',
+                    icon: 'trash-outline',
+                    destructive: true,
+                    confirm: 'Görev silinsin mi?',
+                    confirmTitle: 'Silinsin mi?',
+                    onPress: async () => { await deleteTask(t.id); refresh(); },
+                  },
+                ]}
+              />
             </View>
           </View>
         )}
