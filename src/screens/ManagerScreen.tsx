@@ -88,15 +88,13 @@ export default function ManagerScreen() {
     setAiLoading(true);
     setTimeout(() => {
       setAiResult({
-        summary: `Yapay Zeka 3 yıllık veriyi analiz etti. Ortalama kâr marjı %${margin.toFixed(1)} ile dengeli bir grafik izliyor.`,
+        summary: `Veri analizi: ortalama kâr marjı %${margin.toFixed(1)}.`,
         insights: [
-          'Malzeme katsayısını %1.30\'a revize ederseniz kârlılık %4.1 artacaktır.',
-          'En yüksek kapatma performansı Test MÜHENDİS\'te — prim hakedişe yansıtılabilir.',
-          'Aksa Enerji işlerinde lojistik maliyet yüksek; uzak iş teklif şablonuna seyahat kalemi ekleyin.',
+          'Daha fazla iş emri tamamlandıkça AI öneriler burada görünecek.',
         ],
       });
       setAiLoading(false);
-    }, 1800);
+    }, 1200);
   };
 
   const HubBtn = ({ route, label, icon, color }: { route: keyof RootStackParamList; label: string; icon: string; color: string }) => (

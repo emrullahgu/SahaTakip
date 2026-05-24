@@ -41,7 +41,7 @@ export default function HomeScreen() {
     profile?.full_name ||
     user?.user_metadata?.full_name ||
     user?.email?.split('@')[0] ||
-    'Test MÜHENDİS';
+    'Kullanıcı';
   const initials = displayName
     .split(' ')
     .map((p: string) => p[0])

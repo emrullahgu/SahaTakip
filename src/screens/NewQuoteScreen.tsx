@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext, calcLineTotal, calcQuoteTotals } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { Quote, QuoteLine, Customer, RootStackParamList } from '../types';
 import {
   POZ_CATALOG,
@@ -36,6 +37,12 @@ type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
 export default function NewQuoteScreen() {
   const navigation = useNavigation<NavProp>();
   const { customers, addQuote, generateQuoteNumber, toast } = useAppContext();
+  const { profile, user } = useAuth();
+  const engineerName =
+    profile?.full_name ||
+    (user as any)?.user_metadata?.full_name ||
+    user?.email?.split('@')[0] ||
+    'Saha';
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [title, setTitle] = useState('');
@@ -106,7 +113,7 @@ export default function NewQuoteScreen() {
       customerTitle: customer.title,
       title,
       date: new Date().toISOString().slice(0, 10),
-      engineer: 'Test MÜHENDİS',
+      engineer: engineerName,
       lines,
       status: 'Taslak',
       notes,

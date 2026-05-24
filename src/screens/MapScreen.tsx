@@ -17,20 +17,8 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.12,
 };
 
-// Demo: customer adı → koordinat mapleme (gerçekte DB'den gelir)
-const MOCK_CUSTOMER_COORDS: Record<string, { lat: number; lon: number }> = {
-  EGEBORU: { lat: 38.435, lon: 27.155 },
-  'Ata Makine': { lat: 38.418, lon: 27.105 },
-  'Mert Çelik': { lat: 38.398, lon: 27.21 },
-  'Dinçer Lojistik': { lat: 38.473, lon: 27.078 },
-  'Cinerji Enerji': { lat: 38.385, lon: 27.16 },
-  'Aksa Enerji': { lat: 38.452, lon: 27.196 },
-};
-
+// Müşteri koordinatları henüz DB'de değilse İzmir civarına deterministik dağıt.
 function getMockCoord(client: string, idx: number): { lat: number; lon: number } {
-  const known = MOCK_CUSTOMER_COORDS[client];
-  if (known) return known;
-  // Bilinmeyenler için İzmir civarına dağıt
   return {
     lat: 38.4 + ((idx * 0.0173) % 0.1),
     lon: 27.12 + ((idx * 0.0271) % 0.15),

@@ -21,6 +21,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, CLIENTS } from '../data/initialData';
 import { SelectedMaterial, ServiceCatalogItem, TabParamList, RootStackParamList } from '../types';
@@ -33,6 +34,12 @@ type NavProp = CompositeNavigationProp<
 export default function NewServiceScreen() {
   const navigation = useNavigation<NavProp>();
   const { addWorkOrder, toast } = useAppContext();
+  const { profile, user } = useAuth();
+  const engineerName =
+    profile?.full_name ||
+    (user as any)?.user_metadata?.full_name ||
+    user?.email?.split('@')[0] ||
+    'Saha';
 
   const [selectedClient, setSelectedClient] = useState(CLIENTS[0]);
   const [selectedService, setSelectedService] = useState<ServiceCatalogItem>(SERVICE_CATALOG[0]);
@@ -118,7 +125,7 @@ export default function NewServiceScreen() {
       client: selectedClient,
       serviceName: selectedService.name,
       date: new Date().toISOString().split('T')[0],
-      engineer: 'Test MÜHENDİS',
+      engineer: engineerName,
       materials: [...selectedMaterials],
       otherCost: extraCost,
       laborCost,
