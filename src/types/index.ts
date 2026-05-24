@@ -4046,6 +4046,8 @@ export type RootStackParamList = {
   AiAssistantHub: undefined;
   AiPermissions: undefined;
   AiChat: { sessionId?: string } | undefined;
+  CoPilot: undefined;
+  AiKnowledgeBase: undefined;
   AiSessions: undefined;
   AiPozSuggest: undefined;
   AiQuoteDraft: undefined;

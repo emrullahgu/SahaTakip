@@ -149,7 +149,7 @@ export async function pingAi(s: AiSettings): Promise<{ ok: boolean; message: str
 }
 
 // ---------- Provider-agnostic chat call ----------
-async function chat(prompt: string, settings: AiSettings, systemPrompt?: string): Promise<string> {
+export async function chat(prompt: string, settings: AiSettings, systemPrompt?: string): Promise<string> {
   if (settings.provider === 'mock' || !settings.apiKey) {
     throw new Error('AI provider yapılandırılmamış. Demo modda çalışılıyor.');
   }

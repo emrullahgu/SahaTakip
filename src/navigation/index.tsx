@@ -294,6 +294,8 @@ import AiAssistantHubScreen from '../screens/AiAssistantHubScreen';
 import AiPermissionsScreen from '../screens/AiPermissionsScreen';
 import AiSessionsScreen from '../screens/AiSessionsScreen';
 import AiChatScreen from '../screens/AiChatScreen';
+import CoPilotScreen from '../screens/CoPilotScreen';
+import AiKnowledgeBaseScreen from '../screens/AiKnowledgeBaseScreen';
 import AiPozSuggestScreen from '../screens/AiPozSuggestScreen';
 import AiQuoteDraftScreen from '../screens/AiQuoteDraftScreen';
 import AiQuoteDraftDetailScreen from '../screens/AiQuoteDraftDetailScreen';
@@ -1599,6 +1601,8 @@ function MainStack() {
       <Stack.Screen name="AiPermissions" component={AiPermissionsScreen} options={{ headerShown: true, title: 'AI Yetkileri', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiSessions" component={AiSessionsScreen} options={{ headerShown: true, title: 'AI Sohbetler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiChat" component={AiChatScreen} options={{ headerShown: true, title: 'AI Sohbet', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="CoPilot" component={CoPilotScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="AiKnowledgeBase" component={AiKnowledgeBaseScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AiPozSuggest" component={AiPozSuggestScreen} options={{ headerShown: true, title: 'POZ Öneri', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiQuoteDraft" component={AiQuoteDraftScreen} options={{ headerShown: true, title: 'AI Teklif Taslağı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiQuoteDraftDetail" component={AiQuoteDraftDetailScreen} options={{ headerShown: true, title: 'Taslak Detayı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
