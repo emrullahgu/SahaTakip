@@ -1295,6 +1295,82 @@ $$;
 grant execute on function public.set_user_approval(uuid, text, text) to authenticated;
 grant select on public.pending_user_approvals to authenticated;
 
+-- 5) Tüm kullanıcıları listele (admin only) — auth.users join'ı için SECURITY DEFINER
+create or replace function public.list_all_users()
+returns table (
+  id uuid,
+  full_name text,
+  role text,
+  approval_status text,
+  rejection_reason text,
+  approved_at timestamptz,
+  created_at timestamptz,
+  email text,
+  last_sign_in_at timestamptz
+) language plpgsql security definer set search_path = public as $$
+declare
+  caller_role text;
+begin
+  select p.role into caller_role from public.profiles p where p.id = auth.uid();
+  if caller_role is null or caller_role <> 'admin' then
+    raise exception 'Bu işlem için admin yetkisi gerekli.';
+  end if;
+
+  return query
+    select p.id,
+           p.full_name,
+           p.role,
+           p.approval_status,
+           p.rejection_reason,
+           p.approved_at,
+           p.created_at,
+           u.email::text,
+           u.last_sign_in_at
+      from public.profiles p
+      join auth.users u on u.id = p.id
+     order by p.created_at desc;
+end;
+$$;
+
+grant execute on function public.list_all_users() to authenticated;
+
+-- 6) Rol değiştir (admin only)
+create or replace function public.set_user_role(
+  target_id uuid,
+  new_role text
+) returns void language plpgsql security definer set search_path = public as $$
+declare
+  caller_role text;
+  admin_count int;
+begin
+  if new_role not in ('admin','manager','engineer','field') then
+    raise exception 'Geçersiz rol: %', new_role;
+  end if;
+
+  select role into caller_role from public.profiles where id = auth.uid();
+  if caller_role is null or caller_role <> 'admin' then
+    raise exception 'Bu işlem için admin yetkisi gerekli.';
+  end if;
+
+  -- Son admini düşürmeyi engelle
+  if new_role <> 'admin' then
+    select count(*) into admin_count
+      from public.profiles
+     where role = 'admin' and approval_status = 'approved' and id <> target_id;
+    if admin_count = 0 and (select role from public.profiles where id = target_id) = 'admin' then
+      raise exception 'Sistemde başka admin kalmadığı için bu kullanıcının rolü değiştirilemez.';
+    end if;
+  end if;
+
+  update public.profiles
+     set role = new_role,
+         updated_at = now()
+   where id = target_id;
+end;
+$$;
+
+grant execute on function public.set_user_role(uuid, text) to authenticated;
+
 -- =============================================================
 -- SCHEDULED EMAIL REPORTS (günlük/haftalık/aylık/yıllık rapor maili)
 -- =============================================================

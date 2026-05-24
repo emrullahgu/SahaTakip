@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
-import { AI_PROVIDER_LABEL, getAiSettings, setAiSettings } from '../services/ai';
+import { AI_PROVIDER_LABEL, getAiSettings, setAiSettings, pingAi } from '../services/ai';
 import { AiProvider, AiSettings } from '../types';
 
 const PROVIDERS: AiProvider[] = ['mock', 'openai', 'claude', 'gemini'];
@@ -24,6 +24,7 @@ export default function AiSettingsScreen() {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -47,6 +48,27 @@ export default function AiSettingsScreen() {
     await setAiSettings(payload);
     Alert.alert('Kaydedildi', 'AI ayarları güncellendi.');
     nav.goBack();
+  };
+
+  const onTest = async () => {
+    const payload: AiSettings = {
+      provider,
+      apiKey: apiKey.trim() || undefined,
+      model: model.trim() || undefined,
+    };
+    if (provider !== 'mock' && !payload.apiKey) {
+      Alert.alert('Eksik', 'Test için API anahtarı girin.');
+      return;
+    }
+    setTesting(true);
+    const res = await pingAi(payload);
+    setTesting(false);
+    Alert.alert(
+      res.ok ? 'Bağlantı OK' : 'Bağlantı Hatası',
+      res.ok
+        ? `${res.message}${res.sample ? `\n\nCevap: ${res.sample}` : ''}`
+        : res.message,
+    );
   };
 
   return (
@@ -107,10 +129,16 @@ export default function AiSettingsScreen() {
           </>
         )}
 
-        <TouchableOpacity style={styles.saveBtn} onPress={onSave}>
-          <Ionicons name="save-outline" size={16} color="#fff" />
-          <Text style={styles.saveText}>Kaydet</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.lg }}>
+          <TouchableOpacity style={[styles.testBtn, testing && { opacity: 0.6 }]} onPress={onTest} disabled={testing}>
+            <Ionicons name="flash-outline" size={16} color="#fff" />
+            <Text style={styles.saveText}>{testing ? 'Test ediliyor…' : 'Test'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.saveBtn, { flex: 1, marginTop: 0 }]} onPress={onSave}>
+            <Ionicons name="save-outline" size={16} color="#fff" />
+            <Text style={styles.saveText}>Kaydet</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -132,5 +160,6 @@ const styles = StyleSheet.create({
   eyeBtn: { width: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.secondary },
   note: { color: colors.text.faint, fontSize: 11, marginTop: 4 },
   saveBtn: { flexDirection: 'row', backgroundColor: brand.green, paddingVertical: 12, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: spacing.lg },
+  testBtn: { flexDirection: 'row', backgroundColor: '#8b5cf6', paddingVertical: 12, paddingHorizontal: 16, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 6 },
   saveText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
 });

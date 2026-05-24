@@ -105,6 +105,7 @@ import AnomaliesScreen from '../screens/AnomaliesScreen';
 import WebAdminScreen from '../screens/WebAdminScreen';
 import UsersAdminScreen from '../screens/UsersAdminScreen';
 import UserApprovalsScreen from '../screens/UserApprovalsScreen';
+import AllUsersScreen from '../screens/AllUsersScreen';
 import PendingApprovalScreen from '../screens/PendingApprovalScreen';
 import ExternalApiKeysScreen from '../screens/ExternalApiKeysScreen';
 import ScheduledEmailsScreen from '../screens/ScheduledEmailsScreen';
@@ -1403,6 +1404,7 @@ function MainStack() {
       <Stack.Screen name="WebAdmin" component={WebAdminScreen} options={{ headerShown: true, title: 'Web Admin', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="UsersAdmin" component={UsersAdminScreen} options={{ headerShown: true, title: 'Kullanıcılar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="UserApprovals" component={UserApprovalsScreen} options={{ headerShown: true, title: 'Kullanıcı Onayları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AllUsers" component={AllUsersScreen} options={{ headerShown: true, title: 'Tüm Kullanıcılar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ExternalApiKeys" component={ExternalApiKeysScreen} options={{ headerShown: true, title: 'Dış Servis API Anahtarları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ScheduledEmails" component={ScheduledEmailsScreen} options={{ headerShown: true, title: 'Planlı Rapor Mailleri', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="LiveTracking" component={LiveTrackingScreen} options={{ headerShown: true, title: 'Canlı Takip', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

@@ -3854,6 +3854,7 @@ export type RootStackParamList = {
   WebAdmin: undefined;
   UsersAdmin: undefined;
   UserApprovals: undefined;
+  AllUsers: undefined;
   ExternalApiKeys: undefined;
   ScheduledEmails: undefined;
   LiveTracking: undefined;

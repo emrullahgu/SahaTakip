@@ -50,6 +50,24 @@ export const AI_PROVIDER_LABEL: Record<AiProvider, string> = {
   mock: 'Demo (yerel)',
 };
 
+// Tek seferlik bağlantı testi — UI'daki "Test" butonu için.
+export async function pingAi(s: AiSettings): Promise<{ ok: boolean; message: string; sample?: string }> {
+  if (s.provider === 'mock') {
+    return { ok: true, message: 'Demo modu — gerçek bağlantı yok.' };
+  }
+  if (!s.apiKey) {
+    return { ok: false, message: 'API anahtarı boş.' };
+  }
+  try {
+    const out = await chat('Merhaba, kısa bir Türkçe selam ver.', s, 'Sen kısa cevap veren bir Türkçe asistansın.');
+    const sample = (out || '').trim().slice(0, 120);
+    if (!sample) return { ok: false, message: 'Sağlayıcı boş cevap döndü.' };
+    return { ok: true, message: 'Bağlantı başarılı.', sample };
+  } catch (e: any) {
+    return { ok: false, message: e?.message || 'Bilinmeyen hata' };
+  }
+}
+
 // ---------- Provider-agnostic chat call ----------
 async function chat(prompt: string, settings: AiSettings, systemPrompt?: string): Promise<string> {
   if (settings.provider === 'mock' || !settings.apiKey) {

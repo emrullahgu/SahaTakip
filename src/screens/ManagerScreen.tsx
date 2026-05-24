@@ -156,6 +156,14 @@ export default function ManagerScreen() {
               <Text style={styles.quickText}>Kullanıcı Onayları</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              style={[styles.quickBtn, { backgroundColor: '#8b5cf6' }]}
+              onPress={() => navigation.navigate('AllUsers')}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="people-circle-outline" size={18} color="#fff" />
+              <Text style={styles.quickText}>Tüm Kullanıcılar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.quickBtn}
               onPress={() => navigation.navigate('BulkAssign')}
               activeOpacity={0.85}
