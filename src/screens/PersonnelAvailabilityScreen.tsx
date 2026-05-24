@@ -31,9 +31,9 @@ export default function PersonnelAvailabilityScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.statRow}>
         {STATUSES.map(st => (
-          <View key={st} style={[s.statCard, { borderLeftColor: STATUS_COLOR[st] }]}>
-            <Text style={[s.sV, { color: STATUS_COLOR[st] }]}>{counts[st]}</Text>
-            <Text style={s.sL}>{STATUS_LABEL[st]}</Text>
+          <View key={st} style={[s.statCard, { borderLeftColor: STATUS_COLOR[st as keyof typeof STATUS_COLOR] }]}>
+            <Text style={[s.sV, { color: STATUS_COLOR[st as keyof typeof STATUS_COLOR] }]}>{counts[st]}</Text>
+            <Text style={s.sL}>{STATUS_LABEL[st as keyof typeof STATUS_LABEL]}</Text>
           </View>
         ))}
       </View>
@@ -50,16 +50,16 @@ export default function PersonnelAvailabilityScreen() {
           />
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={[s.card, { borderLeftColor: STATUS_COLOR[item.status] }]} onPress={() => setEditing(item)}>
-            <View style={[s.avatar, { backgroundColor: STATUS_COLOR[item.status] }]}>
+          <TouchableOpacity style={[s.card, { borderLeftColor: STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] }]} onPress={() => setEditing(item)}>
+            <View style={[s.avatar, { backgroundColor: STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] }]}>
               <Ionicons name="person" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.n}>{item.name}</Text>
-              <Text style={s.st}>{STATUS_LABEL[item.status]}{item.currentCustomer ? ` · ${item.currentCustomer}` : ''}</Text>
+              <Text style={s.st}>{STATUS_LABEL[item.status as keyof typeof STATUS_LABEL]}{item.currentCustomer ? ` · ${item.currentCustomer}` : ''}</Text>
               <Text style={s.tm}>{new Date(item.since).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}'den beri</Text>
             </View>
-            <View style={[s.dot, { backgroundColor: STATUS_COLOR[item.status] }]} />
+            <View style={[s.dot, { backgroundColor: STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] }]} />
           </TouchableOpacity>
         )}
       />
@@ -68,8 +68,8 @@ export default function PersonnelAvailabilityScreen() {
           <Text style={s.mt}>{editing?.name}</Text>
           <Text style={s.lbl}>Durum güncelle:</Text>
           {STATUSES.map(st => (
-            <TouchableOpacity key={st} style={[s.opt, { backgroundColor: STATUS_COLOR[st] }]} onPress={() => setS(st)}>
-              <Text style={s.optT}>{STATUS_LABEL[st]}</Text>
+            <TouchableOpacity key={st} style={[s.opt, { backgroundColor: STATUS_COLOR[st as keyof typeof STATUS_COLOR] }]} onPress={() => setS(st)}>
+              <Text style={s.optT}>{STATUS_LABEL[st as keyof typeof STATUS_LABEL]}</Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity style={[s.opt, { backgroundColor: '#475569' }]} onPress={() => setEditing(null)}>

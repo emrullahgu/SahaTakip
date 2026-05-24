@@ -67,10 +67,10 @@ export default function OrdRecurringScreen() {
           />
         }
         renderItem={({ item: t }) => (
-          <View key={t.id} style={[s.card, { borderLeftColor: FREQ_COLOR[t.frequency], opacity: t.active ? 1 : 0.55, marginBottom: spacing.sm }]}>
+          <View key={t.id} style={[s.card, { borderLeftColor: FREQ_COLOR[t.frequency as keyof typeof FREQ_COLOR], opacity: t.active ? 1 : 0.55, marginBottom: spacing.sm }]}>
             <View style={s.cardHead}>
-              <View style={[s.iconBox, { backgroundColor: FREQ_COLOR[t.frequency] + '22' }]}>
-                <Ionicons name="repeat" size={20} color={FREQ_COLOR[t.frequency]} />
+              <View style={[s.iconBox, { backgroundColor: FREQ_COLOR[t.frequency as keyof typeof FREQ_COLOR] + '22' }]}>
+                <Ionicons name="repeat" size={20} color={FREQ_COLOR[t.frequency as keyof typeof FREQ_COLOR]} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardT}>{t.name}</Text>
@@ -83,7 +83,7 @@ export default function OrdRecurringScreen() {
             <View style={s.metaRow}>
               <View style={s.metaCol}>
                 <Text style={s.metaL}>Sıklık</Text>
-                <Text style={s.metaV}>{ORD_RECURRING_FREQ_LABEL[t.frequency]}</Text>
+                <Text style={s.metaV}>{ORD_RECURRING_FREQ_LABEL[t.frequency as keyof typeof ORD_RECURRING_FREQ_LABEL]}</Text>
               </View>
               <View style={s.metaCol}>
                 <Text style={s.metaL}>Sonraki Çalışma</Text>

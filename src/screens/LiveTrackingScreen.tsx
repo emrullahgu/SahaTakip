@@ -112,11 +112,11 @@ export default function LiveTrackingScreen() {
           const active = selectedId === w.employeeId;
           return (
             <TouchableOpacity style={[styles.workerRow, active && styles.workerRowActive]} onPress={() => focusOn(w)}>
-              <View style={[styles.dot, { backgroundColor: STATUS_COLOR[w.status] }]} />
+              <View style={[styles.dot, { backgroundColor: STATUS_COLOR[w.status as keyof typeof STATUS_COLOR] }]} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.workerName} numberOfLines={1}>{w.name}</Text>
                 <Text style={styles.workerMeta} numberOfLines={1}>
-                  {w.role || '—'} · {STATUS_LABEL[w.status]}
+                  {w.role || '—'} · {STATUS_LABEL[w.status as keyof typeof STATUS_LABEL]}
                 </Text>
                 {w.workOrderLabel && (
                   <Text style={styles.woHint} numberOfLines={1}>↪ {w.workOrderLabel}</Text>
@@ -144,8 +144,8 @@ export default function LiveTrackingScreen() {
                 key={w.employeeId}
                 coordinate={{ latitude: w.lat, longitude: w.lng }}
                 title={w.name}
-                description={`${STATUS_LABEL[w.status]}${w.workOrderLabel ? ' · ' + w.workOrderLabel : ''}`}
-                pinColor={STATUS_COLOR[w.status]}
+                description={`${STATUS_LABEL[w.status as keyof typeof STATUS_LABEL]}${w.workOrderLabel ? ' · ' + w.workOrderLabel : ''}`}
+                pinColor={STATUS_COLOR[w.status as keyof typeof STATUS_COLOR]}
                 onPress={() => setSelectedId(w.employeeId)}
               />
             ))}

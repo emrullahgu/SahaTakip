@@ -51,12 +51,12 @@ export default function OrdListScreen() {
         {FILTERS.map(f => (
           <TouchableOpacity
             key={f}
-            style={[s.chip, filter === f && { backgroundColor: f === 'all' ? '#f97316' : ORD_STATUS_COLOR[f] }]}
+            style={[s.chip, filter === f && { backgroundColor: f === 'all' ? '#f97316' : ORD_STATUS_COLOR[f as OrdStatus] }]}
             onPress={() => setFilter(f)}
             activeOpacity={0.85}
           >
             <Text style={[s.chipT, filter === f && { color: '#fff' }]}>
-              {f === 'all' ? 'Tümü' : ORD_STATUS_LABEL[f]}
+              {f === 'all' ? 'Tümü' : ORD_STATUS_LABEL[f as OrdStatus]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -79,7 +79,7 @@ export default function OrdListScreen() {
         renderItem={({ item: o }) => (
           <TouchableOpacity
             key={o.id}
-            style={[s.card, { borderLeftColor: ORD_STATUS_COLOR[o.status] }]}
+            style={[s.card, { borderLeftColor: ORD_STATUS_COLOR[o.status as OrdStatus] }]}
             activeOpacity={0.85}
             onPress={() => nav.navigate('OrdDetail', { id: o.id })}
           >
@@ -88,9 +88,9 @@ export default function OrdListScreen() {
                 <Text style={s.code}>{o.code}</Text>
                 <Text style={s.cust}>{o.customerName}</Text>
               </View>
-              <View style={[s.statusPill, { borderColor: ORD_STATUS_COLOR[o.status] }]}>
-                <Ionicons name={ORD_STATUS_ICON[o.status] as any} size={12} color={ORD_STATUS_COLOR[o.status]} />
-                <Text style={[s.statusT, { color: ORD_STATUS_COLOR[o.status] }]}>{ORD_STATUS_LABEL[o.status]}</Text>
+              <View style={[s.statusPill, { borderColor: ORD_STATUS_COLOR[o.status as OrdStatus] }]}>
+                <Ionicons name={ORD_STATUS_ICON[o.status as OrdStatus] as any} size={12} color={ORD_STATUS_COLOR[o.status as OrdStatus]} />
+                <Text style={[s.statusT, { color: ORD_STATUS_COLOR[o.status as OrdStatus] }]}>{ORD_STATUS_LABEL[o.status as OrdStatus]}</Text>
               </View>
             </View>
             <View style={s.cardBody}>
@@ -100,7 +100,7 @@ export default function OrdListScreen() {
               </View>
               <View style={s.metaCol}>
                 <Text style={s.metaL}>Kanal</Text>
-                <Text style={s.metaV}>{ORD_CHANNEL_LABEL[o.channel]}</Text>
+                <Text style={s.metaV}>{ORD_CHANNEL_LABEL[o.channel as keyof typeof ORD_CHANNEL_LABEL]}</Text>
               </View>
               <View style={s.metaCol}>
                 <Text style={s.metaL}>Tutar</Text>

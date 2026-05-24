@@ -100,16 +100,16 @@ export default function OfflineQueueScreen() {
           />
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={[s.card, { borderLeftColor: OP_STATUS_COLOR[item.status] }]} onPress={() => item.status === 'conflict' ? nav.navigate('ConflictResolver', { opId: item.id }) : nav.navigate('OfflineOpDetail', { opId: item.id })}>
-            <Ionicons name={OP_KIND_ICON[item.kind] as never} size={22} color={OP_STATUS_COLOR[item.status]} />
+          <TouchableOpacity style={[s.card, { borderLeftColor: OP_STATUS_COLOR[item.status as keyof typeof OP_STATUS_COLOR] }]} onPress={() => item.status === 'conflict' ? nav.navigate('ConflictResolver', { opId: item.id }) : nav.navigate('OfflineOpDetail', { opId: item.id })}>
+            <Ionicons name={OP_KIND_ICON[item.kind as keyof typeof OP_KIND_ICON] as never} size={22} color={OP_STATUS_COLOR[item.status as keyof typeof OP_STATUS_COLOR]} />
             <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={s.t}>{item.description || OP_KIND_LABEL[item.kind]}</Text>
-              <Text style={s.sub}>{OP_KIND_LABEL[item.kind]} · {item.resource}{item.resourceId ? ' · ' + item.resourceId : ''}</Text>
+              <Text style={s.t}>{item.description || OP_KIND_LABEL[item.kind as keyof typeof OP_KIND_LABEL]}</Text>
+              <Text style={s.sub}>{OP_KIND_LABEL[item.kind as keyof typeof OP_KIND_LABEL]} · {item.resource}{item.resourceId ? ' · ' + item.resourceId : ''}</Text>
               <Text style={s.sub}>{new Date(item.createdAt).toLocaleString('tr-TR')} · {item.attempts} deneme</Text>
               {item.lastError ? <Text style={s.err}>{item.lastError}</Text> : null}
             </View>
-            <View style={[s.statusPill, { backgroundColor: OP_STATUS_COLOR[item.status] + '22' }]}>
-              <Text style={[s.statusTxt, { color: OP_STATUS_COLOR[item.status] }]}>{OP_STATUS_LABEL[item.status]}</Text>
+            <View style={[s.statusPill, { backgroundColor: OP_STATUS_COLOR[item.status as keyof typeof OP_STATUS_COLOR] + '22' }]}>
+              <Text style={[s.statusTxt, { color: OP_STATUS_COLOR[item.status as keyof typeof OP_STATUS_COLOR] }]}>{OP_STATUS_LABEL[item.status as keyof typeof OP_STATUS_LABEL]}</Text>
             </View>
           </TouchableOpacity>
         )}

@@ -143,7 +143,7 @@ export default function PaymentsScreen() {
             onPress={() => setStatusFilter(s)}
           >
             <Text style={[styles.chipText, statusFilter === s && styles.chipTextActive]}>
-              {s === 'all' ? 'Tümü' : PAYMENT_STATUS_LABEL[s]}
+              {s === 'all' ? 'Tümü' : PAYMENT_STATUS_LABEL[s as keyof typeof PAYMENT_STATUS_LABEL]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -181,13 +181,13 @@ export default function PaymentsScreen() {
               <View
                 style={[
                   styles.iconWrap,
-                  { backgroundColor: STATUS_COLOR[p.status] + '22' },
+                  { backgroundColor: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] + '22' },
                 ]}
               >
                 <Ionicons
                   name={(m?.icon ?? 'cash-outline') as keyof typeof Ionicons.glyphMap}
                   size={18}
-                  color={STATUS_COLOR[p.status]}
+                  color={STATUS_COLOR[p.status as keyof typeof STATUS_COLOR]}
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -199,11 +199,11 @@ export default function PaymentsScreen() {
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.amount, { color: STATUS_COLOR[p.status] }]}>
+                <Text style={[styles.amount, { color: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] }]}>
                   {fmtMoney(p.amount)}
                 </Text>
-                <Text style={[styles.statusChip, { color: STATUS_COLOR[p.status] }]}>
-                  {PAYMENT_STATUS_LABEL[p.status]}
+                <Text style={[styles.statusChip, { color: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] }]}>
+                  {PAYMENT_STATUS_LABEL[p.status as keyof typeof PAYMENT_STATUS_LABEL]}
                 </Text>
               </View>
             </TouchableOpacity>
