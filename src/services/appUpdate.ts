@@ -29,7 +29,9 @@ export type UpdateCheckResult =
 
 const MANIFEST_URL_KEY = 'sahatakip.updateManifestUrl';
 const LAST_CHECK_KEY = 'sahatakip.updateLastCheck';
-const DEFAULT_MANIFEST_URL = '';
+// Varsayılan: GitHub Releases API — her "latest" release otomatik okunur.
+// .apk asset yüklenen ilk release "latest" olarak görülür.
+export const DEFAULT_MANIFEST_URL = 'https://api.github.com/repos/emrullahgu/SahaTakip/releases/latest';
 
 export function getCurrentVersion(): string {
   try {
@@ -81,6 +83,23 @@ function isValidManifest(m: unknown): m is UpdateManifest {
   return true;
 }
 
+/** GitHub Releases API yanıtını UpdateManifest formatına çevirir. */
+function parseGithubRelease(json: any): UpdateManifest | null {
+  if (!json || typeof json !== 'object') return null;
+  const tag = String(json.tag_name || json.name || '').trim();
+  if (!tag) return null;
+  const version = tag.replace(/^v/i, '');
+  const assets: any[] = Array.isArray(json.assets) ? json.assets : [];
+  const apkAsset = assets.find(a => typeof a?.browser_download_url === 'string' && /\.apk(\?|$)/i.test(a.browser_download_url));
+  if (!apkAsset) return null;
+  return {
+    version,
+    apkUrl: apkAsset.browser_download_url,
+    notes: typeof json.body === 'string' ? json.body : undefined,
+    mandatory: false,
+  };
+}
+
 export async function checkForUpdate(): Promise<UpdateCheckResult> {
   const url = await getManifestUrl();
   const current = getCurrentVersion();
@@ -98,8 +117,17 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     if (!res.ok) {
       return { status: 'error', message: `Sunucu hatası: HTTP ${res.status}` };
     }
-    const json = (await res.json()) as unknown;
-    if (!isValidManifest(json)) {
+    const json = (await res.json()) as any;
+    // GitHub Releases API → manifest çevrimi; aksi halde direkt manifest dolandırılır.
+    let manifest: UpdateManifest | null = null;
+    if (json && (json.tag_name || Array.isArray(json.assets))) {
+      manifest = parseGithubRelease(json);
+      if (!manifest) {
+        return { status: 'error', message: 'GitHub release’ında .apk asset bulunamadı.' };
+      }
+    } else if (isValidManifest(json)) {
+      manifest = json;
+    } else {
       return { status: 'error', message: 'Manifest formatı geçersiz (version + apkUrl gerekli).' };
     }
     try {
@@ -107,9 +135,9 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     } catch {
       /* sessiz */
     }
-    const latest = json.version.trim();
+    const latest = manifest.version.trim();
     if (compareVersions(latest, current) > 0) {
-      return { status: 'available', current, latest, manifest: json };
+      return { status: 'available', current, latest, manifest };
     }
     return { status: 'up-to-date', current, latest };
   } catch (e: any) {

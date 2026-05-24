@@ -160,14 +160,14 @@ export default function AppUpdateScreen() {
           </View>
         )}
 
-        <Text style={s.section}>Sunucu Ayarı</Text>
+        <Text style={s.section}>Sunucu Ayarı (Opsiyonel)</Text>
         <Text style={s.help}>
-          Güncelleme manifest URL'si (JSON). Bu adres her kontrolde okunur ve sunucudaki en son
-          sürümle karşılaştırılır.
+          Varsayılan olarak <Text style={{ fontWeight: '600' }}>GitHub Releases</Text> kullanılır
+          (emrullahgu/SahaTakip). Farklı bir manifest sunucusu kullanacaksanız JSON URL'sini girin.
         </Text>
         <TextInput
           style={s.input}
-          placeholder="https://ornek.com/sahatakip/latest.json"
+          placeholder="https://api.github.com/repos/emrullahgu/SahaTakip/releases/latest"
           placeholderTextColor={colors.text.faint}
           value={manifestUrl}
           onChangeText={setManifestUrlState}
@@ -181,14 +181,18 @@ export default function AppUpdateScreen() {
         </TouchableOpacity>
 
         <View style={s.hintBox}>
-          <Text style={s.hintTitle}>Manifest Örneği</Text>
-          <Text style={s.hintCode}>{`{
-  "version": "1.0.1",
-  "apkUrl": "https://example.com/sahatakip-1.0.1.apk",
-  "notes": "Yeni özellikler ve hata düzeltmeleri",
-  "mandatory": false
-}`}</Text>
+          <Text style={s.hintTitle}>Otomatik GitHub Releases</Text>
           <Text style={s.hintNote}>
+            Varsayılan kaynak:{' '}
+            <Text style={{ fontWeight: '600' }}>github.com/emrullahgu/SahaTakip/releases/latest</Text>
+            {'\n\n'}
+            Yeni sürüm yayınlamak için GitHub'da bir release oluşturup APK dosyasını asset olarak
+            ekleyin (örn. `sahatakip-1.0.1.apk`). Uygulama "Güncellemeyi Kontrol Et" dediğinizde
+            tag'i (örn. v1.0.1) sürüm olarak okur ve `.apk` asset'ini indirir.
+            {'\n\n'}
+            Özel bir manifest sunucusu kullanmak isterseniz yukarıdaki alana JSON URL'sini girin
+            (format: {'{'} "version": "1.0.1", "apkUrl": "...apk", "notes": "...", "mandatory": false {'}'}).
+            {'\n\n'}
             Android'de APK indirme tamamlandıktan sonra bildirimden dokununca paket yükleyici açılır.
             İlk kullanımda "Bilinmeyen kaynaklara izin ver" ayarını onaylamanız gerekebilir.
           </Text>
