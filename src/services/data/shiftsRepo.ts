@@ -101,6 +101,25 @@ export const shiftsRepo = {
     if (error) console.warn('[shifts.end]', error.message);
   },
 
+  /** Güvenli bitir: shiftId yoksa veya hatalıysa user_id üzerinden tüm aktif vardıyaları kapat. */
+  async forceEndByUser(userId: string, lat?: number, lng?: number): Promise<number> {
+    if (!isOnlineMode()) {
+      await cacheSet(CACHE_ACTIVE, null);
+      return 0;
+    }
+    const { data, error } = await supabase
+      .from('shifts')
+      .update({ end_at: new Date().toISOString(), end_lat: lat ?? null, end_lng: lng ?? null })
+      .eq('user_id', userId)
+      .is('end_at', null)
+      .select('id');
+    if (error) {
+      console.warn('[shifts.forceEndByUser]', error.message);
+      return 0;
+    }
+    return data?.length ?? 0;
+  },
+
   async listMine(userId: string, limit = 30): Promise<Shift[]> {
     if (!isOnlineMode()) return [];
     const { data, error } = await supabase

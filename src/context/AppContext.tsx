@@ -620,7 +620,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteWorkOrder = (id: string) => {
     setWorkOrders(prev => prev.filter(w => w.id !== id));
-    workOrdersRepo.delete(id).catch(e => console.warn('[work_order.delete]', e));
+    workOrdersRepo.delete(id)
+      .then(() => showToast('İş emri silindi.'))
+      .catch(e => {
+        console.warn('[work_order.delete]', e);
+        showToast(`Silinemedi: ${e?.message ?? 'yetkiniz olmayabilir'}`);
+      });
     auditRepo.log(userId, { action: 'work_order.delete', tableName: 'work_orders', refId: id });
   };
 

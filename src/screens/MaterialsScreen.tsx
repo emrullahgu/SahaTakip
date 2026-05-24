@@ -25,6 +25,7 @@ import {
 import { totalQtyOfMaterial } from '../services/stock';
 import { Material, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Materials'>;
@@ -156,6 +157,12 @@ export default function MaterialsScreen() {
                 </Text>
                 <Text style={styles.unit}>{item.unit}</Text>
               </View>
+              <RowMenu
+                items={[
+                  { label: 'Düzenle', icon: 'create-outline', onPress: () => navigation.navigate('MaterialForm', { materialId: item.id }) },
+                  { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: `"${item.name}" silinsin mi?`, confirmTitle: 'Malzeme Sil', onPress: async () => { await deleteMaterial(item.id); load(); } },
+                ]}
+              />
             </TouchableOpacity>
           );
         }}

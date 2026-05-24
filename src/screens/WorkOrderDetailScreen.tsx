@@ -18,6 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { uploadPhoto } from '../services/photoUpload';
 
 import { colors, brand } from '../theme';
 import { RootStackParamList, WorkOrderPriority, WorkOrder } from '../types';
@@ -230,8 +231,20 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: false })
         : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
       if (!res.canceled && res.assets[0]?.uri) {
-        attachWorkOrderMedia(wo.id, { [slot]: res.assets[0].uri });
-        showToast(slot === 'beforePhoto' ? 'İş öncesi foto eklendi.' : 'İş sonrası foto eklendi.');
+        const localUri = res.assets[0].uri;
+        // 1) Anında lokal URI'yi göster
+        attachWorkOrderMedia(wo.id, { [slot]: localUri });
+        showToast(slot === 'beforePhoto' ? 'İş öncesi foto eklendi, yükleniyor…' : 'İş sonrası foto eklendi, yükleniyor…');
+        // 2) Arka planda Supabase Storage'a yükle ve URL ile değiştir
+        const folder = `work-orders/${wo.id}`;
+        uploadPhoto(localUri, folder).then(publicUrl => {
+          if (publicUrl && publicUrl !== localUri) {
+            attachWorkOrderMedia(wo.id, { [slot]: publicUrl });
+            showToast('Foto bulutta saklanıyor.');
+          }
+        }).catch(err => {
+          console.warn('[pickPhoto.upload]', err?.message ?? err);
+        });
       }
     } catch (e: any) {
       Alert.alert('Hata', e?.message ?? 'Foto alınamadı.');

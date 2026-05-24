@@ -22,6 +22,7 @@ import {
   deleteDamage,
 } from '../services/vehicleDamages';
 import { listVehicles } from '../services/vehicles';
+import RowMenu from '../components/RowMenu';
 import {
   VehicleDamage,
   VehicleDamageSeverity,
@@ -159,6 +160,12 @@ export default function VehicleDamagesScreen() {
                   </View>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+                <RowMenu
+                  items={[
+                    { label: 'Düzenle', icon: 'create-outline', onPress: () => navigation.navigate('VehicleDamageForm', { vehicleId: d.vehicleId, damageId: d.id }) },
+                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: 'Hasar kaydı silinsin mi?', confirmTitle: 'Hasarı Sil', onPress: async () => { await deleteDamage(d.id); load(); } },
+                  ]}
+                />
               </TouchableOpacity>
             );
           })

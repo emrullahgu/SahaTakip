@@ -60,8 +60,10 @@ export async function startShift(): Promise<FieldShift> {
   s.startedAt = new Date().toISOString();
   s.endedAt = undefined;
   // Supabase senkronu (canlı mesai paneline yansısın diye)
+  let auditUid: string | null = null;
   try {
     const uid = await currentUserId();
+    auditUid = uid;
     if (uid) {
       s.userId = uid;
       const remote = await shiftsRepo.start(uid);
@@ -71,6 +73,12 @@ export async function startShift(): Promise<FieldShift> {
     console.warn('[fieldOps.startShift.sync]', e?.message ?? e);
   }
   await set(K.shift, s);
+  if (auditUid) {
+    try {
+      const { auditRepo } = await import('./data/auditRepo');
+      void auditRepo.log(auditUid, { action: 'shift.start', tableName: 'shifts', refId: s.remoteShiftId ?? 'local' });
+    } catch {}
+  }
   return s;
 }
 export async function endShift(): Promise<FieldShift> {
@@ -78,23 +86,31 @@ export async function endShift(): Promise<FieldShift> {
   s.status = 'finished';
   s.endedAt = new Date().toISOString();
   if (s.startedAt) s.totalMinutes = Math.round((Date.now() - new Date(s.startedAt).getTime()) / 60000);
-  // Supabase senkronu
+  // Supabase senkronu — her durumda user_id üzerinden tüm aktif vardıyaları kapat
+  let auditUid: string | null = null;
   try {
-    if (s.remoteShiftId) {
-      await shiftsRepo.end(s.remoteShiftId);
-    } else {
-      // remoteShiftId yoksa aktif vardiyayı bulup kapat
-      const uid = await currentUserId();
-      if (uid) {
-        const active = await shiftsRepo.getActive(uid);
-        if (active?.id) await shiftsRepo.end(active.id);
+    const uid = await currentUserId();
+    auditUid = uid;
+    if (uid) {
+      // Once spesifik shiftId ile dene, sonra güvenli fallback (forceEndByUser).
+      if (s.remoteShiftId) {
+        try { await shiftsRepo.end(s.remoteShiftId); } catch (e: any) { console.warn('[fieldOps.endShift.byId]', e?.message ?? e); }
       }
+      const closed = await shiftsRepo.forceEndByUser(uid);
+      if (closed > 0) console.log('[fieldOps.endShift] forceEnd kapattı:', closed);
     }
     s.remoteShiftId = null;
   } catch (e: any) {
     console.warn('[fieldOps.endShift.sync]', e?.message ?? e);
   }
   await set(K.shift, s);
+  // Audit
+  if (auditUid) {
+    try {
+      const { auditRepo } = await import('./data/auditRepo');
+      void auditRepo.log(auditUid, { action: 'shift.end', tableName: 'shifts', refId: s.remoteShiftId ?? 'local', meta: { totalMinutes: s.totalMinutes } });
+    } catch {}
+  }
   return s;
 }
 export async function toggleBreak(): Promise<FieldShift> {

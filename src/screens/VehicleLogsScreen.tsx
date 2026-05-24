@@ -14,8 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
-import { listLogs, listLogsByVehicle } from '../services/vehicleLogs';
+import { listLogs, listLogsByVehicle, deleteLog } from '../services/vehicleLogs';
 import { listVehicles } from '../services/vehicles';
+import RowMenu from '../components/RowMenu';
 import {
   VehicleLog,
   VehicleLogKind,
@@ -128,6 +129,11 @@ export default function VehicleLogsScreen() {
                 {typeof l.totalCost === 'number' && (
                   <Text style={styles.cost}>{l.totalCost.toLocaleString('tr-TR')} ₺</Text>
                 )}
+                <RowMenu
+                  items={[
+                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: `${m.label} kaydı silinsin mi?`, confirmTitle: 'Kaydı Sil', onPress: async () => { await deleteLog(l.id); load(); } },
+                  ]}
+                />
               </View>
             );
           })

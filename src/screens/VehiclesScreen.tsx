@@ -147,7 +147,7 @@ export default function VehiclesScreen() {
                   items={[
                     { label: 'Detay', icon: 'eye-outline', onPress: () => navigation.navigate('VehicleDetail', { vehicleId: item.id }) },
                     { label: 'Düzenle', icon: 'create-outline', onPress: () => navigation.navigate('VehicleForm', { vehicleId: item.id }) },
-                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: { title: 'Aracı Sil', message: `"${item.plate}" silinsin mi?` }, onPress: async () => { await deleteVehicle(item.id); load(); } },
+                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: `"${item.plate}" silinsin mi?`, confirmTitle: 'Aracı Sil', onPress: async () => { await deleteVehicle(item.id); load(); } },
                   ]}
                 />
               </View>
