@@ -111,9 +111,14 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     const timer = setTimeout(() => controller.abort(), 10_000);
     const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`, {
       signal: controller.signal,
-      headers: { 'Cache-Control': 'no-cache' },
+      headers: { Accept: 'application/json' },
     });
     clearTimeout(timer);
+    if (res.status === 404) {
+      // Henüz yayınlanmış bir release yok → mevcut sürüm en güncel kabul edilir.
+      try { await AsyncStorage.setItem(LAST_CHECK_KEY, new Date().toISOString()); } catch { /* sessiz */ }
+      return { status: 'up-to-date', current, latest: current };
+    }
     if (!res.ok) {
       return { status: 'error', message: `Sunucu hatası: HTTP ${res.status}` };
     }
