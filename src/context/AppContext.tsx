@@ -25,6 +25,7 @@ import { runDueTemplates } from '../services/recurringTasks';
 import { recordRevision } from '../services/quoteRevisions';
 import { recordQuoteLines } from '../services/recentPozes';
 import { INITIAL_WORK_ORDERS, INITIAL_EMPLOYEES } from '../data/initialData';
+import { REAL_CUSTOMERS } from '../data/realCustomers';
 import {
   isOnlineMode,
   quotesRepo,
@@ -114,16 +115,7 @@ interface AppContextType {
   refresh: () => Promise<void>;
 }
 
-const INITIAL_CUSTOMERS: Customer[] = [
-  { id: 'C1', shortName: 'EGEBORU', title: 'EGEBORU PLASTİK SANAYİ VE TİCARET ANONİM ŞİRKETİ', city: 'İzmir' },
-  { id: 'C2', shortName: 'Ata Makine', title: 'Ata Makine', city: 'İzmir' },
-  { id: 'C3', shortName: 'Mert Çelik', title: 'Mert Çelik Metal Ürünleri Sanayi ve Ticaret A.Ş.', city: 'İzmir' },
-  { id: 'C4', shortName: 'Dinçer Lojistik', title: 'DİNÇER LOJİSTİK ANONİM ŞİRKETİ', city: 'İzmir' },
-  { id: 'C5', shortName: 'Tekpan', title: 'TEKPAN TEKNIK ELEKTRIK KUMANDA PANO SAN. TIC. A.Ş.', city: 'İzmir' },
-  { id: 'C6', shortName: 'Woopal Palet', title: 'WOOPAL PALET ORMAN ÜRÜNLERİ SANAYİ VE TİCARET A.Ş.', city: 'İzmir' },
-  { id: 'C7', shortName: 'Biltur Catering', title: 'Biltur Catering ve Gıda A.Ş.', city: 'İzmir' },
-  { id: 'C8', shortName: 'Korunak Yangın', title: 'KORUNAK YANGIN PROJE DENETİM MÜHENDİSLİK LTD. ŞTİ.', city: 'İzmir' },
-];
+const INITIAL_CUSTOMERS: Customer[] = REAL_CUSTOMERS;
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 

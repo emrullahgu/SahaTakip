@@ -17,8 +17,25 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
 export async function getAiSettings(): Promise<AiSettings> {
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as AiSettings;
+      if (parsed.provider && parsed.provider !== 'mock' && parsed.apiKey) return parsed;
+    }
   } catch { /* ignore */ }
+  // Fallback: .env'den seed et (yalnızca anahtar girilmemişse).
+  const envProv = (process.env.EXPO_PUBLIC_AI_DEFAULT_PROVIDER || '').toLowerCase() as AiProvider;
+  const envKey =
+    envProv === 'openai' ? process.env.EXPO_PUBLIC_OPENAI_KEY :
+    envProv === 'claude' ? process.env.EXPO_PUBLIC_CLAUDE_KEY :
+    envProv === 'gemini' ? process.env.EXPO_PUBLIC_GEMINI_KEY :
+    undefined;
+  if (envProv && envKey && envProv !== 'mock') {
+    return { provider: envProv, apiKey: envKey, model: DEFAULT_MODEL[envProv] };
+  }
+  // İkincil: hangi anahtar varsa onu kullan (öncelik: openai > claude > gemini).
+  if (process.env.EXPO_PUBLIC_OPENAI_KEY) return { provider: 'openai', apiKey: process.env.EXPO_PUBLIC_OPENAI_KEY, model: DEFAULT_MODEL.openai };
+  if (process.env.EXPO_PUBLIC_CLAUDE_KEY) return { provider: 'claude', apiKey: process.env.EXPO_PUBLIC_CLAUDE_KEY, model: DEFAULT_MODEL.claude };
+  if (process.env.EXPO_PUBLIC_GEMINI_KEY) return { provider: 'gemini', apiKey: process.env.EXPO_PUBLIC_GEMINI_KEY, model: DEFAULT_MODEL.gemini };
   return { provider: 'mock' };
 }
 

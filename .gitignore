@@ -24,3 +24,7 @@ ios/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Real (PII) source files
+realdata/
+src/data/realData.meta.json

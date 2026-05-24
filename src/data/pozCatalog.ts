@@ -22,7 +22,9 @@ export const DEFAULT_OVERHEAD = 10; // %10 genel gider
 export const DEFAULT_PROFIT = 15;   // %15 kâr
 export const DEFAULT_VAT = 20;      // %20 KDV
 
-export const POZ_CATALOG: PozItem[] = [
+// LEGACY demo katalog — geriye uyum için tutuluyor. Asıl katalog dosyanın
+// sonunda REAL_POZ_CATALOG ile birleştirilerek dışa aktarılır.
+const LEGACY_POZ_CATALOG: PozItem[] = [
   // === ELEKTRİK PANO & KOMPANZASYON ===
   {
     id: 'POZ-EL-001',
@@ -852,6 +854,11 @@ export const POZ_CATALOG: PozItem[] = [
     defaultProfit: 15,
   },
 ];
+
+// Gerçek (üretim) katalog — realdata/excel-to-json*.json'dan üretildi.
+// Sıralama önce gerçek veri, ardından legacy demo kalemleri.
+import { REAL_POZ_CATALOG } from './realPozCatalog';
+export const POZ_CATALOG: PozItem[] = [...REAL_POZ_CATALOG, ...LEGACY_POZ_CATALOG];
 
 // Kategori listesini hızlıca al
 export const POZ_CATEGORIES: PozCategory[] = ['Malzeme', 'İşçilik', 'Servis', 'Mühendislik', 'Ulaşım', 'Diğer'];

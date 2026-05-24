@@ -1,4 +1,7 @@
 import { WorkOrder, Employee, ServiceCatalogItem, MaterialCatalogItem } from '../types';
+import { REAL_EMPLOYEES } from './realEmployees';
+import { REAL_MATERIALS } from './realMaterials';
+import { REAL_CUSTOMERS } from './realCustomers';
 
 export const SERVICE_CATALOG: ServiceCatalogItem[] = [
   { id: 'og-hucre', name: 'OG Hücre Değişimi ve Devreye Alma', price: 95000, estCost: 38000 },
@@ -7,19 +10,11 @@ export const SERVICE_CATALOG: ServiceCatalogItem[] = [
   { id: 'trafo-bakim', name: 'Yıllık Trafo Yağ ve Test Bakımı', price: 65000, estCost: 25000 },
 ];
 
-export const MATERIAL_CATALOG: MaterialCatalogItem[] = [
-  { id: 'bakir-kablo', name: 'NYY Bakır Kablo (Metre)', price: 320 },
-  { id: 'sigorta-16a', name: 'Otomatik Sigorta 16A', price: 110 },
-  { id: 'kontaktor-22', name: 'AG Kontaktör 22kW', price: 580 },
-  { id: 'led-armatur', name: 'Etanj LED Armatür 40W', price: 290 },
-];
+export const MATERIAL_CATALOG: MaterialCatalogItem[] = REAL_MATERIALS;
 
-export const CLIENTS = [
-  'Turkcell Veri Merkezi',
-  'Aksa Enerji A.Ş.',
-  'Zorlu Enerji Grubu',
-  'Yıldız Holding',
-];
+export const CLIENTS: string[] = REAL_CUSTOMERS
+  .filter(c => c.type !== 'Tedarikçi')
+  .map(c => c.title);
 
 export const INITIAL_WORK_ORDERS: WorkOrder[] = [
   {
@@ -81,32 +76,4 @@ export const INITIAL_WORK_ORDERS: WorkOrder[] = [
   },
 ];
 
-export const INITIAL_EMPLOYEES: Employee[] = [
-  {
-    id: 'emp-1',
-    name: 'Test MÜHENDİS',
-    role: 'Servis Mühendisi',
-    monthlyWage: 60000,
-    dailyRate: 2727,
-    attendance: { Pzt: 'Geldi', Sal: 'Geldi', Çar: 'Geldi', Per: 'Geldi', Cum: 'Geldi', Cmt: 'Gelmedi', Paz: 'Gelmedi' },
-    daysWorked: 5,
-  },
-  {
-    id: 'emp-2',
-    name: 'Ahmet Usta',
-    role: 'Elektrik Teknisyeni',
-    monthlyWage: 48000,
-    dailyRate: 2181,
-    attendance: { Pzt: 'Geldi', Sal: 'Geldi', Çar: 'Geldi', Per: 'Geldi', Cum: 'Geldi', Cmt: 'Geldi', Paz: 'Gelmedi' },
-    daysWorked: 6,
-  },
-  {
-    id: 'emp-3',
-    name: 'Mehmet Mühendis',
-    role: 'Saha Mühendisi',
-    monthlyWage: 75000,
-    dailyRate: 3409,
-    attendance: { Pzt: 'Geldi', Sal: 'Geldi', Çar: 'İzinli', Per: 'Geldi', Cum: 'Geldi', Cmt: 'Gelmedi', Paz: 'Gelmedi' },
-    daysWorked: 4,
-  },
-];
+export const INITIAL_EMPLOYEES: Employee[] = REAL_EMPLOYEES;
