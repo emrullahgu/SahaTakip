@@ -11,14 +11,72 @@ import {
   WorkOrder,
   Quote,
 } from '../types';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
 const KEY = '@SahaTakip:payments';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidOrNull(v?: string | null): string | null { return v && UUID_RE.test(v) ? v : null; }
+
+function fromRow(r: any): Payment {
+  return {
+    id: r.id,
+    customerId: r.customer_id ?? '',
+    customerName: r.customer_name ?? '',
+    workOrderId: r.work_order_id ?? undefined,
+    quoteId: r.quote_id ?? undefined,
+    amount: Number(r.amount ?? 0),
+    currency: r.currency ?? 'TRY',
+    method: r.method,
+    status: r.status,
+    receivedAt: r.received_at,
+    receivedBy: r.received_by_name ?? undefined,
+    receivedById: r.received_by ?? undefined,
+    receiptNo: r.receipt_no ?? undefined,
+    vatRate: r.vat_rate == null ? undefined : Number(r.vat_rate),
+    note: r.note ?? undefined,
+    createdAt: r.created_at ?? new Date().toISOString(),
+  };
+}
+function toRow(p: Payment): Record<string, any> {
+  const row: Record<string, any> = {
+    customer_id: uuidOrNull(p.customerId),
+    customer_name: p.customerName,
+    work_order_id: uuidOrNull(p.workOrderId),
+    quote_id: uuidOrNull(p.quoteId),
+    amount: p.amount,
+    currency: p.currency ?? 'TRY',
+    method: p.method,
+    status: p.status,
+    received_at: p.receivedAt,
+    received_by: uuidOrNull(p.receivedById),
+    received_by_name: p.receivedBy ?? null,
+    receipt_no: p.receiptNo ?? null,
+    vat_rate: p.vatRate ?? null,
+    note: p.note ?? null,
+  };
+  if (UUID_RE.test(p.id)) row.id = p.id;
+  return row;
+}
 
 function rid(): string {
   return 'pay_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
 
 export async function listPayments(): Promise<Payment[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .order('received_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(fromRow);
+        await AsyncStorage.setItem(KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return [];
@@ -41,13 +99,23 @@ export async function createPayment(
   data: Omit<Payment, 'id' | 'createdAt'> & { id?: string },
 ): Promise<Payment> {
   const all = await listPayments();
-  const next: Payment = {
+  let next: Payment = {
     ...data,
     id: data.id ?? rid(),
     createdAt: new Date().toISOString(),
     currency: data.currency ?? 'TRY',
     receiptNo: data.receiptNo ?? autoReceiptNo(all),
   };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data: row, error } = await supabase
+        .from('payments')
+        .insert(toRow(next))
+        .select()
+        .single();
+      if (!error && row) next = fromRow(row);
+    } catch { /* keep local */ }
+  }
   await saveAll([next, ...all]);
   return next;
 }
@@ -63,11 +131,29 @@ export async function updatePayment(
     updated = { ...p, ...patch };
     return updated;
   });
+  if (updated && SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try {
+      const { data: row, error } = await supabase
+        .from('payments')
+        .update(toRow(updated))
+        .eq('id', id)
+        .select()
+        .single();
+      if (!error && row) {
+        updated = fromRow(row);
+        const idx = next.findIndex(p => p.id === id);
+        if (idx >= 0) next[idx] = updated;
+      }
+    } catch { /* ignore */ }
+  }
   if (updated) await saveAll(next);
   return updated;
 }
 
 export async function deletePayment(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try { await supabase.from('payments').delete().eq('id', id); } catch { /* ignore */ }
+  }
   const all = await listPayments();
   await saveAll(all.filter(p => p.id !== id));
 }

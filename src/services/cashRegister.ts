@@ -3,14 +3,60 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CashEntry, CashEntryKind, CashSummary, Employee } from '../types';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
 const KEY = '@SahaTakip:cash_entries';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidOrNull(v?: string | null): string | null { return v && UUID_RE.test(v) ? v : null; }
+
+function fromRow(r: any): CashEntry {
+  return {
+    id: r.id,
+    employeeId: r.employee_id ?? '',
+    employeeName: r.employee_name ?? '',
+    kind: r.kind,
+    amount: Number(r.amount ?? 0),
+    date: r.date ?? new Date().toISOString(),
+    paymentId: r.payment_id ?? undefined,
+    workOrderId: r.work_order_id ?? undefined,
+    note: r.note ?? undefined,
+    createdAt: r.created_at ?? new Date().toISOString(),
+  };
+}
+function toRow(e: CashEntry): Record<string, any> {
+  const row: Record<string, any> = {
+    employee_id: uuidOrNull(e.employeeId),
+    employee_name: e.employeeName,
+    kind: e.kind,
+    amount: e.amount,
+    date: e.date,
+    payment_id: uuidOrNull(e.paymentId),
+    work_order_id: uuidOrNull(e.workOrderId),
+    note: e.note ?? null,
+  };
+  if (UUID_RE.test(e.id)) row.id = e.id;
+  return row;
+}
 
 function rid(): string {
   return 'cash_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 }
 
 export async function listEntries(): Promise<CashEntry[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase
+        .from('cash_entries')
+        .select('*')
+        .order('date', { ascending: false });
+      if (!error && data) {
+        const list = data.map(fromRow);
+        await AsyncStorage.setItem(KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return [];
@@ -28,17 +74,30 @@ export async function addEntry(
   data: Omit<CashEntry, 'id' | 'createdAt' | 'date'> & { id?: string; date?: string },
 ): Promise<CashEntry> {
   const all = await listEntries();
-  const next: CashEntry = {
+  let next: CashEntry = {
     ...data,
     id: data.id ?? rid(),
     date: data.date ?? new Date().toISOString(),
     createdAt: new Date().toISOString(),
   };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data: row, error } = await supabase
+        .from('cash_entries')
+        .insert(toRow(next))
+        .select()
+        .single();
+      if (!error && row) next = fromRow(row);
+    } catch { /* keep local */ }
+  }
   await saveAll([next, ...all]);
   return next;
 }
 
 export async function deleteEntry(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try { await supabase.from('cash_entries').delete().eq('id', id); } catch { /* ignore */ }
+  }
   const all = await listEntries();
   await saveAll(all.filter(e => e.id !== id));
 }
