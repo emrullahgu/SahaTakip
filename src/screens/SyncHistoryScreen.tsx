@@ -48,10 +48,10 @@ export default function SyncHistoryScreen() {
           />
         }
         renderItem={({ item }) => (
-          <View style={[s.card, { borderLeftColor: STATUS_COLOR[item.status] }]}>
-            <Ionicons name="sync-outline" size={22} color={STATUS_COLOR[item.status]} />
+          <View style={[s.card, { borderLeftColor: STATUS_COLOR[item.status as keyof typeof STATUS_COLOR] }]}>
+            <Ionicons name="sync-outline" size={22} color={STATUS_COLOR[item.status as keyof typeof STATUS_COLOR]} />
             <View style={{ flex: 1, marginLeft: spacing.sm }}>
-              <Text style={s.t}>{STATUS_LABEL[item.status]} · {item.ops} işlem</Text>
+              <Text style={s.t}>{STATUS_LABEL[item.status as keyof typeof STATUS_LABEL]} · {item.ops} işlem</Text>
               <Text style={s.sub}>{new Date(item.startedAt).toLocaleString('tr-TR')} · {(item.durationMs / 1000).toFixed(2)}s</Text>
               <View style={s.statRow}>
                 <Pill color="#22c55e" label={`✓ ${item.succeeded}`} />

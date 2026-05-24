@@ -54,7 +54,7 @@ export default function TasksScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>
         <Tab label="Tümü" active={filterStatus === 'all'} onPress={() => setFilterStatus('all')} count={items.length} />
         {TASK_STATUS_ORDER.map(st => (
-          <Tab key={st} label={TASK_STATUS_LABEL[st]} color={TASK_STATUS_COLOR[st]} active={filterStatus === st} onPress={() => setFilterStatus(st)} count={items.filter(x => x.status === st).length} />
+          <Tab key={st} label={TASK_STATUS_LABEL[st as keyof typeof TASK_STATUS_LABEL]} color={TASK_STATUS_COLOR[st as keyof typeof TASK_STATUS_COLOR]} active={filterStatus === st} onPress={() => setFilterStatus(st)} count={items.filter(x => x.status === st).length} />
         ))}
       </ScrollView>
       <FlatList

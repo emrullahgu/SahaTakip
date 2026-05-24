@@ -63,17 +63,17 @@ export default function SuspiciousActivityScreen() {
           />
         }
         renderItem={({ item: a }) => (
-          <View key={a.id} style={[s.card, { borderLeftColor: SUS_SEV_COLOR[a.severity] }, a.resolved && { opacity: 0.55 }]}>
+          <View key={a.id} style={[s.card, { borderLeftColor: SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR] }, a.resolved && { opacity: 0.55 }]}>
             <View style={s.row}>
-              <View style={[s.iconBox, { backgroundColor: SUS_SEV_COLOR[a.severity] + '22', borderColor: SUS_SEV_COLOR[a.severity] }]}>
-                <Ionicons name={SUS_TYPE_ICON[a.type] as any} size={20} color={SUS_SEV_COLOR[a.severity]} />
+              <View style={[s.iconBox, { backgroundColor: SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR] + '22', borderColor: SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR] }]}>
+                <Ionicons name={SUS_TYPE_ICON[a.type as keyof typeof SUS_TYPE_ICON] as any} size={20} color={SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR]} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.title}>{SUS_TYPE_LABEL[a.type]}</Text>
+                <Text style={s.title}>{SUS_TYPE_LABEL[a.type as keyof typeof SUS_TYPE_LABEL]}</Text>
                 <Text style={s.userT}>{a.user} · {new Date(a.at).toLocaleString('tr-TR')}</Text>
               </View>
-              <View style={[s.sev, { backgroundColor: SUS_SEV_COLOR[a.severity] + '33', borderColor: SUS_SEV_COLOR[a.severity] }]}>
-                <Text style={[s.sevT, { color: SUS_SEV_COLOR[a.severity] }]}>{SUS_SEV_LABEL[a.severity]}</Text>
+              <View style={[s.sev, { backgroundColor: SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR] + '33', borderColor: SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR] }]}>
+                <Text style={[s.sevT, { color: SUS_SEV_COLOR[a.severity as keyof typeof SUS_SEV_COLOR] }]}>{SUS_SEV_LABEL[a.severity as keyof typeof SUS_SEV_LABEL]}</Text>
               </View>
             </View>
             <Text style={s.desc}>{a.description}</Text>

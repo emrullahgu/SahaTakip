@@ -11,10 +11,49 @@ import {
   EInvoiceStatus,
   Payment,
 } from '../types';
-import { supabase } from './supabase';
+import { supabase, SUPABASE_CONFIGURED, getCurrentUser } from './supabase';
 
 const CONFIG_KEY = '@SahaTakip:einvoice_config';
 const QUEUE_KEY = '@SahaTakip:einvoice_records';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidOrNull(v?: string | null): string | null { return v && UUID_RE.test(v) ? v : null; }
+
+function recFromRow(r: any): EInvoiceRecord {
+  return {
+    id: r.id,
+    paymentId: r.payment_id || undefined,
+    workOrderId: r.work_order_id || undefined,
+    customerId: r.customer_id || undefined,
+    customerName: r.customer_name,
+    customerVkn: r.customer_vkn || undefined,
+    total: Number(r.total) || 0,
+    vat: Number(r.vat) || 0,
+    status: r.status,
+    externalId: r.external_id || undefined,
+    errorMessage: r.error_message || undefined,
+    pdfUri: r.pdf_uri || undefined,
+    createdAt: r.created_at,
+    sentAt: r.sent_at || undefined,
+  } as EInvoiceRecord;
+}
+function recToRow(r: EInvoiceRecord) {
+  return {
+    payment_id: uuidOrNull(r.paymentId),
+    work_order_id: uuidOrNull(r.workOrderId),
+    customer_id: uuidOrNull(r.customerId),
+    customer_name: r.customerName,
+    customer_vkn: r.customerVkn || null,
+    total: r.total,
+    vat: r.vat || 0,
+    status: r.status,
+    external_id: r.externalId || null,
+    error_message: r.errorMessage || null,
+    pdf_uri: r.pdfUri || null,
+    created_at: r.createdAt,
+    sent_at: r.sentAt || null,
+  };
+}
 
 const DEFAULT_CONFIG: EInvoiceConfig = {
   provider: 'manual',
@@ -23,6 +62,29 @@ const DEFAULT_CONFIG: EInvoiceConfig = {
 };
 
 export async function loadConfig(): Promise<EInvoiceConfig> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        const { data, error } = await supabase.from('einvoice_config').select('*').eq('user_id', user.id).maybeSingle();
+        if (!error && data) {
+          const cfg: EInvoiceConfig = {
+            provider: data.provider,
+            enabled: !!data.enabled,
+            testMode: !!data.test_mode,
+            apiUrl: data.api_url || undefined,
+            username: data.username || undefined,
+            vknTckn: data.vkn_tckn || undefined,
+            companyTitle: data.company_title || undefined,
+            prefix: data.prefix || undefined,
+            updatedAt: data.updated_at || undefined,
+          } as EInvoiceConfig;
+          await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+          return cfg;
+        }
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(CONFIG_KEY);
     if (!raw) return { ...DEFAULT_CONFIG };
@@ -34,6 +96,25 @@ export async function loadConfig(): Promise<EInvoiceConfig> {
 
 export async function saveConfig(cfg: EInvoiceConfig): Promise<EInvoiceConfig> {
   const next: EInvoiceConfig = { ...cfg, updatedAt: new Date().toISOString() };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        await supabase.from('einvoice_config').upsert({
+          user_id: user.id,
+          provider: next.provider,
+          enabled: next.enabled,
+          test_mode: next.testMode,
+          api_url: next.apiUrl || null,
+          username: next.username || null,
+          vkn_tckn: next.vknTckn || null,
+          company_title: next.companyTitle || null,
+          prefix: next.prefix || null,
+          updated_at: next.updatedAt,
+        });
+      }
+    } catch { /* offline */ }
+  }
   await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(next));
   return next;
 }
@@ -43,6 +124,16 @@ function rid(): string {
 }
 
 export async function listRecords(): Promise<EInvoiceRecord[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('einvoice_records').select('*').order('created_at', { ascending: false }).limit(500);
+      if (!error && data) {
+        const list = data.map(recFromRow);
+        await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(QUEUE_KEY);
     if (!raw) return [];
@@ -59,7 +150,7 @@ async function saveAll(items: EInvoiceRecord[]): Promise<void> {
 export async function queueFromPayment(p: Payment, customerVkn?: string): Promise<EInvoiceRecord> {
   const all = await listRecords();
   const vat = p.vatRate ? (p.amount * p.vatRate) / (100 + p.vatRate) : 0;
-  const rec: EInvoiceRecord = {
+  let rec: EInvoiceRecord = {
     id: rid(),
     paymentId: p.id,
     workOrderId: p.workOrderId,
@@ -71,6 +162,12 @@ export async function queueFromPayment(p: Payment, customerVkn?: string): Promis
     status: 'queued',
     createdAt: new Date().toISOString(),
   };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('einvoice_records').insert(recToRow(rec)).select().single();
+      if (!error && data) rec = recFromRow(data);
+    } catch { /* offline */ }
+  }
   await saveAll([rec, ...all]);
   return rec;
 }
@@ -86,11 +183,21 @@ export async function updateRecord(
     updated = { ...r, ...patch };
     return updated;
   });
+  if (updated && SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try {
+      const row: any = recToRow(updated);
+      delete row.created_at;
+      await supabase.from('einvoice_records').update(row).eq('id', id);
+    } catch { /* offline */ }
+  }
   if (updated) await saveAll(next);
   return updated;
 }
 
 export async function deleteRecord(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try { await supabase.from('einvoice_records').delete().eq('id', id); } catch { /* offline */ }
+  }
   const all = await listRecords();
   await saveAll(all.filter(r => r.id !== id));
 }
