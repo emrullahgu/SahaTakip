@@ -200,56 +200,74 @@ revoke all on function public.user_role() from public;
 grant execute on function public.user_role() to anon, authenticated;
 
 -- Profil: kendi profilini görür ve günceller; admin/manager hepsini görür
+drop policy if exists "profiles_select_own_or_manager" on public.profiles;
 create policy "profiles_select_own_or_manager" on public.profiles
   for select using (id = auth.uid() or public.user_role() in ('admin','manager'));
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
   for update using (id = auth.uid());
 
 -- Müşteriler: tüm kimliği doğrulanmış kullanıcılar okuyabilir; manager/admin yazar
+drop policy if exists "customers_all_read" on public.customers;
 create policy "customers_all_read" on public.customers
   for select using (auth.uid() is not null);
+drop policy if exists "customers_manager_write" on public.customers;
 create policy "customers_manager_write" on public.customers
   for all using (public.user_role() in ('admin','manager'));
 
 -- Teklifler / İş Emirleri: tüm kimliği doğrulanmış okur; sahibi veya manager/admin yazar
+drop policy if exists "quotes_all_read" on public.quotes;
 create policy "quotes_all_read" on public.quotes
   for select using (auth.uid() is not null);
+drop policy if exists "quotes_owner_write" on public.quotes;
 create policy "quotes_owner_write" on public.quotes
   for all using (created_by = auth.uid() or public.user_role() in ('admin','manager'));
 
+drop policy if exists "quote_lines_all_read" on public.quote_lines;
 create policy "quote_lines_all_read" on public.quote_lines
   for select using (auth.uid() is not null);
+drop policy if exists "quote_lines_owner_write" on public.quote_lines;
 create policy "quote_lines_owner_write" on public.quote_lines
   for all using (
     exists (select 1 from public.quotes q where q.id = quote_id and (q.created_by = auth.uid() or public.user_role() in ('admin','manager')))
   );
 
+drop policy if exists "wo_all_read" on public.work_orders;
 create policy "wo_all_read" on public.work_orders
   for select using (auth.uid() is not null);
+drop policy if exists "wo_owner_write" on public.work_orders;
 create policy "wo_owner_write" on public.work_orders
   for all using (created_by = auth.uid() or public.user_role() in ('admin','manager'));
 
+drop policy if exists "wo_mat_all_read" on public.work_order_materials;
 create policy "wo_mat_all_read" on public.work_order_materials
   for select using (auth.uid() is not null);
+drop policy if exists "wo_mat_owner_write" on public.work_order_materials;
 create policy "wo_mat_owner_write" on public.work_order_materials
   for all using (
     exists (select 1 from public.work_orders w where w.id = work_order_id and (w.created_by = auth.uid() or public.user_role() in ('admin','manager')))
   );
 
+drop policy if exists "wo_photos_all_read" on public.work_order_photos;
 create policy "wo_photos_all_read" on public.work_order_photos
   for select using (auth.uid() is not null);
+drop policy if exists "wo_photos_uploader_write" on public.work_order_photos;
 create policy "wo_photos_uploader_write" on public.work_order_photos
   for all using (uploaded_by = auth.uid() or public.user_role() in ('admin','manager'));
 
 -- Personel & Puantaj: sadece manager/admin
+drop policy if exists "employees_manager" on public.employees;
 create policy "employees_manager" on public.employees
   for all using (public.user_role() in ('admin','manager'));
+drop policy if exists "attendance_manager" on public.attendance;
 create policy "attendance_manager" on public.attendance
   for all using (public.user_role() in ('admin','manager'));
 
 -- Masraf: kullanıcı kendi masrafını ekler, manager hepsini görür
+drop policy if exists "expenses_owner_or_manager_read" on public.expenses;
 create policy "expenses_owner_or_manager_read" on public.expenses
   for select using (created_by = auth.uid() or public.user_role() in ('admin','manager'));
+drop policy if exists "expenses_owner_write" on public.expenses;
 create policy "expenses_owner_write" on public.expenses
   for all using (created_by = auth.uid() or public.user_role() in ('admin','manager'));
 
@@ -345,24 +363,32 @@ alter table public.geofence_events   enable row level security;
 alter table public.location_checkins enable row level security;
 
 -- Kendi konumunu yazar; manager/admin herkesinkini okur
+drop policy if exists "locations_self_write" on public.locations;
 create policy "locations_self_write" on public.locations
   for insert with check (user_id = auth.uid());
+drop policy if exists "locations_self_or_manager_read" on public.locations;
 create policy "locations_self_or_manager_read" on public.locations
   for select using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
 
+drop policy if exists "shifts_self_write" on public.shifts;
 create policy "shifts_self_write" on public.shifts
   for all using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
 
+drop policy if exists "geofences_manager_write" on public.geofences;
 create policy "geofences_manager_write" on public.geofences
   for all using (public.user_role() in ('admin','manager'));
+drop policy if exists "geofences_all_read" on public.geofences;
 create policy "geofences_all_read" on public.geofences
   for select using (auth.uid() is not null);
 
+drop policy if exists "geofence_events_read" on public.geofence_events;
 create policy "geofence_events_read" on public.geofence_events
   for select using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
+drop policy if exists "geofence_events_write" on public.geofence_events;
 create policy "geofence_events_write" on public.geofence_events
   for insert with check (user_id = auth.uid());
 
+drop policy if exists "checkins_self_write" on public.location_checkins;
 create policy "checkins_self_write" on public.location_checkins
   for all using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
 
@@ -480,7 +506,9 @@ CREATE TABLE IF NOT EXISTS recurring_templates (
 ALTER TABLE recurring_templates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS rt_select ON recurring_templates;
 DROP POLICY IF EXISTS rt_write ON recurring_templates;
+DROP POLICY IF EXISTS rt_select ON recurring_templates;
 CREATE POLICY rt_select ON recurring_templates FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS rt_write ON recurring_templates;
 CREATE POLICY rt_write ON recurring_templates FOR ALL USING (
   EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role IN ('admin','manager'))
 );
