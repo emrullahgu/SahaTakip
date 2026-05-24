@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listVoiceTranscripts, VOICE_CATEGORY_LABEL, VOICE_CATEGORY_COLOR } from '../services/advanced';
 import type { AdvVoiceTranscript } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function AdvVoiceAIScreen() {
   const [items, setItems] = useState<AdvVoiceTranscript[]>([]);
@@ -17,27 +20,42 @@ export default function AdvVoiceAIScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.intro}>
-          <Ionicons name="mic" size={48} color="#f59e0b" />
-          <Text style={s.introT}>İleri Sesli AI</Text>
-          <Text style={s.introD}>Ses notlarını otomatik metne çevir, kategorize et, görev oluştur</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={t => t.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.intro}>
+              <Ionicons name="mic" size={48} color="#f59e0b" />
+              <Text style={s.introT}>İleri Sesli AI</Text>
+              <Text style={s.introD}>Ses notlarını otomatik metne çevir, kategorize et, görev oluştur</Text>
+            </View>
 
-        <View style={s.kpiRow}>
-          <Kpi label="Kayıt" value={items.length.toString()} color="#f59e0b" />
-          <Kpi label="Toplam Süre" value={`${Math.round(totalDur / 60)}dk`} color="#06b6d4" />
-          <Kpi label="Doğruluk" value={`%${Math.round(avgConf * 100)}`} color="#22c55e" />
-        </View>
+            <View style={s.kpiRow}>
+              <Kpi label="Kayıt" value={items.length.toString()} color="#f59e0b" />
+              <Kpi label="Toplam Süre" value={`${Math.round(totalDur / 60)}dk`} color="#06b6d4" />
+              <Kpi label="Doğruluk" value={`%${Math.round(avgConf * 100)}`} color="#22c55e" />
+            </View>
 
-        <TouchableOpacity style={s.btn} activeOpacity={0.85} onPress={() => Alert.alert('Kayıt', 'Sesli not kaydı başlıyor (demo).')}>
-          <Ionicons name="mic" size={22} color="#fff" />
-          <Text style={s.btnT}>Yeni Sesli Not Kaydet</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={s.btn} activeOpacity={0.85} onPress={() => Alert.alert('Kayıt', 'Sesli not kaydı başlıyor (demo).')}>
+              <Ionicons name="mic" size={22} color="#fff" />
+              <Text style={s.btnT}>Yeni Sesli Not Kaydet</Text>
+            </TouchableOpacity>
 
-        <Text style={s.sectionT}>Son Transkriptler</Text>
-        {items.map(t => (
-          <View key={t.id} style={[s.card, { borderLeftColor: VOICE_CATEGORY_COLOR[t.category] }]}>
+            <Text style={s.sectionT}>Son Transkriptler</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="mic-outline"
+            title="Transkript yok"
+            subtitle="Henüz kaydedilmiş ve metne dönüştürülmüş bir ses notu bulunmuyor."
+          />
+        }
+        renderItem={({ item: t }) => (
+          <View key={t.id} style={[s.card, { borderLeftColor: VOICE_CATEGORY_COLOR[t.category], marginBottom: spacing.xs }]}>
             <View style={s.cardHead}>
               <View style={[s.catPill, { borderColor: VOICE_CATEGORY_COLOR[t.category] }]}>
                 <Text style={[s.catT, { color: VOICE_CATEGORY_COLOR[t.category] }]}>{VOICE_CATEGORY_LABEL[t.category]}</Text>
@@ -54,8 +72,8 @@ export default function AdvVoiceAIScreen() {
               <Text style={s.confT}>%{Math.round(t.confidence * 100)}</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { getCovSummary, listCovCategories, COV_STATUS_COLOR, COV_STATUS_LABEL } from '../services/coverage';
 import type { CovSummary, CovCategory, CovStatus } from '../types';
+import EmptyState from '../components/EmptyState';
 
 export default function CovSummaryScreen() {
   const [sum, setSum] = useState<CovSummary | null>(null);
@@ -15,7 +16,13 @@ export default function CovSummaryScreen() {
   const cols = width >= 900 ? 4 : 2;
   const tileW = `${100 / cols - 1}%`;
   useFocusEffect(useCallback(() => { (async () => { setSum(await getCovSummary()); setCats(await listCovCategories()); })(); }, []));
-  if (!sum) return <SafeAreaView style={s.safe} edges={['bottom']}><View style={s.empty}><Ionicons name="hourglass" size={48} color={colors.text.muted} /></View></SafeAreaView>;
+  if (!sum) {
+    return (
+      <SafeAreaView style={s.safe} edges={['bottom']}>
+        <EmptyState icon="speedometer-outline" title="Yükleniyor…" subtitle="Kapsam analizi verileri hazırlanıyor." />
+      </SafeAreaView>
+    );
+  }
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll}>

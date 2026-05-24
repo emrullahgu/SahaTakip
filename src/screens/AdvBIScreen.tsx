@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listBIDatasets, BI_STATUS_LABEL, BI_STATUS_COLOR } from '../services/advanced';
 import type { AdvBIDataset } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const DEST_ICON: Record<AdvBIDataset['destination'], string> = {
   PowerBI: 'bar-chart', Looker: 'analytics', Metabase: 'pie-chart', Tableau: 'stats-chart',
@@ -24,22 +27,37 @@ export default function AdvBIScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.intro}>
-          <Ionicons name="git-network" size={48} color="#8b5cf6" />
-          <Text style={s.introT}>BI Veri Köprüsü</Text>
-          <Text style={s.introD}>Power BI, Looker, Metabase ve Tableau\'ya canlı veri akışı</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={datasets}
+        keyExtractor={d => d.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.intro}>
+              <Ionicons name="git-network" size={48} color="#8b5cf6" />
+              <Text style={s.introT}>BI Veri Köprüsü</Text>
+              <Text style={s.introD}>Power BI, Looker, Metabase ve Tableau'ya canlı veri akışı</Text>
+            </View>
 
-        <View style={s.kpiRow}>
-          <Kpi label="Dataset" value={datasets.length.toString()} color="#8b5cf6" />
-          <Kpi label="Sağlıklı" value={healthy.toString()} color="#22c55e" />
-          <Kpi label="Toplam Satır" value={`${(totalRows / 1000).toFixed(0)}K`} color="#06b6d4" />
-        </View>
+            <View style={s.kpiRow}>
+              <Kpi label="Dataset" value={datasets.length.toString()} color="#8b5cf6" />
+              <Kpi label="Sağlıklı" value={healthy.toString()} color="#22c55e" />
+              <Kpi label="Toplam Satır" value={`${(totalRows / 1000).toFixed(0)}K`} color="#06b6d4" />
+            </View>
 
-        <Text style={s.sectionT}>Datasetler</Text>
-        {datasets.map(d => (
-          <View key={d.id} style={[s.card, { borderLeftColor: BI_STATUS_COLOR[d.status] }]}>
+            <Text style={s.sectionT}>Datasetler</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="bar-chart-outline"
+            title="Dataset yok"
+            subtitle="Henüz tanımlanmış bir BI veri seti bulunmuyor."
+          />
+        }
+        renderItem={({ item: d }) => (
+          <View key={d.id} style={[s.card, { borderLeftColor: BI_STATUS_COLOR[d.status], marginBottom: spacing.xs }]}>
             <View style={s.row}>
               <View style={[s.iconBox, { backgroundColor: DEST_COLOR[d.destination] + '22' }]}>
                 <Ionicons name={DEST_ICON[d.destination] as any} size={20} color={DEST_COLOR[d.destination]} />
@@ -53,13 +71,16 @@ export default function AdvBIScreen() {
               </View>
             </View>
           </View>
-        ))}
-
-        <TouchableOpacity style={s.btn} activeOpacity={0.85} onPress={() => Alert.alert('Senkronizasyon', 'Tüm datasetler için manuel tetikleme gönderildi (demo).')}>
-          <Ionicons name="refresh" size={18} color="#fff" />
-          <Text style={s.btnT}>Tümünü Senkronize Et</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        )}
+        ListFooterComponent={
+          datasets.length > 0 ? (
+            <TouchableOpacity style={s.btn} activeOpacity={0.85} onPress={() => Alert.alert('Senkronizasyon', 'Tüm datasetler için manuel tetikleme gönderildi (demo).')}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={s.btnT}>Tümünü Senkronize Et</Text>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }

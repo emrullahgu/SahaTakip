@@ -7,6 +7,9 @@ import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/nati
 import { colors, spacing, radius, typography } from '../theme';
 import { getExtLogs, getExtIntegration } from '../services/extensions';
 import type { ExtLogEntry, ExtIntegration, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 type R = RouteProp<RootStackParamList, 'ExtLogs'>;
 
@@ -33,36 +36,42 @@ export default function ExtLogsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        {it && (
-          <View style={s.hero}>
-            <Ionicons name={it.icon as any} size={32} color={it.color} />
-            <Text style={s.heroT}>{it.name}</Text>
-            <Text style={s.heroD}>Entegrasyon log kayıtları</Text>
-          </View>
-        )}
-        {logs.length === 0 ? (
-          <View style={s.empty}>
-            <Ionicons name="document-outline" size={48} color={colors.text.muted} />
-            <Text style={s.emptyT}>Henüz log kaydı yok</Text>
-          </View>
-        ) : (
-          logs.map(l => (
-            <View key={l.id} style={[s.row, { borderLeftColor: LEVEL_COLOR[l.level] }]}>
-              <Ionicons name={LEVEL_ICON[l.level] as any} size={18} color={LEVEL_COLOR[l.level]} />
-              <View style={{ flex: 1 }}>
-                <View style={s.rowHead}>
-                  <View style={[s.levelPill, { borderColor: LEVEL_COLOR[l.level] }]}>
-                    <Text style={[s.levelT, { color: LEVEL_COLOR[l.level] }]}>{LEVEL_LABEL[l.level]}</Text>
-                  </View>
-                  <Text style={s.at}>{l.at}</Text>
-                </View>
-                <Text style={s.msg}>{l.message}</Text>
-              </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={logs}
+        keyExtractor={l => l.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          it ? (
+            <View style={s.hero}>
+              <Ionicons name={it.icon as any} size={32} color={it.color} />
+              <Text style={s.heroT}>{it.name}</Text>
+              <Text style={s.heroD}>Entegrasyon log kayıtları</Text>
             </View>
-          ))
+          ) : null
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-text-outline"
+            title="Log yok"
+            subtitle="Bu entegrasyona ait henüz bir işlem kaydı bulunmuyor."
+          />
+        }
+        renderItem={({ item: l }) => (
+          <View key={l.id} style={[s.row, { borderLeftColor: LEVEL_COLOR[l.level] }]}>
+            <Ionicons name={LEVEL_ICON[l.level] as any} size={18} color={LEVEL_COLOR[l.level]} />
+            <View style={{ flex: 1 }}>
+              <View style={s.rowHead}>
+                <View style={[s.levelPill, { borderColor: LEVEL_COLOR[l.level] }]}>
+                  <Text style={[s.levelT, { color: LEVEL_COLOR[l.level] }]}>{LEVEL_LABEL[l.level]}</Text>
+                </View>
+                <Text style={s.at}>{l.at}</Text>
+              </View>
+              <Text style={s.msg}>{l.message}</Text>
+            </View>
+          </View>
         )}
-      </ScrollView>
+      />
     </SafeAreaView>
   );
 }

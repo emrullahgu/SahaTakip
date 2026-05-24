@@ -11,7 +11,23 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  Platform,
 } from 'react-native';
+
+// react-native-web'de Alert.alert butonları çalışmaz; web'de window.confirm fallback.
+function confirmAction(title: string, message: string, onConfirm: () => void, confirmLabel = 'Onayla') {
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line no-alert
+    if (typeof window !== 'undefined' && window.confirm(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: 'Vazgeç', style: 'cancel' },
+    { text: confirmLabel, style: 'default', onPress: onConfirm },
+  ]);
+}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -82,26 +98,19 @@ export default function UserApprovalsScreen() {
   };
 
   const onApprove = (u: PendingUser) => {
-    Alert.alert(
+    confirmAction(
       'Onayla',
       `${u.full_name || u.email} kullanıcısına erişim verilsin mi?`,
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: 'Onayla',
-          style: 'default',
-          onPress: async () => {
-            setBusyId(u.id);
-            const { error } = await approveUser(u.id);
-            setBusyId(null);
-            if (error) {
-              Alert.alert('Hata', error);
-              return;
-            }
-            setItems(prev => prev.filter(x => x.id !== u.id));
-          },
-        },
-      ],
+      async () => {
+        setBusyId(u.id);
+        const { error } = await approveUser(u.id);
+        setBusyId(null);
+        if (error) {
+          Alert.alert('Hata', error);
+          return;
+        }
+        setItems(prev => prev.filter(x => x.id !== u.id));
+      },
     );
   };
 

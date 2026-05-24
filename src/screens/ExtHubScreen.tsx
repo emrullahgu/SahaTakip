@@ -10,6 +10,9 @@ import {
   listExtIntegrations, getExtSummary, EXT_STATUS_COLOR, EXT_STATUS_LABEL, EXT_STATUS_ICON, EXT_CATEGORY_LABEL,
 } from '../services/extensions';
 import type { ExtIntegration, RootStackParamList } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ExtHub'>;
 
@@ -27,23 +30,38 @@ export default function ExtHubScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.hero}>
-          <Ionicons name="link" size={80} color="#7c3aed" />
-          <Text style={s.heroT}>Dış Entegrasyonlar & Eklentiler</Text>
-          <Text style={s.heroD}>WhatsApp, SMS, Takvim, Banka, POS, ERP, OCR ve daha fazlası</Text>
-        </View>
-        {sum && (
-          <View style={s.kpiRow}>
-            <Kpi label="Toplam" value={sum.total} color="#7c3aed" />
-            <Kpi label="Bağlı" value={sum.connected} color="#22c55e" />
-            <Kpi label="Bekliyor" value={sum.pending} color="#f59e0b" />
-            <Kpi label="Pasif" value={sum.disconnected} color="#64748b" />
-          </View>
-        )}
-        {(Object.keys(grouped) as Array<ExtIntegration['category']>).map(cat => (
-          <View key={cat} style={s.section}>
-            <Text style={s.sectionT}>{EXT_CATEGORY_LABEL[cat]}</Text>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={Object.keys(grouped)}
+        keyExtractor={cat => cat}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.hero}>
+              <Ionicons name="link" size={80} color="#7c3aed" />
+              <Text style={s.heroT}>Dış Entegrasyonlar & Eklentiler</Text>
+              <Text style={s.heroD}>WhatsApp, SMS, Takvim, Banka, POS, ERP, OCR ve daha fazlası</Text>
+            </View>
+            {sum && (
+              <View style={s.kpiRow}>
+                <Kpi label="Toplam" value={sum.total} color="#7c3aed" />
+                <Kpi label="Bağlı" value={sum.connected} color="#22c55e" />
+                <Kpi label="Bekliyor" value={sum.pending} color="#f59e0b" />
+                <Kpi label="Pasif" value={sum.disconnected} color="#64748b" />
+              </View>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="link-outline"
+            title="Eklenti yok"
+            subtitle="Henüz kullanılabilir bir dış entegrasyon bulunmuyor."
+          />
+        }
+        renderItem={({ item: cat }) => (
+          <View style={s.section}>
+            <Text style={s.sectionT}>{EXT_CATEGORY_LABEL[cat as ExtIntegration['category']]}</Text>
             {grouped[cat].map(it => (
               <TouchableOpacity key={it.id} style={[s.card, { borderLeftColor: it.color }]} activeOpacity={0.85} onPress={() => nav.navigate('ExtConfig', { id: it.id })}>
                 <View style={s.cardHead}>
@@ -62,8 +80,8 @@ export default function ExtHubScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

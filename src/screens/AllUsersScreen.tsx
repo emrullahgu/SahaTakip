@@ -11,7 +11,23 @@ import {
   RefreshControl,
   Modal,
   TextInput,
+  Platform,
 } from 'react-native';
+
+// react-native-web Alert butonları çalışmaz; web'de window.confirm fallback.
+function confirmAction(title: string, message: string, onConfirm: () => void, confirmLabel = 'Onayla') {
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line no-alert
+    if (typeof window !== 'undefined' && window.confirm(`${title}\n\n${message}`)) {
+      onConfirm();
+    }
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: 'Vazgeç', style: 'cancel' },
+    { text: confirmLabel, style: 'default', onPress: onConfirm },
+  ]);
+}
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -125,36 +141,30 @@ export default function AllUsersScreen() {
 
   const changeStatus = (u: AppUser, status: ApprovalStatus) => {
     const action = status === 'approved' ? 'Onayla' : status === 'rejected' ? 'Reddet' : 'Beklet';
-    Alert.alert(
+    confirmAction(
       action,
       `${u.full_name || u.email} kullanıcısı için "${STATUS_LABEL[status]}" durumuna geçilsin mi?`,
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: action,
-          style: status === 'rejected' ? 'destructive' : 'default',
-          onPress: async () => {
-            setBusyId(u.id);
-            const { error } = await setUserApprovalStatus(u.id, status);
-            setBusyId(null);
-            if (error) {
-              Alert.alert('Hata', error);
-              return;
-            }
-            setUsers(prev =>
-              prev.map(x =>
-                x.id === u.id
-                  ? {
-                      ...x,
-                      approval_status: status,
-                      approved_at: status === 'approved' ? new Date().toISOString() : x.approved_at,
-                    }
-                  : x,
-              ),
-            );
-          },
-        },
-      ],
+      async () => {
+        setBusyId(u.id);
+        const { error } = await setUserApprovalStatus(u.id, status);
+        setBusyId(null);
+        if (error) {
+          Alert.alert('Hata', error);
+          return;
+        }
+        setUsers(prev =>
+          prev.map(x =>
+            x.id === u.id
+              ? {
+                  ...x,
+                  approval_status: status,
+                  approved_at: status === 'approved' ? new Date().toISOString() : x.approved_at,
+                }
+              : x,
+          ),
+        );
+      },
+      action,
     );
   };
 

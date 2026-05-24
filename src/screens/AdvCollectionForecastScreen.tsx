@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listCollectionForecasts, COLL_RISK_LABEL, COLL_RISK_COLOR } from '../services/advanced';
 import type { AdvCollectionForecast } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 export default function AdvCollectionForecastScreen() {
   const [items, setItems] = useState<AdvCollectionForecast[]>([]);
@@ -18,22 +21,37 @@ export default function AdvCollectionForecastScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.intro}>
-          <Ionicons name="trending-down" size={48} color="#dc2626" />
-          <Text style={s.introT}>Tahsilat Tahmin Modeli</Text>
-          <Text style={s.introD}>Cari geçmiş + ödeme davranışı + sektör trendi ile ödeme tarihi tahmini</Text>
-        </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={items}
+        keyExtractor={c => c.customerId}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.intro}>
+              <Ionicons name="trending-down" size={48} color="#dc2626" />
+              <Text style={s.introT}>Tahsilat Tahmin Modeli</Text>
+              <Text style={s.introD}>Cari geçmiş + ödeme davranışı + sektör trendi ile ödeme tarihi tahmini</Text>
+            </View>
 
-        <View style={s.kpiRow}>
-          <Kpi label="Bekleyen" value={`₺${(total / 1000).toFixed(0)}K`} color="#dc2626" />
-          <Kpi label="Yüksek Risk" value={highRisk.toString()} color="#ef4444" />
-          <Kpi label="Model Güveni" value={`%${Math.round(avgConf * 100)}`} color="#22c55e" />
-        </View>
+            <View style={s.kpiRow}>
+              <Kpi label="Bekleyen" value={`₺${(total / 1000).toFixed(0)}K`} color="#dc2626" />
+              <Kpi label="Yüksek Risk" value={highRisk.toString()} color="#ef4444" />
+              <Kpi label="Model Güveni" value={`%${Math.round(avgConf * 100)}`} color="#22c55e" />
+            </View>
 
-        <Text style={s.sectionT}>Müşteri Tahminleri</Text>
-        {items.map(c => (
-          <View key={c.customerId} style={[s.card, { borderLeftColor: COLL_RISK_COLOR[c.risk] }]}>
+            <Text style={s.sectionT}>Müşteri Tahminleri</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="trending-down-outline"
+            title="Tahmin verisi yok"
+            subtitle="Modelin tahmin yapabilmesi için yeterli finansal veri toplanmadı."
+          />
+        }
+        renderItem={({ item: c }) => (
+          <View key={c.customerId} style={[s.card, { borderLeftColor: COLL_RISK_COLOR[c.risk], marginBottom: spacing.sm }]}>
             <View style={s.cardHead}>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardT}>{c.customer}</Text>
@@ -63,8 +81,8 @@ export default function AdvCollectionForecastScreen() {
               ))}
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

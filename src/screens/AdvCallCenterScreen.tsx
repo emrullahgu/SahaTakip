@@ -11,6 +11,9 @@ import {
   CALL_OUTCOME_LABEL, CALL_OUTCOME_COLOR,
 } from '../services/advanced';
 import type { AdvCallAgent, AdvCallRecord } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 function fmt(sec: number): string {
   if (sec === 0) return '-';
@@ -32,39 +35,54 @@ export default function AdvCallCenterScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.kpiRow}>
-          <Kpi label="Bugün Çağrı" value={totalCalls.toString()} color="#22c55e" />
-          <Kpi label="Müsait" value={available.toString()} color="#22c55e" />
-          <Kpi label="Görüşmede" value={onCall.toString()} color="#3b82f6" />
-          <Kpi label="Memnuniyet" value={avgSat.toFixed(1)} color="#f59e0b" />
-        </View>
-
-        <Text style={s.sectionT}>Operatörler</Text>
-        {agents.map(a => (
-          <View key={a.id} style={s.card}>
-            <View style={s.row}>
-              <View style={[s.dot, { backgroundColor: CALL_AGENT_STATUS_COLOR[a.status] }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardT}>{a.name}</Text>
-                <Text style={s.cardD}>{a.calls} çağrı · ort. {fmt(a.avgDurationSec)}</Text>
-              </View>
-              {a.satisfaction > 0 && (
-                <View style={s.satBox}>
-                  <Ionicons name="star" size={12} color="#f59e0b" />
-                  <Text style={s.satT}>{a.satisfaction.toFixed(1)}</Text>
-                </View>
-              )}
-              <View style={[s.statusPill, { borderColor: CALL_AGENT_STATUS_COLOR[a.status] }]}>
-                <Text style={[s.statusT, { color: CALL_AGENT_STATUS_COLOR[a.status] }]}>{CALL_AGENT_STATUS_LABEL[a.status]}</Text>
-              </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={records}
+        keyExtractor={r => r.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.kpiRow}>
+              <Kpi label="Bugün Çağrı" value={totalCalls.toString()} color="#22c55e" />
+              <Kpi label="Müsait" value={available.toString()} color="#22c55e" />
+              <Kpi label="Görüşmede" value={onCall.toString()} color="#3b82f6" />
+              <Kpi label="Memnuniyet" value={avgSat.toFixed(1)} color="#f59e0b" />
             </View>
-          </View>
-        ))}
 
-        <Text style={s.sectionT}>Son Çağrılar</Text>
-        {records.map(r => (
-          <View key={r.id} style={[s.card, { borderLeftColor: CALL_OUTCOME_COLOR[r.outcome], borderLeftWidth: 4 }]}>
+            <Text style={s.sectionT}>Operatörler</Text>
+            {agents.map(a => (
+              <View key={a.id} style={[s.card, { marginBottom: spacing.xs }]}>
+                <View style={s.row}>
+                  <View style={[s.dot, { backgroundColor: CALL_AGENT_STATUS_COLOR[a.status] }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardT}>{a.name}</Text>
+                    <Text style={s.cardD}>{a.calls} çağrı · ort. {fmt(a.avgDurationSec)}</Text>
+                  </View>
+                  {a.satisfaction > 0 && (
+                    <View style={s.satBox}>
+                      <Ionicons name="star" size={12} color="#f59e0b" />
+                      <Text style={s.satT}>{a.satisfaction.toFixed(1)}</Text>
+                    </View>
+                  )}
+                  <View style={[s.statusPill, { borderColor: CALL_AGENT_STATUS_COLOR[a.status] }]}>
+                    <Text style={[s.statusT, { color: CALL_AGENT_STATUS_COLOR[a.status] }]}>{CALL_AGENT_STATUS_LABEL[a.status]}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+
+            <Text style={s.sectionT}>Son Çağrılar</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="call-outline"
+            title="Çağrı kaydı yok"
+            subtitle="Çağrı merkezi üzerinden bugün henüz bir görüşme yapılmadı."
+          />
+        }
+        renderItem={({ item: r }) => (
+          <View key={r.id} style={[s.card, { borderLeftColor: CALL_OUTCOME_COLOR[r.outcome], borderLeftWidth: 4, marginBottom: spacing.xs }]}>
             <View style={s.row}>
               <Ionicons name={r.direction === 'in' ? 'call' : 'arrow-redo'} size={20} color={r.direction === 'in' ? '#22c55e' : '#3b82f6'} />
               <View style={{ flex: 1 }}>
@@ -77,8 +95,8 @@ export default function AdvCallCenterScreen() {
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }

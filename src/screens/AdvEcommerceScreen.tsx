@@ -7,6 +7,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listEcomChannels, listEcomOrders, ECOM_STATUS_LABEL, ECOM_STATUS_COLOR } from '../services/advanced';
 import type { AdvEcomChannel, AdvEcomOrder } from '../types';
+import EmptyState from '../components/EmptyState';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { FlatList } from 'react-native';
 
 const STATUS_BG: Record<AdvEcomChannel['status'], string> = {
   connected: '#22c55e', pending: '#f59e0b', disconnected: '#64748b',
@@ -27,39 +30,54 @@ export default function AdvEcommerceScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.kpiRow}>
-          <Kpi label="Toplam Kanal" value={channels.length.toString()} color="#0ea5e9" />
-          <Kpi label="Bağlı" value={channels.filter(c => c.status === 'connected').length.toString()} color="#22c55e" />
-          <Kpi label="Bugün Sipariş" value={totalOrders.toString()} color="#8b5cf6" />
-          <Kpi label="Ciro" value={`₺${(totalRevenue / 1000).toFixed(1)}K`} color="#22c55e" />
-        </View>
-
-        <Text style={s.sectionT}>Kanallar</Text>
-        {channels.map(c => (
-          <View key={c.id} style={[s.card, { borderLeftColor: c.color }]}>
-            <View style={s.cardHead}>
-              <View style={[s.iconBox, { backgroundColor: c.color + '22' }]}>
-                <Ionicons name={c.logo as any} size={22} color={c.color} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.cardT}>{c.name}</Text>
-                <Text style={s.cardD}>{c.productsSynced} ürün senkron</Text>
-              </View>
-              <View style={[s.statusPill, { borderColor: STATUS_BG[c.status] }]}>
-                <Text style={[s.statusT, { color: STATUS_BG[c.status] }]}>{STATUS_LBL[c.status]}</Text>
-              </View>
+      <FlatList
+        {...FLATLIST_DEFAULTS}
+        data={orders}
+        keyExtractor={o => o.id}
+        contentContainerStyle={s.scroll}
+        ListHeaderComponent={
+          <>
+            <View style={s.kpiRow}>
+              <Kpi label="Toplam Kanal" value={channels.length.toString()} color="#0ea5e9" />
+              <Kpi label="Bağlı" value={channels.filter(c => c.status === 'connected').length.toString()} color="#22c55e" />
+              <Kpi label="Bugün Sipariş" value={totalOrders.toString()} color="#8b5cf6" />
+              <Kpi label="Ciro" value={`₺${(totalRevenue / 1000).toFixed(1)}K`} color="#22c55e" />
             </View>
-            <View style={s.metricsRow}>
-              <View style={s.metric}><Text style={s.metricV}>{c.ordersToday}</Text><Text style={s.metricL}>Sipariş</Text></View>
-              <View style={s.metric}><Text style={[s.metricV, { color: '#22c55e' }]}>₺{c.revenueToday.toLocaleString('tr-TR')}</Text><Text style={s.metricL}>Bugün Ciro</Text></View>
-            </View>
-          </View>
-        ))}
 
-        <Text style={s.sectionT}>Son Siparişler</Text>
-        {orders.map(o => (
-          <View key={o.id} style={[s.row, { borderLeftColor: ECOM_STATUS_COLOR[o.status] }]}>
+            <Text style={s.sectionT}>Kanallar</Text>
+            {channels.map(c => (
+              <View key={c.id} style={[s.card, { borderLeftColor: c.color, marginBottom: spacing.sm }]}>
+                <View style={s.cardHead}>
+                  <View style={[s.iconBox, { backgroundColor: c.color + '22' }]}>
+                    <Ionicons name={c.logo as any} size={22} color={c.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardT}>{c.name}</Text>
+                    <Text style={s.cardD}>{c.productsSynced} ürün senkron</Text>
+                  </View>
+                  <View style={[s.statusPill, { borderColor: STATUS_BG[c.status] }]}>
+                    <Text style={[s.statusT, { color: STATUS_BG[c.status] }]}>{STATUS_LBL[c.status]}</Text>
+                  </View>
+                </View>
+                <View style={s.metricsRow}>
+                  <View style={s.metric}><Text style={s.metricV}>{c.ordersToday}</Text><Text style={s.metricL}>Sipariş</Text></View>
+                  <View style={s.metric}><Text style={[s.metricV, { color: '#22c55e' }]}>₺{c.revenueToday.toLocaleString('tr-TR')}</Text><Text style={s.metricL}>Bugün Ciro</Text></View>
+                </View>
+              </View>
+            ))}
+
+            <Text style={s.sectionT}>Son Siparişler</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            icon="cart-outline"
+            title="Sipariş yok"
+            subtitle="Pazaryeri entegrasyonlarından henüz sipariş gelmedi."
+          />
+        }
+        renderItem={({ item: o }) => (
+          <View style={[s.row, { borderLeftColor: ECOM_STATUS_COLOR[o.status], marginBottom: spacing.xs }]}>
             <View style={{ flex: 1 }}>
               <Text style={s.rowT}>{o.customer}</Text>
               <Text style={s.rowD}>{o.channel} · {o.items} kalem · {o.at}</Text>
@@ -69,8 +87,8 @@ export default function AdvEcommerceScreen() {
               <Text style={[s.miniT, { color: ECOM_STATUS_COLOR[o.status] }]}>{ECOM_STATUS_LABEL[o.status]}</Text>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }
