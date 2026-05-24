@@ -88,20 +88,33 @@ export async function endShift(): Promise<FieldShift> {
   if (s.startedAt) s.totalMinutes = Math.round((Date.now() - new Date(s.startedAt).getTime()) / 60000);
   // Supabase senkronu — her durumda user_id üzerinden tüm aktif vardıyaları kapat
   let auditUid: string | null = null;
+  let syncError: Error | null = null;
   try {
     const uid = await currentUserId();
     auditUid = uid;
     if (uid) {
       // Once spesifik shiftId ile dene, sonra güvenli fallback (forceEndByUser).
       if (s.remoteShiftId) {
-        try { await shiftsRepo.end(s.remoteShiftId); } catch (e: any) { console.warn('[fieldOps.endShift.byId]', e?.message ?? e); }
+        try { await shiftsRepo.end(s.remoteShiftId); } catch (e: any) {
+          console.warn('[fieldOps.endShift.byId]', e?.message ?? e);
+          syncError = e instanceof Error ? e : new Error(String(e?.message ?? e));
+        }
       }
-      const closed = await shiftsRepo.forceEndByUser(uid);
-      if (closed > 0) console.log('[fieldOps.endShift] forceEnd kapattı:', closed);
+      try {
+        const closed = await shiftsRepo.forceEndByUser(uid);
+        if (closed > 0) {
+          console.log('[fieldOps.endShift] forceEnd kapattı:', closed);
+          syncError = null; // forceEnd başarılıysa sorun yok
+        }
+      } catch (e: any) {
+        console.warn('[fieldOps.endShift.force]', e?.message ?? e);
+        syncError = e instanceof Error ? e : new Error(String(e?.message ?? e));
+      }
     }
     s.remoteShiftId = null;
   } catch (e: any) {
     console.warn('[fieldOps.endShift.sync]', e?.message ?? e);
+    syncError = e instanceof Error ? e : new Error(String(e?.message ?? e));
   }
   await set(K.shift, s);
   // Audit
@@ -111,6 +124,7 @@ export async function endShift(): Promise<FieldShift> {
       void auditRepo.log(auditUid, { action: 'shift.end', tableName: 'shifts', refId: s.remoteShiftId ?? 'local', meta: { totalMinutes: s.totalMinutes } });
     } catch {}
   }
+  if (syncError) throw syncError;
   return s;
 }
 export async function toggleBreak(): Promise<FieldShift> {

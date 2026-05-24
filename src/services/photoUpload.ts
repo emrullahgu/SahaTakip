@@ -53,12 +53,12 @@ export async function uploadPhoto(localUri: string, folder: string): Promise<str
     });
     if (error) {
       console.warn('[photoUpload]', error.message);
-      return localUri;
+      throw new Error(error.message);
     }
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return data.publicUrl || localUri;
   } catch (e: any) {
     console.warn('[photoUpload.exception]', e?.message ?? e);
-    return localUri;
+    throw e instanceof Error ? e : new Error(String(e?.message ?? e));
   }
 }

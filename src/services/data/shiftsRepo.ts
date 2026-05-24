@@ -89,7 +89,7 @@ export const shiftsRepo = {
       await cacheSet(CACHE_ACTIVE, null);
       return;
     }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('shifts')
       .update({
         end_at: new Date().toISOString(),
@@ -97,8 +97,10 @@ export const shiftsRepo = {
         end_lng: lng ?? null,
         notes: notes ?? null,
       })
-      .eq('id', shiftId);
-    if (error) console.warn('[shifts.end]', error.message);
+      .eq('id', shiftId)
+      .select('id');
+    if (error) throw new Error(`[shifts.end] ${error.message}`);
+    if (!data || data.length === 0) throw new Error('Mesai bitirilemedi: yetkiniz yok veya kayıt bulunamadı.');
   },
 
   /** Güvenli bitir: shiftId yoksa veya hatalıysa user_id üzerinden tüm aktif vardıyaları kapat. */
@@ -113,10 +115,7 @@ export const shiftsRepo = {
       .eq('user_id', userId)
       .is('end_at', null)
       .select('id');
-    if (error) {
-      console.warn('[shifts.forceEndByUser]', error.message);
-      return 0;
-    }
+    if (error) throw new Error(`[shifts.forceEndByUser] ${error.message}`);
     return data?.length ?? 0;
   },
 

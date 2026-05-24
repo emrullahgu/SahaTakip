@@ -71,7 +71,15 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await enqueueSync({ id, table: 'work_orders', action: 'delete', payload: { id } });
       return;
     }
-    const { error } = await supabase.from('work_orders').delete().eq('number', id);
+    // .select() ile silinen satır sayısını doğrula — RLS sessizce 0 satır döndürürse hata fırlat.
+    const { data, error } = await supabase
+      .from('work_orders')
+      .delete()
+      .eq('number', id)
+      .select('id');
     if (error) throw new Error(`[workOrders.delete] ${error.message}`);
+    if (!data || data.length === 0) {
+      throw new Error('Silinemedi: yetkiniz yok veya kayıt bulunamadı.');
+    }
   },
 };

@@ -1634,3 +1634,51 @@ create policy "inbox_update_auth" on public.inbox_messages
 -- INSERT: yalnÄ±zca service_role (edge function) â€” RLS gereÄŸi policy yok.
 -- Edge functions service_role anahtarÄ± ile yazar.
 
+
+-- ====================================================================
+-- STORAGE RLS (POZ-FIX 2026-05-24) — photos / signatures / documents / customer-docs
+-- ====================================================================
+-- Supabase Dashboard > Storage > "photos" bucket'ý (Public read) oluþturmuþ olman gerek.
+-- Bu policy'ler authenticated user'larýn bucket'a yükleyebilmesini saðlar.
+-- Aksi halde supabase.storage.from('photos').upload(...) "new row violates RLS" ile reddedilir.
+
+-- photos: yetkili kullanýcý yazabilir, herkes okuyabilir (bucket zaten public)
+drop policy if exists "photos_authenticated_insert" on storage.objects;
+create policy "photos_authenticated_insert" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'photos');
+
+drop policy if exists "photos_authenticated_update" on storage.objects;
+create policy "photos_authenticated_update" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'photos');
+
+drop policy if exists "photos_owner_delete" on storage.objects;
+create policy "photos_owner_delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'photos' and (owner = auth.uid() or public.user_role() in ('admin','manager')));
+
+drop policy if exists "photos_public_read" on storage.objects;
+create policy "photos_public_read" on storage.objects
+  for select to anon, authenticated
+  using (bucket_id = 'photos');
+
+-- signatures / documents / customer-docs: sadece authenticated yazabilir & okuyabilir
+drop policy if exists "private_buckets_auth_all" on storage.objects;
+create policy "private_buckets_auth_all" on storage.objects
+  for all to authenticated
+  using (bucket_id in ('signatures','documents','customer-docs'))
+  with check (bucket_id in ('signatures','documents','customer-docs'));
+
+-- ====================================================================
+-- WORK ORDERS DELETE (POZ-FIX 2026-05-24) — saha kullanýcýsý atandýðý iþi silebilsin
+-- ====================================================================
+-- Eski wo_owner_write created_by + admin/manager'a izin veriyordu.
+-- Yeni: assigned_to_id (atanan saha kullanýcýsý) da silebilsin.
+drop policy if exists "wo_owner_write" on public.work_orders;
+create policy "wo_owner_write" on public.work_orders
+  for all using (
+    created_by = auth.uid()
+    or assigned_to_id = auth.uid()
+    or public.user_role() in ('admin','manager')
+  );

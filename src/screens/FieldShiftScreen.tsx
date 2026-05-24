@@ -1,6 +1,6 @@
 // Faz 42 — FieldShiftScreen: mesai başlat/bitir/mola
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,7 +41,13 @@ export default function FieldShiftScreen() {
             <Ionicons name={shift.status === 'on_break' ? 'play-circle' : 'pause'} size={26} color="#fff" />
             <Text style={s.btnT}>{shift.status === 'on_break' ? 'Devam' : 'Mola'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.btn, { backgroundColor: canEnd ? '#ef4444' : '#475569' }]} disabled={!canEnd} onPress={async () => { setShift(await endShift()); }}>
+          <TouchableOpacity style={[s.btn, { backgroundColor: canEnd ? '#ef4444' : '#475569' }]} disabled={!canEnd} onPress={async () => {
+            try { setShift(await endShift()); }
+            catch (e: any) {
+              setShift(await getShift());
+              Alert.alert('Mesai bitirilemedi', e?.message ?? 'Sunucu ile senkron sağlanamadı. Lokal olarak kapandı; tekrar deneyin.');
+            }
+          }}>
             <Ionicons name="stop" size={26} color="#fff" />
             <Text style={s.btnT}>Mesai Bitir</Text>
           </TouchableOpacity>

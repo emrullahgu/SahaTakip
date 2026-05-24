@@ -244,6 +244,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
           }
         }).catch(err => {
           console.warn('[pickPhoto.upload]', err?.message ?? err);
+          showToast(`Foto yüklenemedi: ${err?.message ?? 'bilinmeyen hata'}`, 'error');
         });
       }
     } catch (e: any) {
