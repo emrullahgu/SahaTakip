@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,11 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../services/supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +27,9 @@ import type { AuthStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
+const REMEMBER_KEY = '@sahatakip:rememberMe';
+const SAVED_EMAIL_KEY = '@sahatakip:lastEmail';
+
 export default function LoginScreen() {
   const navigation = useNavigation<NavProp>();
   const { signIn, enterDemoMode, isOffline } = useAuth();
@@ -30,6 +37,45 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const rememberRef = useRef(true);
+
+  // Kayıtlı e-posta ve "beni hatırla" tercihini yükle
+  useEffect(() => {
+    (async () => {
+      try {
+        const [savedEmail, savedRemember] = await Promise.all([
+          AsyncStorage.getItem(SAVED_EMAIL_KEY),
+          AsyncStorage.getItem(REMEMBER_KEY),
+        ]);
+        const remember = savedRemember === null ? true : savedRemember === '1';
+        setRememberMe(remember);
+        rememberRef.current = remember;
+        if (remember && savedEmail) setEmail(savedEmail);
+      } catch {}
+    })();
+  }, []);
+
+  // "Beni Hatırla" kapalıysa uygulama arka plana alındığında oturumu kapat
+  useEffect(() => {
+    const onChange = (state: AppStateStatus) => {
+      if (state === 'background' && !rememberRef.current) {
+        supabase.auth.signOut().catch(() => {});
+      }
+    };
+    const sub = AppState.addEventListener('change', onChange);
+    return () => sub.remove();
+  }, []);
+
+  const toggleRemember = async () => {
+    const next = !rememberMe;
+    setRememberMe(next);
+    rememberRef.current = next;
+    try {
+      await AsyncStorage.setItem(REMEMBER_KEY, next ? '1' : '0');
+      if (!next) await AsyncStorage.removeItem(SAVED_EMAIL_KEY);
+    } catch {}
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -41,7 +87,16 @@ export default function LoginScreen() {
     setLoading(false);
     if (error) {
       Alert.alert('Giriş başarısız', error);
+      return;
     }
+    try {
+      await AsyncStorage.setItem(REMEMBER_KEY, rememberMe ? '1' : '0');
+      if (rememberMe) {
+        await AsyncStorage.setItem(SAVED_EMAIL_KEY, email.trim());
+      } else {
+        await AsyncStorage.removeItem(SAVED_EMAIL_KEY);
+      }
+    } catch {}
   };
 
   return (
@@ -99,6 +154,20 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.rememberRow}
+              onPress={toggleRemember}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={rememberMe ? 'checkbox' : 'square-outline'}
+                size={20}
+                color={rememberMe ? brand.green : colors.text.faint}
+              />
+              <Text style={styles.rememberText}>Beni Hatırla</Text>
+              <Text style={styles.rememberHint}>(şifre tekrar sorulmasın)</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.primaryBtn, loading && { opacity: 0.6 }]}
@@ -187,6 +256,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   input: { flex: 1, color: colors.text.primary, fontSize: typography.sm, paddingVertical: 2 },
+
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: spacing.md,
+    paddingVertical: 4,
+  },
+  rememberText: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
+  rememberHint: { color: colors.text.faint, fontSize: 11, fontWeight: '500' },
 
   primaryBtn: {
     flexDirection: 'row',
