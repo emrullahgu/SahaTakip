@@ -8,6 +8,11 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Google Maps API key (EXPO_PUBLIC_*) bilerek client bundle'a gömülür ve
+  # Google Cloud Console'da Android paket adı + SHA-1 ile kısıtlanır.
+  # app.json / eas.json mobil derleme yapılandırması içindir; web build'in parçası değildir.
+  SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
+  SECRETS_SCAN_OMIT_PATHS = "app.json,eas.json"
 
 # SPA fallback — React Navigation history için
 [[redirects]]
