@@ -139,9 +139,32 @@ export default function ShiftScreen() {
         onPress: async () => {
           setLoading(true);
           const pos = await requestAndGetPosition();
-          await shiftsRepo.end(active.id, pos?.latitude, pos?.longitude);
-          setActive(null);
+          let primaryErr: any = null;
+          try {
+            await shiftsRepo.end(active.id, pos?.latitude, pos?.longitude);
+          } catch (e: any) {
+            primaryErr = e;
+            console.warn('[ShiftScreen.end] primary failed', e?.message ?? e);
+          }
+          // Fallback: kullanıcının tüm açık mesailerini kapat (orphan/RLS dahil)
+          let fallbackClosed = 0;
+          try {
+            fallbackClosed = await shiftsRepo.forceEndByUser(userId, pos?.latitude, pos?.longitude);
+          } catch (e: any) {
+            console.warn('[ShiftScreen.end] forceEndByUser failed', e?.message ?? e);
+            if (!primaryErr) primaryErr = e;
+          }
+          const stillActive = await shiftsRepo.getActive(userId);
+          setActive(stillActive);
           setLoading(false);
+          if (stillActive) {
+            Alert.alert(
+              'Mesai bitirilemedi',
+              primaryErr?.message ?? 'Sunucu ile senkron sağlanamadı; tekrar deneyin.'
+            );
+          } else if (primaryErr && fallbackClosed === 0) {
+            Alert.alert('Uyarı', primaryErr?.message ?? 'Mesai kapatma sırasında hata oluştu.');
+          }
         },
       },
     ]);

@@ -7,6 +7,7 @@
 // ====================================================================
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Alert } from 'react-native';
 import {
   WorkOrder,
   Employee,
@@ -619,14 +620,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteWorkOrder = (id: string) => {
-    setWorkOrders(prev => prev.filter(w => w.id !== id));
+    // Optimistik: önce listeden kaldır, hata olursa geri ekle.
+    let snapshot: WorkOrder[] = [];
+    setWorkOrders(prev => {
+      snapshot = prev;
+      return prev.filter(w => w.id !== id);
+    });
     workOrdersRepo.delete(id)
-      .then(() => showToast('İş emri silindi.'))
+      .then(() => {
+        showToast('İş emri silindi.');
+        auditRepo.log(userId, { action: 'work_order.delete', tableName: 'work_orders', refId: id });
+      })
       .catch(e => {
         console.warn('[work_order.delete]', e);
-        showToast(`Silinemedi: ${e?.message ?? 'yetkiniz olmayabilir'}`);
+        // Rollback: silinemediği için listeyi eski haline döndür.
+        setWorkOrders(snapshot);
+        const msg = e?.message ?? 'yetkiniz olmayabilir';
+        showToast(`Silinemedi: ${msg}`);
+        // Web'de toast'ı kaçıranlar için Alert da bas.
+        try { Alert.alert('İş emri silinemedi', msg); } catch { /* ignore */ }
       });
-    auditRepo.log(userId, { action: 'work_order.delete', tableName: 'work_orders', refId: id });
   };
 
   const generateFromRecurring = async (): Promise<number> => {

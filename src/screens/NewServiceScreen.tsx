@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG } from '../data/initialData';
 import { createApproval } from '../services/governance';
+import { uploadPhoto } from '../services/photoUpload';
 import { Customer, SelectedMaterial, ServiceCatalogItem, TabParamList, RootStackParamList } from '../types';
 
 type NavProp = CompositeNavigationProp<
@@ -187,6 +188,28 @@ export default function NewServiceScreen() {
     const profit = calculatedQuote - totalCost;
 
     const workOrderId = `KOB-DRAFT-${Date.now().toString().slice(-4)}`;
+
+    // Fotoğrafları Supabase Storage'a yükle (varsa). Hata olursa lokal URI fallback.
+    let beforeUrl = beforePhoto || '';
+    let afterUrl = afterPhoto || '';
+    let formUrl = formPhoto || undefined;
+    const uploadFolder = `work-orders/${workOrderId}`;
+    try {
+      if (beforePhoto) beforeUrl = await uploadPhoto(beforePhoto, uploadFolder);
+    } catch (e: any) {
+      Alert.alert('Foto yüklenemedi (öncesi)', e?.message ?? 'Bilinmeyen hata');
+    }
+    try {
+      if (afterPhoto) afterUrl = await uploadPhoto(afterPhoto, uploadFolder);
+    } catch (e: any) {
+      Alert.alert('Foto yüklenemedi (sonrası)', e?.message ?? 'Bilinmeyen hata');
+    }
+    try {
+      if (formPhoto) formUrl = await uploadPhoto(formPhoto, uploadFolder);
+    } catch (e: any) {
+      Alert.alert('Foto yüklenemedi (form)', e?.message ?? 'Bilinmeyen hata');
+    }
+
     addWorkOrder({
       id: workOrderId,
       client: selectedClient,
@@ -200,9 +223,9 @@ export default function NewServiceScreen() {
       quoteAmount: Math.round(calculatedQuote),
       profit: Math.round(profit),
       status: 'Onay Bekliyor',
-      beforePhoto: beforePhoto || '',
-      afterPhoto: afterPhoto || '',
-      formPhoto: formPhoto || undefined,
+      beforePhoto: beforeUrl,
+      afterPhoto: afterUrl,
+      formPhoto: formUrl,
       notes: notes || 'Saha bakımı tamamlandı, gerilim testleri yapıldı.',
     });
 
