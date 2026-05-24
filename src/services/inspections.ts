@@ -1,5 +1,4 @@
 // inspections.ts — POZ-DEV-087, POZ-DEV-088
-// Denetim formu + uygunsuzluk kaydı + kalite puanlama + düzeltici faaliyet
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Inspection,
@@ -9,9 +8,82 @@ import {
   NonconformitySeverity,
   NonconformityStatus,
 } from '../types';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
 const INS_KEY = '@SahaTakip:inspections';
 const NC_KEY = '@SahaTakip:nonconformities';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidOrNull(v?: string | null): string | null { return v && UUID_RE.test(v) ? v : null; }
+
+function insFromRow(r: any): Inspection {
+  return {
+    id: r.id,
+    type: r.type,
+    title: r.title,
+    assetId: r.asset_id || undefined,
+    customerId: r.customer_id || undefined,
+    workOrderId: r.work_order_id || undefined,
+    inspectorId: r.inspector_id || undefined,
+    date: r.date,
+    items: r.items || [],
+    score: r.score ?? 0,
+    status: r.status,
+    notes: r.notes || undefined,
+    createdAt: r.created_at,
+  } as Inspection;
+}
+function insToRow(i: Inspection) {
+  return {
+    type: i.type,
+    title: i.title,
+    asset_id: uuidOrNull(i.assetId),
+    customer_id: uuidOrNull(i.customerId),
+    work_order_id: uuidOrNull(i.workOrderId),
+    inspector_id: uuidOrNull(i.inspectorId),
+    date: i.date,
+    items: i.items || [],
+    score: i.score,
+    status: i.status,
+    notes: i.notes || null,
+    created_at: i.createdAt,
+  };
+}
+function ncFromRow(r: any): Nonconformity {
+  return {
+    id: r.id,
+    inspectionId: r.inspection_id || undefined,
+    assetId: r.asset_id || undefined,
+    customerId: r.customer_id || undefined,
+    description: r.description,
+    severity: r.severity,
+    status: r.status,
+    assignedTo: r.assigned_to || undefined,
+    dueDate: r.due_date || undefined,
+    correctiveAction: r.corrective_action || undefined,
+    rootCause: r.root_cause || undefined,
+    closedAt: r.closed_at || undefined,
+    closedBy: r.closed_by || undefined,
+    createdAt: r.created_at,
+  } as Nonconformity;
+}
+function ncToRow(n: Nonconformity) {
+  return {
+    inspection_id: uuidOrNull(n.inspectionId),
+    asset_id: uuidOrNull(n.assetId),
+    customer_id: uuidOrNull(n.customerId),
+    description: n.description,
+    severity: n.severity,
+    status: n.status,
+    assigned_to: uuidOrNull(n.assignedTo),
+    due_date: n.dueDate || null,
+    corrective_action: n.correctiveAction || null,
+    root_cause: n.rootCause || null,
+    closed_at: n.closedAt || null,
+    closed_by: uuidOrNull(n.closedBy),
+    created_at: n.createdAt,
+  };
+}
 
 function rid(prefix: string): string {
   return prefix + '_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -20,6 +92,16 @@ function rid(prefix: string): string {
 // --- Inspections -------------------------------------------------------------
 
 export async function listInspections(): Promise<Inspection[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('inspections').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(insFromRow);
+        await AsyncStorage.setItem(INS_KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(INS_KEY);
     return raw ? (JSON.parse(raw) as Inspection[]) : [];
@@ -44,12 +126,18 @@ export async function createInspection(
   input: Omit<Inspection, 'id' | 'createdAt' | 'score'> & { score?: number },
 ): Promise<Inspection> {
   const all = await listInspections();
-  const next: Inspection = {
+  let next: Inspection = {
     ...input,
     id: rid('ins'),
     score: input.score ?? computeScore(input.items),
     createdAt: new Date().toISOString(),
   };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('inspections').insert(insToRow(next)).select().single();
+      if (!error && data) next = insFromRow(data);
+    } catch { /* offline */ }
+  }
   all.unshift(next);
   await AsyncStorage.setItem(INS_KEY, JSON.stringify(all));
   return next;
@@ -64,12 +152,22 @@ export async function updateInspection(
   if (i < 0) return undefined;
   const merged = { ...all[i], ...patch, id: all[i].id };
   if (patch.items) merged.score = computeScore(merged.items);
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try {
+      const row: any = insToRow(merged);
+      delete row.created_at;
+      await supabase.from('inspections').update(row).eq('id', id);
+    } catch { /* offline */ }
+  }
   all[i] = merged;
   await AsyncStorage.setItem(INS_KEY, JSON.stringify(all));
   return merged;
 }
 
 export async function deleteInspection(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try { await supabase.from('inspections').delete().eq('id', id); } catch { /* offline */ }
+  }
   const all = await listInspections();
   await AsyncStorage.setItem(INS_KEY, JSON.stringify(all.filter(x => x.id !== id)));
 }
@@ -139,6 +237,16 @@ export function buildItemsFromTemplate(type: InspectionType): InspectionItem[] {
 // --- Nonconformities --------------------------------------------------------
 
 export async function listNonconformities(): Promise<Nonconformity[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('nonconformities').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(ncFromRow);
+        await AsyncStorage.setItem(NC_KEY, JSON.stringify(list));
+        return list;
+      }
+    } catch { /* fallback */ }
+  }
   try {
     const raw = await AsyncStorage.getItem(NC_KEY);
     return raw ? (JSON.parse(raw) as Nonconformity[]) : [];
@@ -151,12 +259,18 @@ export async function createNonconformity(
   input: Omit<Nonconformity, 'id' | 'createdAt' | 'status'> & { status?: NonconformityStatus },
 ): Promise<Nonconformity> {
   const all = await listNonconformities();
-  const next: Nonconformity = {
+  let next: Nonconformity = {
     ...input,
     id: rid('nc'),
     status: input.status || 'open',
     createdAt: new Date().toISOString(),
   };
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('nonconformities').insert(ncToRow(next)).select().single();
+      if (!error && data) next = ncFromRow(data);
+    } catch { /* offline */ }
+  }
   all.unshift(next);
   await AsyncStorage.setItem(NC_KEY, JSON.stringify(all));
   return next;
@@ -173,11 +287,21 @@ export async function updateNonconformity(
   if (patch.status === 'closed' && !all[i].closedAt) {
     all[i].closedAt = new Date().toISOString();
   }
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try {
+      const row: any = ncToRow(all[i]);
+      delete row.created_at;
+      await supabase.from('nonconformities').update(row).eq('id', id);
+    } catch { /* offline */ }
+  }
   await AsyncStorage.setItem(NC_KEY, JSON.stringify(all));
   return all[i];
 }
 
 export async function deleteNonconformity(id: string): Promise<void> {
+  if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
+    try { await supabase.from('nonconformities').delete().eq('id', id); } catch { /* offline */ }
+  }
   const all = await listNonconformities();
   await AsyncStorage.setItem(NC_KEY, JSON.stringify(all.filter(x => x.id !== id)));
 }

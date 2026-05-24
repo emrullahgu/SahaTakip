@@ -92,7 +92,7 @@ export default function StockMovementsScreen() {
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
-              {f === 'Tümü' ? 'Tümü' : KIND_META[f].label}
+              {f === 'Tümü' ? 'Tümü' : KIND_META[f as StockMovementKind].label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -111,7 +111,7 @@ export default function StockMovementsScreen() {
           />
         }
         renderItem={({ item: mv }) => {
-          const meta = KIND_META[mv.kind];
+          const meta = KIND_META[mv.kind as StockMovementKind];
           const fromName = mv.fromWarehouseId ? warehouses[mv.fromWarehouseId]?.name : null;
           const toName = mv.toWarehouseId ? warehouses[mv.toWarehouseId]?.name : null;
           return (

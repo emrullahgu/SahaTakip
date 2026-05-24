@@ -50,10 +50,10 @@ export default function SecClassificationScreen() {
 
             <View style={s.legend}>
               {SENS_ORDER.map(k => (
-                <TouchableOpacity key={k} style={[s.legendBox, { borderColor: SEC_SENS_COLOR[k] }, filter === k && { backgroundColor: SEC_SENS_COLOR[k] + '33' }]} onPress={() => setFilter(filter === k ? 'all' : k)}>
-                  <View style={[s.dot, { backgroundColor: SEC_SENS_COLOR[k] }]} />
-                  <Text style={s.legendT}>{SEC_SENS_LABEL[k]}</Text>
-                  <Text style={[s.legendC, { color: SEC_SENS_COLOR[k] }]}>{counts[k]}</Text>
+                <TouchableOpacity key={k} style={[s.legendBox, { borderColor: SEC_SENS_COLOR[k as keyof typeof SEC_SENS_COLOR] }, filter === k && { backgroundColor: SEC_SENS_COLOR[k as keyof typeof SEC_SENS_COLOR] + '33' }]} onPress={() => setFilter(filter === k ? 'all' : k)}>
+                  <View style={[s.dot, { backgroundColor: SEC_SENS_COLOR[k as keyof typeof SEC_SENS_COLOR] }]} />
+                  <Text style={s.legendT}>{SEC_SENS_LABEL[k as keyof typeof SEC_SENS_LABEL]}</Text>
+                  <Text style={[s.legendC, { color: SEC_SENS_COLOR[k as keyof typeof SEC_SENS_COLOR] }]}>{counts[k as keyof typeof counts]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -67,7 +67,7 @@ export default function SecClassificationScreen() {
           />
         }
         renderItem={({ item }) => (
-          <View style={[s.card, { borderLeftColor: SEC_SENS_COLOR[item.sensitivity] }]}>
+          <View style={[s.card, { borderLeftColor: SEC_SENS_COLOR[item.sensitivity as keyof typeof SEC_SENS_COLOR] }]}>
             <View style={s.row}>
               <View style={{ flex: 1 }}>
                 <Text style={s.field}>{item.field}</Text>
@@ -75,8 +75,8 @@ export default function SecClassificationScreen() {
                 {item.description && <Text style={s.desc}>{item.description}</Text>}
               </View>
               <View style={s.right}>
-                <View style={[s.pill, { backgroundColor: SEC_SENS_COLOR[item.sensitivity] + '33', borderColor: SEC_SENS_COLOR[item.sensitivity] }]}>
-                  <Text style={[s.pillT, { color: SEC_SENS_COLOR[item.sensitivity] }]}>{SEC_SENS_LABEL[item.sensitivity]}</Text>
+                <View style={[s.pill, { backgroundColor: SEC_SENS_COLOR[item.sensitivity as keyof typeof SEC_SENS_COLOR] + '33', borderColor: SEC_SENS_COLOR[item.sensitivity as keyof typeof SEC_SENS_COLOR] }]}>
+                  <Text style={[s.pillT, { color: SEC_SENS_COLOR[item.sensitivity as keyof typeof SEC_SENS_COLOR] }]}>{SEC_SENS_LABEL[item.sensitivity as keyof typeof SEC_SENS_LABEL]}</Text>
                 </View>
                 <Text style={s.count}>{item.recordCount.toLocaleString('tr-TR')} kayıt</Text>
                 <View style={s.encRow}>
