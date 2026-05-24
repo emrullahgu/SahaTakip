@@ -195,19 +195,21 @@ export default function ManagerScreen() {
           </View>
 
           {/* Ticari & Finans */}
-          <Text style={styles.sectionLabel}>Ticari & Finans</Text>
-          <View style={styles.quickRow}>
-            <HubBtn route="QuoteFlowHub" label="Teklif Sistemi" icon="document-text-outline" color="#f59e0b" />
-            <HubBtn route="ProposalsHub" label="Teklif Modülleri" icon="calculator-outline" color="#d946ef" />
-            <HubBtn route="SmartQuoteHub" label="Akıllı Teklif" icon="bulb" color="#f97316" />
-            <HubBtn route="CustomerHub" label="Müşteri Merkezi" icon="briefcase-outline" color="#ec4899" />
-            <HubBtn route="CustomerExperienceHub" label="Müşteri Deneyimi" icon="storefront-outline" color="#ec4899" />
-            <HubBtn route="FinanceHub" label="Finans & Tahsilat" icon="cash-outline" color="#10b981" />
-            <HubBtn route="OrdHub" label="Sipariş Yönetimi" icon="bag-handle" color="#f97316" />
-            <HubBtn route="EInvoice" label="E-Fatura" icon="receipt-outline" color="#be185d" />
-            <HubBtn route="Payments" label="Tahsilatlar" icon="cash-outline" color="#16a34a" />
-            <HubBtn route="CustomerBalances" label="Müşteri Bakiyeleri" icon="wallet-outline" color="#d97706" />
-          </View>
+          <RoleGuard allow={['admin', 'manager']}>
+            <Text style={styles.sectionLabel}>Ticari & Finans</Text>
+            <View style={styles.quickRow}>
+              <HubBtn route="QuoteFlowHub" label="Teklif Sistemi" icon="document-text-outline" color="#f59e0b" />
+              <HubBtn route="ProposalsHub" label="Teklif Modülleri" icon="calculator-outline" color="#d946ef" />
+              <HubBtn route="SmartQuoteHub" label="Akıllı Teklif" icon="bulb" color="#f97316" />
+              <HubBtn route="CustomerHub" label="Müşteri Merkezi" icon="briefcase-outline" color="#ec4899" />
+              <HubBtn route="CustomerExperienceHub" label="Müşteri Deneyimi" icon="storefront-outline" color="#ec4899" />
+              <HubBtn route="FinanceHub" label="Finans & Tahsilat" icon="cash-outline" color="#10b981" />
+              <HubBtn route="OrdHub" label="Sipariş Yönetimi" icon="bag-handle" color="#f97316" />
+              <HubBtn route="EInvoice" label="E-Fatura" icon="receipt-outline" color="#be185d" />
+              <HubBtn route="Payments" label="Tahsilatlar" icon="cash-outline" color="#16a34a" />
+              <HubBtn route="CustomerBalances" label="Müşteri Bakiyeleri" icon="wallet-outline" color="#d97706" />
+            </View>
+          </RoleGuard>
 
           {/* Lojistik & Stok */}
           <Text style={styles.sectionLabel}>Lojistik & Stok</Text>

@@ -223,7 +223,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addWorkOrder = (order: WorkOrder) => {
     setWorkOrders(prev => [order, ...prev]);
-    workOrdersRepo.insert(order).catch(e => console.warn(e));
+    workOrdersRepo.insert(order)
+      .then(() => {
+        if (order.status === 'Onay Bekliyor') {
+          showToast('Onay havuzuna gönderildi ✓');
+        }
+      })
+      .catch(e => {
+        console.warn('[wo.insert]', e);
+        showToast('⚠️ Bulutta kayıt başarısız: ' + (e?.message || 'bilinmeyen hata'));
+      });
     auditRepo.log(userId, { action: 'work_order.create', tableName: 'work_orders', refId: order.id });
     showToast('Rapor gönderildi! Yönetici onay havuzuna eklendi.');
   };

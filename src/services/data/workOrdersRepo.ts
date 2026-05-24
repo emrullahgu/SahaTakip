@@ -38,7 +38,14 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await cacheSet(CACHE_KEY, [w, ...list]);
       return w;
     }
-    const { error } = await supabase.from('work_orders').insert(workOrderToRow(w));
+    // Auth uid'i çek: RLS wo_owner_write created_by = auth.uid() istiyor.
+    // Aksi halde saha kullanıcısının insert'i sessizce reddediliyor → admin göremiyor.
+    let userId: string | undefined;
+    try {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id;
+    } catch { /* ignore */ }
+    const { error } = await supabase.from('work_orders').insert(workOrderToRow(w, userId));
     if (error) throw new Error(`[workOrders.insert] ${error.message}`);
     return w;
   },

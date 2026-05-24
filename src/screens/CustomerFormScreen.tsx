@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { useVisit } from '../context/VisitContext';
+import { useHasRole } from '../components/RoleGuard';
 import type { Customer, RootStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CustomerForm'>;
@@ -28,6 +29,7 @@ export default function CustomerFormScreen() {
   const route = useRoute<RouteProps>();
   const { customers, addCustomer, updateCustomer } = useAppContext();
   const { activeVisit, checkIn, checkOut, loading: visitLoading } = useVisit();
+  const canSeeFinance = useHasRole(['admin', 'manager']);
 
   const editingId = route.params?.customerId;
   const existing = editingId ? customers.find(c => c.id === editingId) : null;
@@ -129,15 +131,19 @@ export default function CustomerFormScreen() {
             </View>
           </View>
 
-          <Text style={styles.section}>Finansal Bilgiler</Text>
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <View style={{ flex: 1 }}>
-              <Field label="Risk Limiti" value={String(form.riskLimit ?? '')} onChangeText={v => set('riskLimit', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Field label="Mevcut Bakiye" value={String(form.currentBalance ?? '')} onChangeText={v => set('currentBalance', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
-            </View>
-          </View>
+          {canSeeFinance && (
+            <>
+              <Text style={styles.section}>Finansal Bilgiler</Text>
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Field label="Risk Limiti" value={String(form.riskLimit ?? '')} onChangeText={v => set('riskLimit', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Field label="Mevcut Bakiye" value={String(form.currentBalance ?? '')} onChangeText={v => set('currentBalance', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
+                </View>
+              </View>
+            </>
+          )}
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
             <Ionicons name={isEdit ? 'save-outline' : 'add-circle-outline'} size={18} color="#fff" />
