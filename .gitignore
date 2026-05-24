@@ -28,3 +28,5 @@ ios/
 # Real (PII) source files
 realdata/
 src/data/realData.meta.json
+
+build-android-run.log

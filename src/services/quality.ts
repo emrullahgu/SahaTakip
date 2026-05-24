@@ -52,13 +52,7 @@ async function read<T>(key: string, seed: T): Promise<T> {
 async function write<T>(key: string, data: T) { await AsyncStorage.setItem(key, JSON.stringify(data)); }
 
 // ---------- Non-Conformity ----------
-const NC_SEED: NonConformityRecord[] = [
-  { id: 'nc1', code: 'NC-2025-001', kind: 'safety', severity: 'high', title: 'Yüksekte çalışma — emniyet kemeri yok', description: 'Saha personeli 4m yükseklikte emniyet kemeri kullanmadan çalıştı.', location: 'Mavi Plaza GES sahası', reportedBy: 'Mehmet Yılmaz', reportedAt: subDays(3), status: 'in_progress', assignedTo: 'Ali Demir', dueAt: addDays(4), photoUris: [] },
-  { id: 'nc2', code: 'NC-2025-002', kind: 'quality', severity: 'medium', title: 'Pano etiketleri eksik', description: 'AG pano üzerindeki devre etiketleri silinmiş.', location: 'Yıldız AVM', reportedBy: 'Ayşe Kaya', reportedAt: subDays(7), status: 'closed', closedAt: subDays(1), assignedTo: 'Hakan Öz', photoUris: [] },
-  { id: 'nc3', code: 'NC-2025-003', kind: 'documentation', severity: 'low', title: 'Bakım formu imzasız', description: 'Aylık bakım raporu müşteri imzası alınmadan teslim edilmiş.', location: 'Atlas Fabrika', reportedBy: 'Selin Yıldız', reportedAt: subDays(10), status: 'open', dueAt: addDays(-2), photoUris: [] },
-  { id: 'nc4', code: 'NC-2025-004', kind: 'environmental', severity: 'critical', title: 'Trafo yağı sızıntısı', description: 'Trafo altında yağ lekesi tespit edildi.', location: 'Doğa Tesisi', reportedBy: 'Mehmet Yılmaz', reportedAt: subDays(1), status: 'open', assignedTo: 'Ali Demir', dueAt: addDays(2), photoUris: [] },
-  { id: 'nc5', code: 'NC-2025-005', kind: 'process', severity: 'medium', title: 'İş emri onaysız kapatıldı', description: 'Servis tamamlandı ancak amir onayı alınmadı.', location: 'Çelik İmalat', reportedBy: 'Ayşe Kaya', reportedAt: subDays(5), status: 'in_progress', assignedTo: 'Selin Yıldız', dueAt: addDays(6), photoUris: [] },
-];
+const NC_SEED: NonConformityRecord[] = [];
 
 const computeOverdue = (n: NonConformityRecord): NonConformityRecord => {
   if (n.status === 'closed') return n;
@@ -102,12 +96,7 @@ export const assignNc = async (id: string, assignedTo: string, dueAt?: string) =
 };
 
 // ---------- CAPA ----------
-const CAPA_SEED: CapaRecord[] = [
-  { id: 'c1', ncId: 'nc1', ncTitle: 'Yüksekte çalışma', kind: 'corrective', description: 'Tüm saha personeline emniyet kemeri eğitimi verilecek.', owner: 'Ali Demir', plannedAt: addDays(5), status: 'in_progress' },
-  { id: 'c2', ncId: 'nc1', ncTitle: 'Yüksekte çalışma', kind: 'preventive', description: 'Aylık denetim kontrol listesine "kemer kontrolü" eklendi.', owner: 'Selin Yıldız', plannedAt: addDays(10), status: 'planned' },
-  { id: 'c3', ncId: 'nc2', ncTitle: 'Pano etiketleri', kind: 'corrective', description: 'Tüm panolarda etiketler yenilendi.', owner: 'Hakan Öz', plannedAt: subDays(2), completedAt: subDays(1), status: 'done', effectiveness: 4 },
-  { id: 'c4', ncId: 'nc4', ncTitle: 'Trafo yağ sızıntısı', kind: 'corrective', description: 'Trafo contası değiştirilecek.', owner: 'Ali Demir', plannedAt: addDays(2), status: 'planned' },
-];
+const CAPA_SEED: CapaRecord[] = [];
 export const listCapa = async (): Promise<CapaRecord[]> => read(K_CAPA, CAPA_SEED);
 export const saveCapa = async (c: CapaRecord) => {
   const list = await read(K_CAPA, CAPA_SEED);
@@ -133,38 +122,7 @@ export const updateCapaStatus = async (id: string, status: CapaStatus, effective
 };
 
 // ---------- Safety Checklists ----------
-const CHK_SEED: SafetyChecklist[] = [
-  {
-    id: 'k1', title: 'Yüksekte Çalışma Öncesi', location: 'Mavi Plaza', performedBy: 'Ali Demir', performedAt: subDays(1),
-    items: [
-      { id: 'i1', text: 'Emniyet kemeri kontrolü', checked: true },
-      { id: 'i2', text: 'İskele sağlamlığı', checked: true },
-      { id: 'i3', text: 'Hava koşulu uygunluğu', checked: true },
-      { id: 'i4', text: 'İlk yardım çantası', checked: false, note: 'Eksik' },
-      { id: 'i5', text: 'Ekipman muayene tarihi', checked: true },
-    ],
-    score: 80, passed: true,
-  },
-  {
-    id: 'k2', title: 'Elektrik Pano Müdahale', location: 'Atlas Fabrika', performedBy: 'Hakan Öz', performedAt: subDays(3),
-    items: [
-      { id: 'i1', text: 'Enerji kesimi', checked: true },
-      { id: 'i2', text: 'Topraklama kontrolü', checked: true },
-      { id: 'i3', text: 'KKD (eldiven, gözlük)', checked: true },
-      { id: 'i4', text: 'Kilit-Etiket sistemi', checked: true },
-    ],
-    score: 100, passed: true,
-  },
-  {
-    id: 'k3', title: 'Kapalı Alan Girişi', location: 'Yıldız AVM Trafo Odası', performedBy: 'Selin Yıldız', performedAt: subDays(5),
-    items: [
-      { id: 'i1', text: 'Gaz ölçümü', checked: false, note: 'Cihaz arızalı' },
-      { id: 'i2', text: 'Havalandırma', checked: true },
-      { id: 'i3', text: 'İletişim sağlama', checked: true },
-    ],
-    score: 67, passed: false,
-  },
-];
+const CHK_SEED: SafetyChecklist[] = [];
 export const listChecklists = async (): Promise<SafetyChecklist[]> => read(K_CHK, CHK_SEED);
 export const saveChecklist = async (c: SafetyChecklist) => {
   const list = await read(K_CHK, CHK_SEED);
@@ -184,12 +142,7 @@ export const createChecklist = async (title: string, location: string, performed
 };
 
 // ---------- Risk Assessment ----------
-const RISK_SEED: RiskAssessment[] = [
-  { id: 'r1', hazard: 'Elektrik çarpması', location: 'AG Pano', likelihood: 3, severity: 5, score: 15, controls: 'Enerji kesimi, KKD kullanımı, kilit-etiket', residualScore: 4, owner: 'Hakan Öz', createdAt: subDays(20) },
-  { id: 'r2', hazard: 'Yüksekten düşme', location: 'GES Çatı Sahası', likelihood: 4, severity: 5, score: 20, controls: 'Emniyet kemeri, korkuluk, yağmurda çalışmama', residualScore: 5, owner: 'Ali Demir', createdAt: subDays(15) },
-  { id: 'r3', hazard: 'Trafo yağ sızıntısı', location: 'OG Trafo', likelihood: 2, severity: 4, score: 8, controls: 'Periyodik bakım, sızıntı tepsisi', residualScore: 3, owner: 'Selin Yıldız', createdAt: subDays(10) },
-  { id: 'r4', hazard: 'Kapalı alan boğulma', location: 'Trafo Odası', likelihood: 2, severity: 5, score: 10, controls: 'Gaz ölçümü, havalandırma, çift kişi', residualScore: 3, owner: 'Ayşe Kaya', createdAt: subDays(5) },
-];
+const RISK_SEED: RiskAssessment[] = [];
 export const listRisks = async (): Promise<RiskAssessment[]> => read(K_RISK, RISK_SEED);
 export const saveRisk = async (r: RiskAssessment) => {
   const list = await read(K_RISK, RISK_SEED);
@@ -208,12 +161,7 @@ export const riskColor = (score: number) => score >= 15 ? '#ef4444' : score >= 9
 export const riskLabel = (score: number) => score >= 15 ? 'Çok Yüksek' : score >= 9 ? 'Yüksek' : score >= 5 ? 'Orta' : 'Düşük';
 
 // ---------- Audit Schedule ----------
-const AUDIT_SEED: AuditScheduleEntry[] = [
-  { id: 'a1', title: 'ISO 9001 İç Denetim - Q1', auditor: 'Selin Yıldız', scope: 'Tüm operasyon, kalite yönetim sistemi', plannedAt: addDays(7), status: 'planned' },
-  { id: 'a2', title: 'İSG Saha Denetimi', auditor: 'Ali Demir', scope: 'GES sahaları, yüksekte çalışma', plannedAt: addDays(3), status: 'in_progress' },
-  { id: 'a3', title: 'Müşteri Memnuniyet Denetimi', auditor: 'Ayşe Kaya', scope: 'Geçen 3 ayın servis kayıtları', plannedAt: subDays(2), status: 'overdue' },
-  { id: 'a4', title: 'Q4 Kapanış Denetimi', auditor: 'Mehmet Yılmaz', scope: 'Yıl sonu envanter ve dökümantasyon', plannedAt: subDays(30), status: 'completed' },
-];
+const AUDIT_SEED: AuditScheduleEntry[] = [];
 
 const computeAuditStatus = (a: AuditScheduleEntry): AuditScheduleEntry => {
   if (a.status === 'completed') return a;
@@ -243,20 +191,7 @@ export const updateAuditStatus = async (id: string, status: AuditStatus) => {
 };
 
 // ---------- Audit Reports ----------
-const REPORT_SEED: AuditReport[] = [
-  {
-    id: 'rp1', auditTitle: 'Q4 Kapanış Denetimi', auditor: 'Mehmet Yılmaz', performedAt: subDays(28),
-    sections: [
-      { name: 'Doküman Yönetimi', score: 18, maxScore: 20 },
-      { name: 'Süreç Uygunluğu', score: 22, maxScore: 25 },
-      { name: 'Müşteri İlişkileri', score: 23, maxScore: 25 },
-      { name: 'İç Denetim', score: 17, maxScore: 20 },
-      { name: 'Düzeltici Faaliyet', score: 8, maxScore: 10 },
-    ],
-    totalScore: 88, maxScore: 100, percent: 88,
-    findings: ['Doküman revizyon kontrolünde 2 küçük uygunsuzluk', 'Bir CAPA gecikmeli kapatılmış', 'Müşteri şikayet kayıt sistemi mükemmel'],
-  },
-];
+const REPORT_SEED: AuditReport[] = [];
 export const listReports = async (): Promise<AuditReport[]> => read(K_REPORT, REPORT_SEED);
 export const createReport = async (auditTitle: string, auditor: string, sections: AuditScoreSection[], findings: string[]): Promise<AuditReport> => {
   const totalScore = sections.reduce((a, s) => a + s.score, 0);
