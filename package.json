@@ -1,7 +1,7 @@
 {
   "name": "sahatakip",
   "version": "1.0.0",
-  "main": "App.tsx",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "dev": "expo start --web",
