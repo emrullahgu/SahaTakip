@@ -61,6 +61,7 @@ export interface WorkOrder {
     | 'Faturalandırıldı';
   beforePhoto: string;
   afterPhoto: string;
+  formPhoto?: string;             // Servis formu (kağıt) fotoğrafı
   notes: string;
   // FAZ 3 alanları
   priority?: WorkOrderPriority;

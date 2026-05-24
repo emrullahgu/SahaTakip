@@ -49,6 +49,7 @@ export default function NewServiceScreen() {
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedMaterial[]>([]);
   const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
   const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
+  const [formPhoto, setFormPhoto] = useState<string | null>(null);
   const [otherCost, setOtherCost] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -114,7 +115,7 @@ export default function NewServiceScreen() {
     });
   };
 
-  const pickPhoto = async (type: 'before' | 'after') => {
+  const pickPhoto = async (type: 'before' | 'after' | 'form') => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('İzin Gerekli', 'Fotoğraf çekmek için kamera izni gereklidir.');
@@ -127,11 +128,12 @@ export default function NewServiceScreen() {
     });
     if (!result.canceled && result.assets.length > 0) {
       if (type === 'before') setBeforePhoto(result.assets[0].uri);
-      else setAfterPhoto(result.assets[0].uri);
+      else if (type === 'after') setAfterPhoto(result.assets[0].uri);
+      else setFormPhoto(result.assets[0].uri);
     }
   };
 
-  const pickFromGallery = async (type: 'before' | 'after') => {
+  const pickFromGallery = async (type: 'before' | 'after' | 'form') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('İzin Gerekli', 'Galeri erişimi için izin gereklidir.');
@@ -143,11 +145,12 @@ export default function NewServiceScreen() {
     });
     if (!result.canceled && result.assets.length > 0) {
       if (type === 'before') setBeforePhoto(result.assets[0].uri);
-      else setAfterPhoto(result.assets[0].uri);
+      else if (type === 'after') setAfterPhoto(result.assets[0].uri);
+      else setFormPhoto(result.assets[0].uri);
     }
   };
 
-  const showPhotoOptions = (type: 'before' | 'after') => {
+  const showPhotoOptions = (type: 'before' | 'after' | 'form') => {
     Alert.alert('Fotoğraf Ekle', 'Kaynak seçin', [
       { text: 'Kamera', onPress: () => pickPhoto(type) },
       { text: 'Galeri', onPress: () => pickFromGallery(type) },
@@ -169,7 +172,7 @@ export default function NewServiceScreen() {
     setSelectedMaterials(prev => prev.filter(m => m.id !== id));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedClient) {
       Alert.alert('Müşteri Seçin', 'Devam etmek için bir müşteri seçin.');
       return;
@@ -202,29 +205,37 @@ export default function NewServiceScreen() {
       status: 'Onay Bekliyor',
       beforePhoto,
       afterPhoto,
+      formPhoto: formPhoto || undefined,
       notes: notes || 'Saha bakımı tamamlandı, gerilim testleri yapıldı.',
     });
 
     // Yönetici onay havuzuna ApprovalRequest olarak da düşür
-    createApproval({
-      kind: 'other',
-      title: `Servis Raporu Onayı: ${selectedClient}`,
-      description: `${selectedService.name} – Teklif ₺${Math.round(calculatedQuote).toLocaleString('tr-TR')}`,
-      resource: 'work_order',
-      resourceId: workOrderId,
-      requestedByName: engineerName,
-      payload: {
-        client: selectedClient,
-        materialCost,
-        laborCost,
-        extraCost,
-        quoteAmount: Math.round(calculatedQuote),
-      },
-    }).catch(e => console.warn('[approval.create]', e));
+    try {
+      await createApproval({
+        kind: 'other',
+        title: `Servis Raporu Onayı: ${selectedClient}`,
+        description: `${selectedService.name} – Teklif ₺${Math.round(calculatedQuote).toLocaleString('tr-TR')}`,
+        resource: 'work_order',
+        resourceId: workOrderId,
+        requestedByName: engineerName,
+        payload: {
+          client: selectedClient,
+          materialCost,
+          laborCost,
+          extraCost,
+          quoteAmount: Math.round(calculatedQuote),
+        },
+      });
+    } catch (e) {
+      console.warn('[approval.create]', e);
+    }
+
+    Alert.alert('Gönderildi', 'Servis raporu yönetici onay havuzuna düştü.');
 
     // Reset form
     setBeforePhoto(null);
     setAfterPhoto(null);
+    setFormPhoto(null);
     setSelectedMaterials([]);
     setOtherCost('');
     setNotes('');
@@ -361,8 +372,31 @@ export default function NewServiceScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Step 6: Extra Cost & Notes */}
-        <Text style={styles.stepLabel}>6. Yol / Yemek Masrafı (₺)</Text>
+        {/* Step 6: Servis Formu Fotoğrafı (opsiyonel) */}
+        <Text style={styles.stepLabel}>6. Servis Formu Fotoğrafı (opsiyonel)</Text>
+        {formPhoto ? (
+          <View style={styles.photoContainer}>
+            <Image source={{ uri: formPhoto }} style={styles.photo} resizeMode="cover" />
+            <TouchableOpacity
+              style={styles.removePhoto}
+              onPress={() => setFormPhoto(null)}
+            >
+              <Ionicons name="close-circle" size={24} color={colors.rose.default} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.photoUpload}
+            onPress={() => showPhotoOptions('form')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="document-text-outline" size={32} color={colors.text.faint} />
+            <Text style={styles.photoUploadText}>Kağıt Servis Formunu Çek / Yükle</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Step 7: Extra Cost & Notes */}
+        <Text style={styles.stepLabel}>7. Yol / Yemek Masrafı (₺)</Text>
         <TextInput
           style={styles.input}
           placeholder="Örn: 500"
@@ -372,7 +406,7 @@ export default function NewServiceScreen() {
           onChangeText={setOtherCost}
         />
 
-        <Text style={styles.stepLabel}>7. Rapor Notu</Text>
+        <Text style={styles.stepLabel}>8. Rapor Notu</Text>
         <TextInput
           style={[styles.input, styles.textarea]}
           placeholder="Saha notlarınızı yazın..."

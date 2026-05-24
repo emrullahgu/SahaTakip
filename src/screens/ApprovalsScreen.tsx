@@ -10,6 +10,7 @@ import { listApprovals, createApproval, APPROVAL_KIND_LABEL, APPROVAL_STATUS_LAB
 import type { ApprovalRequest, ApprovalStatus, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { useAppContext } from '../context/AppContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Approvals'>;
 type R = RouteProp<RootStackParamList, 'Approvals'>;
@@ -21,21 +22,57 @@ const STATUS_FILTERS: { key: ApprovalStatus | 'all'; label: string }[] = [
   { key: 'rejected', label: 'Reddedildi' },
 ];
 
+// Saha iş emirleri (Onay Bekliyor) için sentetik approval item tipi
+type RowItem = ApprovalRequest & { _woId?: string };
+
 export default function ApprovalsScreen() {
   const nav = useNavigation<Nav>();
   const route = useRoute<R>();
+  const { workOrders } = useAppContext();
   const [items, setItems] = useState<ApprovalRequest[]>([]);
   const [filter, setFilter] = useState<ApprovalStatus | 'all'>(route.params?.status || 'all');
 
   const load = useCallback(async () => { setItems(await listApprovals()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const filtered = useMemo(() => filter === 'all' ? items : items.filter(i => i.status === filter), [items, filter]);
+  // Saha cihazlarından Supabase'e yazılan "Onay Bekliyor" iş emirlerini de listele
+  const woApprovals: RowItem[] = useMemo(() => {
+    return workOrders
+      .filter(w => w.status === 'Onay Bekliyor')
+      .map(w => ({
+        id: `wo_${w.id}`,
+        _woId: w.id,
+        kind: 'other' as const,
+        status: 'pending' as const,
+        title: `Servis Raporu Onayı: ${w.customerName || w.customerId}`,
+        description: w.notes,
+        resource: 'work_order' as const,
+        resourceId: w.id,
+        requestedByName: w.assignedTo || w.createdBy,
+        createdAt: w.createdAt || new Date().toISOString(),
+      }));
+  }, [workOrders]);
+
+  const all: RowItem[] = useMemo(() => {
+    // WO onaylarını üste koy + local approvalleri ekle (id ile dedupe)
+    const localFiltered = items.filter(i => !woApprovals.some(w => w.resourceId === i.resourceId));
+    return [...woApprovals, ...localFiltered];
+  }, [items, woApprovals]);
+
+  const filtered = useMemo(() => filter === 'all' ? all : all.filter(i => i.status === filter), [all, filter]);
 
   const seedDemo = async () => {
     await createApproval({ kind: 'delete', title: 'Müşteri silme talebi', description: 'M-1024 silinecek', resource: 'customer', resourceId: 'M-1024', requestedByName: 'Ahmet' });
     await createApproval({ kind: 'discount', title: '%25 iskonto onayı', description: 'Teklif T-204 için', resource: 'quote', resourceId: 'T-204', requestedByName: 'Mehmet' });
     load();
+  };
+
+  const onPressItem = (item: RowItem) => {
+    if (item._woId) {
+      nav.navigate('WorkOrderDetail', { workOrderId: item._woId });
+    } else {
+      nav.navigate('ApprovalDetail', { requestId: item.id });
+    }
   };
 
   return (
@@ -63,12 +100,13 @@ export default function ApprovalsScreen() {
           />
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={s.card} onPress={() => nav.navigate('ApprovalDetail', { requestId: item.id })}>
+          <TouchableOpacity style={s.card} onPress={() => onPressItem(item)}>
             <View style={[s.statusDot, { backgroundColor: APPROVAL_STATUS_COLOR[item.status as keyof typeof APPROVAL_STATUS_COLOR] }]} />
             <View style={{ flex: 1 }}>
               <Text style={s.t}>{item.title}</Text>
               <Text style={s.sub}>{APPROVAL_KIND_LABEL[item.kind as keyof typeof APPROVAL_KIND_LABEL]} · {APPROVAL_STATUS_LABEL[item.status as keyof typeof APPROVAL_STATUS_LABEL]}{item.requestedByName ? ` · ${item.requestedByName}` : ''}</Text>
             </View>
+            {item._woId ? <Ionicons name="construct-outline" size={18} color="#f59e0b" style={{ marginRight: 4 }} /> : null}
             <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
           </TouchableOpacity>
         )}
