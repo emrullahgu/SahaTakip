@@ -112,7 +112,7 @@ export default function NonconformitiesScreen() {
                 return (
                   <TouchableOpacity key={s} style={[styles.chip, active && styles.chipActive]} onPress={() => setStatusFilter(s)}>
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {s === 'all' ? 'Tümü' : NC_STATUS_LABEL[s]}
+                      {s === 'all' ? 'Tümü' : NC_STATUS_LABEL[s as keyof typeof NC_STATUS_LABEL]}
                     </Text>
                   </TouchableOpacity>
                 );

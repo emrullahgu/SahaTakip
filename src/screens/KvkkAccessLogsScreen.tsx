@@ -48,11 +48,11 @@ export default function KvkkAccessLogsScreen() {
         }
         renderItem={({ item }) => (
           <View style={s.card}>
-            <View style={[s.iconWrap, { backgroundColor: KVKK_KIND_COLOR[item.kind] + '22' }]}>
-              <Ionicons name="document-lock-outline" size={22} color={KVKK_KIND_COLOR[item.kind]} />
+            <View style={[s.iconWrap, { backgroundColor: KVKK_KIND_COLOR[item.kind as keyof typeof KVKK_KIND_COLOR] + '22' }]}>
+              <Ionicons name="document-lock-outline" size={22} color={KVKK_KIND_COLOR[item.kind as keyof typeof KVKK_KIND_COLOR]} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.t}>{KVKK_KIND_LABEL[item.kind]} — {item.subjectName || item.subjectId}</Text>
+              <Text style={s.t}>{KVKK_KIND_LABEL[item.kind as keyof typeof KVKK_KIND_LABEL]} — {item.subjectName || item.subjectId}</Text>
               <Text style={s.sub}>{item.actorName || '—'} · {new Date(item.occurredAt).toLocaleString('tr-TR')}</Text>
               {item.fields && item.fields.length > 0 ? <Text style={s.fields}>{item.fields.join(', ')}</Text> : null}
               {item.reason ? <Text style={s.reason}>{item.reason}</Text> : null}

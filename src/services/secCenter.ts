@@ -91,104 +91,34 @@ const iso = (d: Date) => d.toISOString();
 const daysAgo = (n: number) => { const d = new Date(today); d.setDate(d.getDate() - n); return iso(d); };
 const daysFromNow = (n: number) => { const d = new Date(today); d.setDate(d.getDate() + n); return iso(d); };
 
-const seedClassification: SecClassificationItem[] = [
-  { id: 'c1', field: 'tc_kimlik', table: 'customers', sensitivity: 'pii', recordCount: 4250, encrypted: true, description: 'T.C. kimlik numarası' },
-  { id: 'c2', field: 'phone', table: 'customers', sensitivity: 'pii', recordCount: 4250, encrypted: false, description: 'Telefon numarası' },
-  { id: 'c3', field: 'email', table: 'customers', sensitivity: 'pii', recordCount: 4250, encrypted: false },
-  { id: 'c4', field: 'iban', table: 'invoices', sensitivity: 'confidential', recordCount: 1820, encrypted: true, description: 'Banka hesap bilgisi' },
-  { id: 'c5', field: 'location_history', table: 'employees', sensitivity: 'confidential', recordCount: 38400, encrypted: true },
-  { id: 'c6', field: 'salary', table: 'employees', sensitivity: 'confidential', recordCount: 64, encrypted: true },
-  { id: 'c7', field: 'health_notes', table: 'employees', sensitivity: 'phi', recordCount: 12, encrypted: true, description: 'Sağlık raporları' },
-  { id: 'c8', field: 'company_name', table: 'customers', sensitivity: 'public', recordCount: 4250, encrypted: false },
-  { id: 'c9', field: 'internal_notes', table: 'work_orders', sensitivity: 'internal', recordCount: 2150, encrypted: false },
-  { id: 'c10', field: 'tax_id', table: 'companies', sensitivity: 'confidential', recordCount: 4250, encrypted: false },
-];
+const seedClassification: SecClassificationItem[] = [];
 
-const seedKvkk: KvkkRequest[] = [
-  { id: 'k1', type: 'access', requesterName: 'Ahmet Yıldırım', requesterEmail: 'ahmet@example.com', requestedAt: daysAgo(2), status: 'in_progress', dueDate: daysFromNow(28), notes: 'Tüm verilerin kopyası talep edildi.' },
-  { id: 'k2', type: 'erasure', requesterName: 'Selin Akın', requesterEmail: 'selin@example.com', requestedAt: daysAgo(5), status: 'pending', dueDate: daysFromNow(25) },
-  { id: 'k3', type: 'rectification', requesterName: 'Mert Çelik', requesterEmail: 'mert@example.com', requestedAt: daysAgo(10), status: 'fulfilled', dueDate: daysFromNow(20) },
-  { id: 'k4', type: 'portability', requesterName: 'Eylül Demir', requesterEmail: 'eylul@example.com', requestedAt: daysAgo(15), status: 'fulfilled', dueDate: daysFromNow(15) },
-  { id: 'k5', type: 'objection', requesterName: 'Burak Kaya', requesterEmail: 'burak@example.com', requestedAt: daysAgo(20), status: 'rejected', dueDate: daysFromNow(10), notes: 'Yasal gereklilik nedeniyle veriler korunmalı.' },
-];
+const seedKvkk: KvkkRequest[] = [];
 
-const seedExp: DataExportJob[] = [
-  { id: 'e1', userName: 'Ahmet Yıldırım', format: 'json', status: 'completed', requestedAt: daysAgo(2), completedAt: daysAgo(2), sizeMb: 4.8 },
-  { id: 'e2', userName: 'Selin Akın', format: 'pdf', status: 'running', requestedAt: daysAgo(1) },
-  { id: 'e3', userName: 'Mert Çelik', format: 'csv', status: 'queued', requestedAt: iso(new Date()) },
-  { id: 'e4', userName: 'Eylül Demir', format: 'json', status: 'failed', requestedAt: daysAgo(5) },
-];
+const seedExp: DataExportJob[] = [];
 
-const seedEra: DataErasureJob[] = [
-  { id: 'r1', userName: 'Selin Akın', scope: 'anonymize', status: 'completed', requestedAt: daysAgo(7), completedAt: daysAgo(6), affectedRecords: 142 },
-  { id: 'r2', userName: 'Anonim Müşteri 1', scope: 'full', status: 'running', requestedAt: daysAgo(1) },
-  { id: 'r3', userName: 'Eski Personel', scope: 'partial', status: 'queued', requestedAt: iso(new Date()) },
-];
+const seedEra: DataErasureJob[] = [];
 
-const seedDev: SecDevice[] = [
-  { id: 'd1', userName: 'Yönetici', device: 'iPhone 15 Pro', os: 'iOS 17.4', ip: '85.34.12.45', location: 'İstanbul, TR', lastSeen: iso(new Date()), current: true },
-  { id: 'd2', userName: 'Yönetici', device: 'MacBook Pro', os: 'macOS 14.5', ip: '85.34.12.45', location: 'İstanbul, TR', lastSeen: daysAgo(0), current: false },
-  { id: 'd3', userName: 'Saha Personeli', device: 'Samsung S24', os: 'Android 14', ip: '94.55.21.88', location: 'Ankara, TR', lastSeen: daysAgo(1), current: false },
-  { id: 'd4', userName: 'Muhasebe', device: 'Windows PC', os: 'Windows 11', ip: '212.34.5.99', location: 'İstanbul, TR', lastSeen: daysAgo(3), current: false },
-  { id: 'd5', userName: 'Yönetici', device: 'Unknown Browser', os: 'Linux', ip: '178.55.21.4', location: 'Berlin, DE', lastSeen: daysAgo(2), current: false },
-];
+const seedDev: SecDevice[] = [];
 
-const seedSus: SuspiciousActivity[] = [
-  { id: 's1', type: 'login_anomaly', severity: 'high', user: 'Yönetici', at: daysAgo(2), description: 'Berlin, DE üzerinden olağandışı giriş tespit edildi.', resolved: false },
-  { id: 's2', type: 'failed_attempts', severity: 'medium', user: 'Muhasebe', at: daysAgo(1), description: '15 dakika içinde 8 başarısız giriş denemesi.', resolved: false },
-  { id: 's3', type: 'data_dump', severity: 'critical', user: 'Saha Personeli', at: daysAgo(4), description: '3 dakika içinde 2400 müşteri kaydı sorgulandı.', resolved: true },
-  { id: 's4', type: 'permission_escalation', severity: 'high', user: 'Stajyer', at: daysAgo(6), description: 'Standart kullanıcı yönetici endpointlerine istek attı.', resolved: true },
-  { id: 's5', type: 'unusual_hour', severity: 'low', user: 'Yönetici', at: daysAgo(0), description: 'Saat 03:24te oturum açıldı.', resolved: false },
-];
+const seedSus: SuspiciousActivity[] = [];
 
-const seedAlerts: AdminAlert[] = [
-  { id: 'a1', kind: 'role_change', title: 'Yeni admin atandı', body: 'Ahmet Yıldırım kullanıcısına admin rolü verildi.', severity: 'warning', at: daysAgo(1), ack: false },
-  { id: 'a2', kind: 'mass_delete', title: 'Toplu silme', body: '420 müşteri kaydı silindi.', severity: 'critical', at: daysAgo(2), ack: false },
-  { id: 'a3', kind: 'export', title: 'Veri dışa aktarımı', body: 'Tüm müşteri tablosu JSON olarak indirildi.', severity: 'warning', at: daysAgo(3), ack: true },
-  { id: 'a4', kind: 'config_change', title: 'API anahtarı değişti', body: 'Supabase service role anahtarı güncellendi.', severity: 'info', at: daysAgo(4), ack: true },
-  { id: 'a5', kind: 'failed_backup', title: 'Yedek başarısız', body: 'Gece 02:00 tam yedek alınamadı.', severity: 'critical', at: daysAgo(5), ack: true },
-  { id: 'a6', kind: 'security', title: 'Şüpheli IP engellendi', body: 'Berlinden 3 başarısız giriş sonrası blok uygulandı.', severity: 'info', at: daysAgo(0), ack: false },
-];
+const seedAlerts: AdminAlert[] = [];
 
-const seedBak: BackupReport[] = [
-  { id: 'b1', takenAt: daysAgo(0), sizeMb: 1840, verified: true, durationSec: 384, retentionDays: 30, type: 'incremental' },
-  { id: 'b2', takenAt: daysAgo(1), sizeMb: 1820, verified: true, durationSec: 372, retentionDays: 30, type: 'incremental' },
-  { id: 'b3', takenAt: daysAgo(7), sizeMb: 12450, verified: true, durationSec: 2840, retentionDays: 90, type: 'full' },
-  { id: 'b4', takenAt: daysAgo(14), sizeMb: 12120, verified: false, durationSec: 2740, retentionDays: 90, type: 'full' },
-  { id: 'b5', takenAt: daysAgo(21), sizeMb: 11890, verified: true, durationSec: 2680, retentionDays: 90, type: 'full' },
-];
+const seedBak: BackupReport[] = [];
 
 const seedDr: DrPlan = {
   rpoMinutes: 15,
   rtoMinutes: 60,
-  lastDrillAt: daysAgo(45),
-  lastDrillSuccess: true,
-  steps: [
-    { order: 1, title: 'Olay tespiti ve eskalasyon', responsible: 'On-call Engineer', estimatedMinutes: 5, done: true },
-    { order: 2, title: 'Birincil DB sağlık kontrolü', responsible: 'DBA', estimatedMinutes: 5, done: true },
-    { order: 3, title: 'Standby replikaya failover', responsible: 'DBA', estimatedMinutes: 10, done: true },
-    { order: 4, title: 'Uygulama bağlantı dizgelerini güncelle', responsible: 'DevOps', estimatedMinutes: 10, done: true },
-    { order: 5, title: 'Smoke test ve doğrulama', responsible: 'QA', estimatedMinutes: 15, done: false },
-    { order: 6, title: 'Müşteri bilgilendirme', responsible: 'Customer Success', estimatedMinutes: 10, done: false },
-    { order: 7, title: 'Olay sonrası rapor (postmortem)', responsible: 'Tech Lead', estimatedMinutes: 5, done: false },
-  ],
+  lastDrillAt: '',
+  lastDrillSuccess: false,
+  steps: [],
 };
 
 const seedHealth: SecHealth = {
-  score: 78,
+  score: 0,
   generatedAt: iso(new Date()),
-  items: [
-    { label: '2FA aktif kullanıcı oranı', status: 'warn', detail: '%62 (hedef %95)', category: 'auth' },
-    { label: 'Yönetici şifre rotasyonu', status: 'ok', detail: 'Son 30 gün içinde değiştirildi', category: 'auth' },
-    { label: 'PII alanlarında şifreleme', status: 'warn', detail: '7/10 alan şifrelenmiş', category: 'data' },
-    { label: 'KVKK talep yanıt süresi', status: 'ok', detail: 'Ortalama 4 gün (limit 30)', category: 'compliance' },
-    { label: 'Yedek doğrulama', status: 'ok', detail: 'Son 7 yedeğin 6sı doğrulandı', category: 'backup' },
-    { label: 'DR tatbikatı', status: 'fail', detail: '45 gün önce yapıldı (limit 30 gün)', category: 'backup' },
-    { label: 'Şüpheli aktivite incelemeleri', status: 'warn', detail: '3 açık vaka 24 saat geçti', category: 'monitoring' },
-    { label: 'Loglama kapsama', status: 'ok', detail: '%98 endpoint loglanıyor', category: 'monitoring' },
-    { label: 'Veri sınıflandırması', status: 'ok', detail: '10/10 hassas alan etiketli', category: 'compliance' },
-    { label: 'Penetrasyon testi', status: 'warn', detail: 'Son test 6 ay önce', category: 'compliance' },
-  ],
+  items: [],
 };
 
 async function get<T>(key: string, seed: T): Promise<T> {

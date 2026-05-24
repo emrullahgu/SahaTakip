@@ -153,7 +153,7 @@ export default function UsersAdminScreen() {
                 <View style={[styles.checkbox, isSel && styles.checkboxActive]}>
                   {isSel && <Ionicons name="checkmark" size={12} color="#fff" />}
                 </View>
-                <View style={[styles.avatar, { backgroundColor: ROLE_COLOR[u.role] }]}>
+                <View style={[styles.avatar, { backgroundColor: ROLE_COLOR[u.role as keyof typeof ROLE_COLOR] }]}>
                   <Text style={styles.avatarText}>{u.name.slice(0, 1).toUpperCase()}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -163,8 +163,8 @@ export default function UsersAdminScreen() {
                   </View>
                   <Text style={styles.email} numberOfLines={1}>{u.email}</Text>
                 </View>
-                <View style={[styles.rolePill, { backgroundColor: ROLE_COLOR[u.role] + '22', borderColor: ROLE_COLOR[u.role] }]}>
-                  <Text style={[styles.roleText, { color: ROLE_COLOR[u.role] }]}>{ROLE_LABEL_TR[u.role]}</Text>
+                <View style={[styles.rolePill, { backgroundColor: ROLE_COLOR[u.role as keyof typeof ROLE_COLOR] + '22', borderColor: ROLE_COLOR[u.role as keyof typeof ROLE_COLOR] }]}>
+                  <Text style={[styles.roleText, { color: ROLE_COLOR[u.role as keyof typeof ROLE_COLOR] }]}>{ROLE_LABEL_TR[u.role as keyof typeof ROLE_LABEL_TR]}</Text>
                 </View>
                 {wide && <Text style={styles.dateText}>{fmtDate(u.createdAt)}</Text>}
               </TouchableOpacity>
@@ -197,8 +197,8 @@ export default function UsersAdminScreen() {
             <Text style={styles.label}>Rol</Text>
             <View style={styles.roleGrid}>
               {ROLE_ORDER.map(r => (
-                <TouchableOpacity key={r} style={[styles.roleChip, fRole === r && { backgroundColor: ROLE_COLOR[r], borderColor: ROLE_COLOR[r] }]} onPress={() => setFRole(r)}>
-                  <Text style={[styles.roleChipText, fRole === r && { color: '#fff' }]}>{ROLE_LABEL_TR[r]}</Text>
+                <TouchableOpacity key={r} style={[styles.roleChip, fRole === r && { backgroundColor: ROLE_COLOR[r as keyof typeof ROLE_COLOR], borderColor: ROLE_COLOR[r as keyof typeof ROLE_COLOR] }]} onPress={() => setFRole(r)}>
+                  <Text style={[styles.roleChipText, fRole === r && { color: '#fff' }]}>{ROLE_LABEL_TR[r as keyof typeof ROLE_LABEL_TR]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -227,8 +227,8 @@ export default function UsersAdminScreen() {
             <Text style={styles.modalTitle}>Toplu Rol Atama ({selected.size})</Text>
             <View style={styles.roleGrid}>
               {ROLE_ORDER.map(r => (
-                <TouchableOpacity key={r} style={[styles.roleChip, { borderColor: ROLE_COLOR[r] }]} onPress={() => applyRole(r)}>
-                  <Text style={[styles.roleChipText, { color: ROLE_COLOR[r] }]}>{ROLE_LABEL_TR[r]}</Text>
+                <TouchableOpacity key={r} style={[styles.roleChip, { borderColor: ROLE_COLOR[r as keyof typeof ROLE_COLOR] }]} onPress={() => applyRole(r)}>
+                  <Text style={[styles.roleChipText, { color: ROLE_COLOR[r as keyof typeof ROLE_COLOR] }]}>{ROLE_LABEL_TR[r as keyof typeof ROLE_LABEL_TR]}</Text>
                 </TouchableOpacity>
               ))}
             </View>

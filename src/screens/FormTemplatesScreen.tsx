@@ -146,7 +146,7 @@ export default function FormTemplatesScreen() {
                 ]}
               >
                 <Ionicons
-                  name={CAT_ICON[t.category] ?? 'document-text-outline'}
+                  name={CAT_ICON[t.category as FormTemplateCategory] ?? 'document-text-outline'}
                   size={18}
                   color={brand.blueLight}
                 />

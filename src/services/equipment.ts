@@ -43,14 +43,7 @@ export const EQ_FAULT_COLOR: Record<EqFaultSeverity, string> = {
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86400000).toISOString();
 const daysAgo = (d: number) => new Date(Date.now() - d * 86400000).toISOString();
 
-const SEED_ASSETS: EqAsset[] = [
-  { id: 'ea1', code: 'TR-001', type: 'transformer', name: 'Ana Trafo 1', customerName: 'Ankara OSB Tekstil', location: 'Ankara OSB / Trafo Odası', brand: 'ABB', model: 'IZ-630', serialNo: 'TR2023001', capacity: '630 kVA', installedAt: daysAgo(720), warrantyUntil: daysFromNow(180), serviceUntil: daysFromNow(60), status: 'active', qrPayload: 'sahatakip://eq/ea1' },
-  { id: 'ea2', code: 'PN-014', type: 'panel', name: 'Üretim Pano A', customerName: 'İzmir Lojistik Deposu', location: 'İzmir Aliağa / Üretim', brand: 'Schneider', model: 'Prisma P', serialNo: 'PN2024014', capacity: '400 A', installedAt: daysAgo(420), warrantyUntil: daysFromNow(45), status: 'active', qrPayload: 'sahatakip://eq/ea2' },
-  { id: 'ea3', code: 'IN-021', type: 'inverter', name: 'GES İnverter 1', customerName: 'Konya GES Sahası', location: 'Konya / Saha 1', brand: 'Huawei', model: 'SUN2000-100KTL', serialNo: 'IN20240021', capacity: '100 kW', installedAt: daysAgo(180), warrantyUntil: daysFromNow(550), serviceUntil: daysFromNow(10), status: 'maintenance', qrPayload: 'sahatakip://eq/ea3' },
-  { id: 'ea4', code: 'GN-007', type: 'generator', name: 'Yedek Jeneratör', customerName: 'Bursa Otomotiv', location: 'Bursa / Yedek Enerji Odası', brand: 'Caterpillar', model: 'C18', serialNo: 'GN20210007', capacity: '500 kVA', installedAt: daysAgo(1200), warrantyUntil: daysAgo(60), status: 'broken', qrPayload: 'sahatakip://eq/ea4' },
-  { id: 'ea5', code: 'MT-103', type: 'meter', name: 'Ana Sayaç', customerName: 'Eskişehir Cam Sanayi', location: 'Eskişehir / Giriş', brand: 'Iskra', model: 'MT880', serialNo: 'MT2022103', installedAt: daysAgo(620), warrantyUntil: daysFromNow(380), status: 'active', qrPayload: 'sahatakip://eq/ea5' },
-  { id: 'ea6', code: 'KP-009', type: 'compensation', name: 'Reaktif Kompanzasyon', customerName: 'Adana Mermer Fabrikası', location: 'Adana / Üretim', brand: 'Entes', model: 'RGN-12', serialNo: 'KP20230009', capacity: '12 step', installedAt: daysAgo(540), warrantyUntil: daysFromNow(220), status: 'active', qrPayload: 'sahatakip://eq/ea6' },
-];
+const SEED_ASSETS: EqAsset[] = [];
 
 export const listEqAssets = async (): Promise<EqAsset[]> => {
   const raw = await AsyncStorage.getItem(K.assets);
@@ -74,13 +67,7 @@ export const updateEqAssetStatus = async (id: string, status: EqAssetStatus) => 
   return next;
 };
 
-const SEED_MAINT: EqMaintenanceRecord[] = [
-  { id: 'em1', assetId: 'ea1', kind: 'periodic', performedAt: daysAgo(60), performedBy: 'Ali Yılmaz', description: 'Yıllık trafo bakımı, yağ analizi', cost: 4500, parts: ['Yağ', 'Conta'], nextDueAt: daysFromNow(305) },
-  { id: 'em2', assetId: 'ea2', kind: 'inspection', performedAt: daysAgo(30), performedBy: 'Ayşe Kaya', description: 'Termal kamera ölçümü', cost: 800 },
-  { id: 'em3', assetId: 'ea3', kind: 'breakdown', performedAt: daysAgo(15), performedBy: 'Hakan Çelik', description: 'String arızası, kart değişimi', cost: 2200, parts: ['MPPT kartı'] },
-  { id: 'em4', assetId: 'ea4', kind: 'periodic', performedAt: daysAgo(120), performedBy: 'Mehmet Demir', description: 'Yağ ve filtre değişimi', cost: 3100, parts: ['Motor yağı', 'Yağ filtresi', 'Hava filtresi'] },
-  { id: 'em5', assetId: 'ea1', kind: 'inspection', performedAt: daysAgo(5), performedBy: 'Ali Yılmaz', description: 'Sıcaklık kontrolü', cost: 350 },
-];
+const SEED_MAINT: EqMaintenanceRecord[] = [];
 
 export const listEqMaintenance = async (): Promise<EqMaintenanceRecord[]> => {
   const raw = await AsyncStorage.getItem(K.maint);
@@ -95,12 +82,7 @@ export const createEqMaintenance = async (m: Omit<EqMaintenanceRecord, 'id'>) =>
   return fresh;
 };
 
-const SEED_FAULT: EqFaultRecord[] = [
-  { id: 'ef1', assetId: 'ea4', occurredAt: daysAgo(40), severity: 'critical', description: 'Yakıt pompası arızası', downtimeHours: 18, resolvedAt: daysAgo(38), resolution: 'Pompa değişimi', cost: 8500 },
-  { id: 'ef2', assetId: 'ea3', occurredAt: daysAgo(15), severity: 'medium', description: 'Bir string üretmiyor', downtimeHours: 6, resolvedAt: daysAgo(15), resolution: 'MPPT kartı değişimi', cost: 2200 },
-  { id: 'ef3', assetId: 'ea2', occurredAt: daysAgo(80), severity: 'low', description: 'Termik atması', downtimeHours: 1, resolvedAt: daysAgo(80), resolution: 'Termik ayarlandı', cost: 0 },
-  { id: 'ef4', assetId: 'ea4', occurredAt: daysAgo(5), severity: 'high', description: 'Soğutma suyu kaçağı', downtimeHours: 12, cost: 4200 },
-];
+const SEED_FAULT: EqFaultRecord[] = [];
 
 export const listEqFaults = async (): Promise<EqFaultRecord[]> => {
   const raw = await AsyncStorage.getItem(K.fault);
@@ -115,13 +97,7 @@ export const createEqFault = async (f: Omit<EqFaultRecord, 'id'>) => {
   return fresh;
 };
 
-const SEED_PLANS: EqMaintenancePlan[] = [
-  { id: 'ep1', assetId: 'ea1', taskDescription: 'Yıllık trafo bakımı', intervalDays: 365, nextDueAt: daysFromNow(305), lastPerformedAt: daysAgo(60), owner: 'Ali Yılmaz' },
-  { id: 'ep2', assetId: 'ea2', taskDescription: 'Termal kamera taraması', intervalDays: 180, nextDueAt: daysFromNow(15), lastPerformedAt: daysAgo(165), owner: 'Ayşe Kaya' },
-  { id: 'ep3', assetId: 'ea3', taskDescription: 'GES inverter modül kontrolü', intervalDays: 90, nextDueAt: daysFromNow(-3), lastPerformedAt: daysAgo(93), owner: 'Hakan Çelik' },
-  { id: 'ep4', assetId: 'ea4', taskDescription: 'Jeneratör yakıt sistemi', intervalDays: 120, nextDueAt: daysFromNow(7), lastPerformedAt: daysAgo(113), owner: 'Mehmet Demir' },
-  { id: 'ep5', assetId: 'ea6', taskDescription: 'Kompanzasyon step kontrolü', intervalDays: 60, nextDueAt: daysFromNow(45), lastPerformedAt: daysAgo(15), owner: 'Selin Acar' },
-];
+const SEED_PLANS: EqMaintenancePlan[] = [];
 
 export const listEqPlans = async (): Promise<EqMaintenancePlan[]> => {
   const raw = await AsyncStorage.getItem(K.plans);

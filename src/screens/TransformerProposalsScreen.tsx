@@ -48,7 +48,7 @@ export default function TransformerProposalsScreen() {
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('TransformerProposalForm', { quoteId: q.id })}>
             <View style={{ flex: 1 }}>
               <Text style={s.cardTitle}>{q.customerName || 'Müşteri'}</Text>
-              <Text style={s.cardMeta}>{q.input.unitCount}× {q.input.kvaPerUnit} kVA · {TRANSFORMER_CUSTOMER_TYPE_LABEL[q.input.customerType]} · {q.input.contractMonths} ay</Text>
+              <Text style={s.cardMeta}>{q.input.unitCount}× {q.input.kvaPerUnit} kVA · {TRANSFORMER_CUSTOMER_TYPE_LABEL[q.input.customerType as keyof typeof TRANSFORMER_CUSTOMER_TYPE_LABEL]} · {q.input.contractMonths} ay</Text>
               <Text style={s.price}>₺{q.totalFee.toLocaleString('tr-TR')}</Text>
               <Text style={s.cardMeta}>Aylık: ₺{q.monthlyFee.toLocaleString('tr-TR')}</Text>
             </View>

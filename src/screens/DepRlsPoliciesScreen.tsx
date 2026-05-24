@@ -58,8 +58,8 @@ export default function DepRlsPoliciesScreen() {
                   <Text style={s.table}>{i.table}</Text>
                   <Text style={s.policy}>{i.policy}</Text>
                 </View>
-                <View style={[s.pill, { backgroundColor: CMD_COLOR[i.command] + '33', borderColor: CMD_COLOR[i.command] }]}>
-                  <Text style={[s.pillT, { color: CMD_COLOR[i.command] }]}>{i.command.toUpperCase()}</Text>
+                <View style={[s.pill, { backgroundColor: CMD_COLOR[i.command as keyof typeof CMD_COLOR] + '33', borderColor: CMD_COLOR[i.command as keyof typeof CMD_COLOR] }]}>
+                  <Text style={[s.pillT, { color: CMD_COLOR[i.command as keyof typeof CMD_COLOR] }]}>{i.command.toUpperCase()}</Text>
                 </View>
               </View>
               <View style={s.metaRow}>

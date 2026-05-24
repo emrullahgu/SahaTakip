@@ -76,8 +76,8 @@ export default function TasksScreen() {
             <TouchableOpacity style={{ flex: 1 }} onPress={() => nav.navigate('TaskDetail', { taskId: t.id })} onLongPress={() => nav.navigate('TaskForm', { taskId: t.id })}>
               <View style={s.cardHead}>
                 <Text style={s.cardTitle}>{t.title}</Text>
-                <View style={[s.badge, { backgroundColor: TASK_PRIORITY_COLOR[t.priority] + '33', borderColor: TASK_PRIORITY_COLOR[t.priority] }]}>
-                  <Text style={[s.badgeText, { color: TASK_PRIORITY_COLOR[t.priority] }]}>{TASK_PRIORITY_LABEL[t.priority]}</Text>
+                <View style={[s.badge, { backgroundColor: TASK_PRIORITY_COLOR[t.priority as keyof typeof TASK_PRIORITY_COLOR] + '33', borderColor: TASK_PRIORITY_COLOR[t.priority as keyof typeof TASK_PRIORITY_COLOR] }]}>
+                  <Text style={[s.badgeText, { color: TASK_PRIORITY_COLOR[t.priority as keyof typeof TASK_PRIORITY_COLOR] }]}>{TASK_PRIORITY_LABEL[t.priority as keyof typeof TASK_PRIORITY_LABEL]}</Text>
                 </View>
               </View>
               {t.description ? <Text style={s.cardDesc} numberOfLines={2}>{t.description}</Text> : null}
@@ -87,8 +87,8 @@ export default function TasksScreen() {
               </View>
             </TouchableOpacity>
             <View style={s.actions}>
-              <TouchableOpacity style={[s.statusBtn, { backgroundColor: TASK_STATUS_COLOR[t.status] + '33', borderColor: TASK_STATUS_COLOR[t.status] }]} onPress={() => cycleStatus(t)}>
-                <Text style={[s.statusBtnText, { color: TASK_STATUS_COLOR[t.status] }]}>{TASK_STATUS_LABEL[t.status]}</Text>
+              <TouchableOpacity style={[s.statusBtn, { backgroundColor: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] + '33', borderColor: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] }]} onPress={() => cycleStatus(t)}>
+                <Text style={[s.statusBtnText, { color: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] }]}>{TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL]}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => Alert.alert('Sil', 'Görev silinsin mi?', [
                 { text: 'Vazgeç', style: 'cancel' },

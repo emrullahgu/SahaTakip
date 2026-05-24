@@ -3,14 +3,17 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 import { colors, spacing, radius, typography } from '../theme';
-import type { AuditReport } from '../types';
+import type { AuditReport, RootStackParamList } from '../types';
 import { listReports } from '../services/quality';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const pctColor = (p: number) => p >= 85 ? '#22c55e' : p >= 70 ? '#eab308' : p >= 50 ? '#f59e0b' : '#ef4444';
 
@@ -50,6 +53,7 @@ ${r.sections.map(s => `
 </body></html>`;
 
 export default function AuditReportScreen() {
+  const nav = useNavigation<Nav>();
   const [items, setItems] = useState<AuditReport[]>([]);
   const [view, setView] = useState<AuditReport | null>(null);
 
@@ -97,7 +101,7 @@ export default function AuditReportScreen() {
             title="Henüz rapor yok"
             subtitle="Denetim Puanlama ekranından rapor oluşturun."
             actionLabel="Denetimlere Git"
-            onAction={() => (nav as any).navigate('Inspections')}
+            onAction={() => nav.navigate('Inspections')}
           />
         }
       />

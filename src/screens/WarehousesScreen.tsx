@@ -90,7 +90,7 @@ export default function WarehousesScreen() {
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
-              {f === 'Tümü' ? 'Tümü' : KIND_META[f].label}
+              {f === 'Tümü' ? 'Tümü' : KIND_META[f as WarehouseKind].label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -102,7 +102,7 @@ export default function WarehousesScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
-          const meta = KIND_META[item.kind];
+          const meta = KIND_META[item.kind as WarehouseKind];
           return (
             <TouchableOpacity
               style={styles.card}
