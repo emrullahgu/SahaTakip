@@ -55,11 +55,11 @@ export default function FieldTodayScreen() {
               <Text style={s.name}>{item.customerName}</Text>
               <Text style={s.addr}>{item.address}</Text>
               <View style={s.chipRow}>
-                <View style={[s.chip, { backgroundColor: PRIORITY_COLOR[item.priority] }]}>
-                  <Text style={s.chipT}>{PRIORITY_LABEL[item.priority]}</Text>
+                <View style={[s.chip, { backgroundColor: PRIORITY_COLOR[item.priority as keyof typeof PRIORITY_COLOR] }]}>
+                  <Text style={s.chipT}>{PRIORITY_LABEL[item.priority as keyof typeof PRIORITY_LABEL]}</Text>
                 </View>
-                <View style={[s.chip, { backgroundColor: STAGE_COLOR[item.stage] }]}>
-                  <Text style={s.chipT}>{STAGE_LABEL[item.stage]}</Text>
+                <View style={[s.chip, { backgroundColor: STAGE_COLOR[item.stage as keyof typeof STAGE_COLOR] }]}>
+                  <Text style={s.chipT}>{STAGE_LABEL[item.stage as keyof typeof STAGE_LABEL]}</Text>
                 </View>
                 {item.slaAt && (
                   <Text style={s.sla}>SLA: {new Date(item.slaAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</Text>

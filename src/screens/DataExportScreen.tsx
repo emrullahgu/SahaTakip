@@ -54,18 +54,18 @@ export default function DataExportScreen() {
           />
         }
         renderItem={({ item: j }) => (
-          <View key={j.id} style={[s.card, { borderLeftColor: SEC_JOB_COLOR[j.status] }]}>
+          <View key={j.id} style={[s.card, { borderLeftColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>
             <View style={s.row}>
-              <View style={[s.iconBox, { backgroundColor: SEC_JOB_COLOR[j.status] + '22', borderColor: SEC_JOB_COLOR[j.status] }]}>
-                <Ionicons name={FORMAT_ICON[j.format] as any} size={20} color={SEC_JOB_COLOR[j.status]} />
+              <View style={[s.iconBox, { backgroundColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] + '22', borderColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>
+                <Ionicons name={FORMAT_ICON[j.format as keyof typeof FORMAT_ICON] as any} size={20} color={SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR]} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.user}>{j.userName}</Text>
                 <Text style={s.meta}>{j.format.toUpperCase()} · {new Date(j.requestedAt).toLocaleDateString('tr-TR')}</Text>
                 {j.sizeMb && <Text style={s.meta}>{j.sizeMb.toFixed(1)} MB</Text>}
               </View>
-              <View style={[s.pill, { backgroundColor: SEC_JOB_COLOR[j.status] + '33', borderColor: SEC_JOB_COLOR[j.status] }]}>
-                <Text style={[s.pillT, { color: SEC_JOB_COLOR[j.status] }]}>{SEC_JOB_LABEL[j.status]}</Text>
+              <View style={[s.pill, { backgroundColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] + '33', borderColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>
+                <Text style={[s.pillT, { color: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>{SEC_JOB_LABEL[j.status as keyof typeof SEC_JOB_LABEL]}</Text>
               </View>
             </View>
             {j.status === 'completed' && (

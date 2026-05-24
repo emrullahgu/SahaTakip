@@ -66,15 +66,15 @@ export default function DepNetlifyScreen() {
           />
         }
         renderItem={({ item: d }) => (
-          <View key={d.id} style={[s.card, { borderLeftColor: STATUS_COLOR[d.status] }]}>
+          <View key={d.id} style={[s.card, { borderLeftColor: STATUS_COLOR[d.status as keyof typeof STATUS_COLOR] }]}>
             <View style={s.headRow}>
-              <Ionicons name={STATUS_ICON[d.status] as any} size={20} color={STATUS_COLOR[d.status]} />
+              <Ionicons name={STATUS_ICON[d.status as keyof typeof STATUS_ICON] as any} size={20} color={STATUS_COLOR[d.status as keyof typeof STATUS_COLOR]} />
               <View style={{ flex: 1 }}>
                 <Text style={s.msg}>{d.message}</Text>
                 <Text style={s.meta}>{d.branch} • {d.commit}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: STATUS_COLOR[d.status] + '33', borderColor: STATUS_COLOR[d.status] }]}>
-                <Text style={[s.pillT, { color: STATUS_COLOR[d.status] }]}>{STATUS_LABEL[d.status]}</Text>
+              <View style={[s.pill, { backgroundColor: STATUS_COLOR[d.status as keyof typeof STATUS_COLOR] + '33', borderColor: STATUS_COLOR[d.status as keyof typeof STATUS_COLOR] }]}>
+                <Text style={[s.pillT, { color: STATUS_COLOR[d.status as keyof typeof STATUS_COLOR] }]}>{STATUS_LABEL[d.status as keyof typeof STATUS_LABEL]}</Text>
               </View>
             </View>
             <View style={s.metaRow}>

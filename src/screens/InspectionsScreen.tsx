@@ -65,7 +65,7 @@ export default function InspectionsScreen() {
           return (
             <TouchableOpacity key={t} style={[styles.chip, active && styles.chipActive]} onPress={() => setTypeFilter(t)}>
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {t === 'all' ? 'Tümü' : INSPECTION_TYPE_LABEL[t]}
+                {t === 'all' ? 'Tümü' : INSPECTION_TYPE_LABEL[t as keyof typeof INSPECTION_TYPE_LABEL]}
               </Text>
             </TouchableOpacity>
           );
@@ -100,7 +100,7 @@ export default function InspectionsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.sub}>
-                {INSPECTION_TYPE_LABEL[item.type]} · {fmt(item.date)}
+                {INSPECTION_TYPE_LABEL[item.type as keyof typeof INSPECTION_TYPE_LABEL]} · {fmt(item.date)}
               </Text>
               {item.customerName ? <Text style={styles.subFaint}>{item.customerName}</Text> : null}
             </View>

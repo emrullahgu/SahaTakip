@@ -64,10 +64,10 @@ export default function ApprovalsScreen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('ApprovalDetail', { requestId: item.id })}>
-            <View style={[s.statusDot, { backgroundColor: APPROVAL_STATUS_COLOR[item.status] }]} />
+            <View style={[s.statusDot, { backgroundColor: APPROVAL_STATUS_COLOR[item.status as keyof typeof APPROVAL_STATUS_COLOR] }]} />
             <View style={{ flex: 1 }}>
               <Text style={s.t}>{item.title}</Text>
-              <Text style={s.sub}>{APPROVAL_KIND_LABEL[item.kind]} · {APPROVAL_STATUS_LABEL[item.status]}{item.requestedByName ? ` · ${item.requestedByName}` : ''}</Text>
+              <Text style={s.sub}>{APPROVAL_KIND_LABEL[item.kind as keyof typeof APPROVAL_KIND_LABEL]} · {APPROVAL_STATUS_LABEL[item.status as keyof typeof APPROVAL_STATUS_LABEL]}{item.requestedByName ? ` · ${item.requestedByName}` : ''}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
           </TouchableOpacity>

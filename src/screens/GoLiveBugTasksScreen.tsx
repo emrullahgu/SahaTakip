@@ -52,13 +52,13 @@ export default function GoLiveBugTasksScreen() {
           />
         }
         renderItem={({ item: t }) => (
-          <View key={t.id} style={[s.card, { borderLeftColor: GO_LIVE_SEVERITY_COLOR[t.severity] }]}>
+          <View key={t.id} style={[s.card, { borderLeftColor: GO_LIVE_SEVERITY_COLOR[t.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] }]}>
             <View style={s.headRow}>
-              <View style={[s.pill, { backgroundColor: GO_LIVE_SEVERITY_COLOR[t.severity] + '33', borderColor: GO_LIVE_SEVERITY_COLOR[t.severity] }]}>
-                <Text style={[s.pillT, { color: GO_LIVE_SEVERITY_COLOR[t.severity] }]}>{GO_LIVE_SEVERITY_LABEL[t.severity]}</Text>
+              <View style={[s.pill, { backgroundColor: GO_LIVE_SEVERITY_COLOR[t.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] + '33', borderColor: GO_LIVE_SEVERITY_COLOR[t.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] }]}>
+                <Text style={[s.pillT, { color: GO_LIVE_SEVERITY_COLOR[t.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] }]}>{GO_LIVE_SEVERITY_LABEL[t.severity as keyof typeof GO_LIVE_SEVERITY_LABEL]}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: GO_LIVE_STATUS_COLOR[t.status] + '33', borderColor: GO_LIVE_STATUS_COLOR[t.status] }]}>
-                <Text style={[s.pillT, { color: GO_LIVE_STATUS_COLOR[t.status] }]}>{GO_LIVE_STATUS_LABEL[t.status]}</Text>
+              <View style={[s.pill, { backgroundColor: GO_LIVE_STATUS_COLOR[t.status as keyof typeof GO_LIVE_STATUS_COLOR] + '33', borderColor: GO_LIVE_STATUS_COLOR[t.status as keyof typeof GO_LIVE_STATUS_COLOR] }]}>
+                <Text style={[s.pillT, { color: GO_LIVE_STATUS_COLOR[t.status as keyof typeof GO_LIVE_STATUS_COLOR] }]}>{GO_LIVE_STATUS_LABEL[t.status as keyof typeof GO_LIVE_STATUS_LABEL]}</Text>
               </View>
               {t.feedbackId && (
                 <View style={[s.pill, { borderColor: '#06b6d4' }]}>
@@ -68,7 +68,7 @@ export default function GoLiveBugTasksScreen() {
             </View>
             <Text style={s.title}>{t.title}</Text>
             <View style={s.metaRow}>
-              <Text style={s.meta}><Ionicons name="person" size={11} color={colors.text.muted} /> {ROLE_LABEL[t.assigneeRole]}</Text>
+              <Text style={s.meta}><Ionicons name="person" size={11} color={colors.text.muted} /> {ROLE_LABEL[t.assigneeRole as keyof typeof ROLE_LABEL]}</Text>
               <Text style={s.meta}><Ionicons name="calendar" size={11} color={colors.text.muted} /> {t.createdAt}</Text>
               {t.eta && <Text style={[s.meta, { color: '#f59e0b' }]}>ETA: {t.eta}</Text>}
             </View>

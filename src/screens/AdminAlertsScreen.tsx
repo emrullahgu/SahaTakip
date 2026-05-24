@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listAdminAlerts, ackAlert, ALERT_SEV_LABEL, ALERT_SEV_COLOR, ALERT_KIND_LABEL, ALERT_KIND_ICON } from '../services/secCenter';
-import type { AdminAlert } from '../types';
+import type { AdminAlert, AdminAlertSeverity } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { FlatList } from 'react-native';
@@ -24,7 +24,7 @@ export default function AdminAlertsScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <FlatList
+      <FlatList<AdminAlert>
         {...FLATLIST_DEFAULTS}
         data={filtered}
         keyExtractor={a => a.id}
@@ -58,18 +58,18 @@ export default function AdminAlertsScreen() {
             subtitle="Tüm sistem bildirimleri onaylandı veya henüz bir uyarı oluşmadı."
           />
         }
-        renderItem={({ item: a }) => (
-          <View key={a.id} style={[s.card, { borderLeftColor: ALERT_SEV_COLOR[a.severity] }, a.ack && { opacity: 0.55 }]}>
+        renderItem={({ item: a }: { item: AdminAlert }) => (
+          <View key={a.id} style={[s.card, { borderLeftColor: ALERT_SEV_COLOR[a.severity as AdminAlertSeverity] }, a.ack && { opacity: 0.55 }]}>
             <View style={s.row}>
-              <View style={[s.iconBox, { backgroundColor: ALERT_SEV_COLOR[a.severity] + '22', borderColor: ALERT_SEV_COLOR[a.severity] }]}>
-                <Ionicons name={ALERT_KIND_ICON[a.kind] as any} size={20} color={ALERT_SEV_COLOR[a.severity]} />
+              <View style={[s.iconBox, { backgroundColor: ALERT_SEV_COLOR[a.severity as AdminAlertSeverity] + '22', borderColor: ALERT_SEV_COLOR[a.severity as AdminAlertSeverity] }]}>
+                <Ionicons name={ALERT_KIND_ICON[a.kind as keyof typeof ALERT_KIND_ICON] as any} size={20} color={ALERT_SEV_COLOR[a.severity as AdminAlertSeverity]} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.title}>{a.title}</Text>
-                <Text style={s.kind}>{ALERT_KIND_LABEL[a.kind]} · {new Date(a.at).toLocaleString('tr-TR')}</Text>
+                <Text style={s.kind}>{ALERT_KIND_LABEL[a.kind as keyof typeof ALERT_KIND_LABEL]} · {new Date(a.at).toLocaleString('tr-TR')}</Text>
               </View>
-              <View style={[s.sev, { backgroundColor: ALERT_SEV_COLOR[a.severity] + '33', borderColor: ALERT_SEV_COLOR[a.severity] }]}>
-                <Text style={[s.sevT, { color: ALERT_SEV_COLOR[a.severity] }]}>{ALERT_SEV_LABEL[a.severity]}</Text>
+              <View style={[s.sev, { backgroundColor: ALERT_SEV_COLOR[a.severity as AdminAlertSeverity] + '33', borderColor: ALERT_SEV_COLOR[a.severity as AdminAlertSeverity] }]}>
+                <Text style={[s.sevT, { color: ALERT_SEV_COLOR[a.severity as AdminAlertSeverity] }]}>{ALERT_SEV_LABEL[a.severity as AdminAlertSeverity]}</Text>
               </View>
             </View>
             <Text style={s.body}>{a.body}</Text>

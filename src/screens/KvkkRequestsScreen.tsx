@@ -72,16 +72,16 @@ export default function KvkkRequestsScreen() {
         renderItem={({ item: r }) => {
           const risk = dueRisk(r.dueDate);
           return (
-            <View key={r.id} style={[s.card, { borderLeftColor: KVKK_STATUS_COLOR[r.status] }]}>
+            <View key={r.id} style={[s.card, { borderLeftColor: KVKK_STATUS_COLOR[r.status as keyof typeof KVKK_STATUS_COLOR] }]}>
               <View style={s.row}>
                 <Text style={s.name}>{r.requesterName}</Text>
-                <View style={[s.pill, { backgroundColor: KVKK_STATUS_COLOR[r.status] + '33', borderColor: KVKK_STATUS_COLOR[r.status] }]}>
-                  <Text style={[s.pillT, { color: KVKK_STATUS_COLOR[r.status] }]}>{KVKK_STATUS_LABEL[r.status]}</Text>
+                <View style={[s.pill, { backgroundColor: KVKK_STATUS_COLOR[r.status as keyof typeof KVKK_STATUS_COLOR] + '33', borderColor: KVKK_STATUS_COLOR[r.status as keyof typeof KVKK_STATUS_COLOR] }]}>
+                  <Text style={[s.pillT, { color: KVKK_STATUS_COLOR[r.status as keyof typeof KVKK_STATUS_COLOR] }]}>{KVKK_STATUS_LABEL[r.status as keyof typeof KVKK_STATUS_LABEL]}</Text>
                 </View>
               </View>
               <Text style={s.email}>{r.requesterEmail}</Text>
               <View style={s.metaRow}>
-                <View style={s.typePill}><Text style={s.typeT}>{KVKK_TYPE_LABEL[r.type]}</Text></View>
+                <View style={s.typePill}><Text style={s.typeT}>{KVKK_TYPE_LABEL[r.type as keyof typeof KVKK_TYPE_LABEL]}</Text></View>
                 <Text style={[s.due, { color: risk.c }]}>{risk.t}</Text>
               </View>
               {r.notes && <Text style={s.notes}>"{r.notes}"</Text>}
@@ -115,7 +115,7 @@ export default function KvkkRequestsScreen() {
             <View style={s.chips}>
               {TYPES.map(t => (
                 <TouchableOpacity key={t} style={[s.chip, type === t && { backgroundColor: '#0ea5e9' }]} onPress={() => setType(t)}>
-                  <Text style={[s.chipT, type === t && { color: '#fff' }]}>{KVKK_TYPE_LABEL[t]}</Text>
+                  <Text style={[s.chipT, type === t && { color: '#fff' }]}>{KVKK_TYPE_LABEL[t as keyof typeof KVKK_TYPE_LABEL]}</Text>
                 </TouchableOpacity>
               ))}
             </View>

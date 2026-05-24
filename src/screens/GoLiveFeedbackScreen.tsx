@@ -40,7 +40,7 @@ export default function GoLiveFeedbackScreen() {
           />
         }
         renderItem={({ item: f }) => (
-          <View key={f.id} style={[s.card, { borderLeftColor: CAT_COLOR[f.category] }]}>
+          <View key={f.id} style={[s.card, { borderLeftColor: CAT_COLOR[f.category as keyof typeof CAT_COLOR] }]}>
             <View style={s.headRow}>
               <Ionicons name="person-circle" size={28} color={colors.text.muted} />
               <View style={{ flex: 1 }}>
@@ -55,11 +55,11 @@ export default function GoLiveFeedbackScreen() {
             </View>
             <Text style={s.msg}>{f.message}</Text>
             <View style={s.metaRow}>
-              <View style={[s.pill, { backgroundColor: CAT_COLOR[f.category] + '33', borderColor: CAT_COLOR[f.category] }]}>
-                <Text style={[s.pillT, { color: CAT_COLOR[f.category] }]}>{CAT_LABEL[f.category]}</Text>
+              <View style={[s.pill, { backgroundColor: CAT_COLOR[f.category as keyof typeof CAT_COLOR] + '33', borderColor: CAT_COLOR[f.category as keyof typeof CAT_COLOR] }]}>
+                <Text style={[s.pillT, { color: CAT_COLOR[f.category as keyof typeof CAT_COLOR] }]}>{CAT_LABEL[f.category as keyof typeof CAT_LABEL]}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: GO_LIVE_STATUS_COLOR[f.status] + '33', borderColor: GO_LIVE_STATUS_COLOR[f.status] }]}>
-                <Text style={[s.pillT, { color: GO_LIVE_STATUS_COLOR[f.status] }]}>{GO_LIVE_STATUS_LABEL[f.status]}</Text>
+              <View style={[s.pill, { backgroundColor: GO_LIVE_STATUS_COLOR[f.status as keyof typeof GO_LIVE_STATUS_COLOR] + '33', borderColor: GO_LIVE_STATUS_COLOR[f.status as keyof typeof GO_LIVE_STATUS_COLOR] }]}>
+                <Text style={[s.pillT, { color: GO_LIVE_STATUS_COLOR[f.status as keyof typeof GO_LIVE_STATUS_COLOR] }]}>{GO_LIVE_STATUS_LABEL[f.status as keyof typeof GO_LIVE_STATUS_LABEL]}</Text>
               </View>
             </View>
           </View>

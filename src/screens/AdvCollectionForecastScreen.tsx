@@ -51,22 +51,22 @@ export default function AdvCollectionForecastScreen() {
           />
         }
         renderItem={({ item: c }) => (
-          <View key={c.customerId} style={[s.card, { borderLeftColor: COLL_RISK_COLOR[c.risk], marginBottom: spacing.sm }]}>
+          <View style={[s.card, { borderLeftColor: COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR], marginBottom: spacing.sm }]}>
             <View style={s.cardHead}>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardT}>{c.customer}</Text>
                 <Text style={s.cardD}>Bekleyen tutar: ₺{c.outstandingTotal.toLocaleString('tr-TR')}</Text>
               </View>
-              <View style={[s.riskPill, { borderColor: COLL_RISK_COLOR[c.risk] }]}>
-                <Text style={[s.riskT, { color: COLL_RISK_COLOR[c.risk] }]}>{COLL_RISK_LABEL[c.risk]}</Text>
+              <View style={[s.riskPill, { borderColor: COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR] }]}>
+                <Text style={[s.riskT, { color: COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR] }]}>{COLL_RISK_LABEL[c.risk as keyof typeof COLL_RISK_LABEL]}</Text>
               </View>
             </View>
             <View style={s.predictRow}>
-              <Ionicons name="calendar" size={16} color={COLL_RISK_COLOR[c.risk]} />
+              <Ionicons name="calendar" size={16} color={COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR]} />
               <Text style={s.predictT}>Tahmini ödeme: {c.predictedPaymentDate}</Text>
               <View style={s.confBox}>
                 <View style={s.confBar}>
-                  <View style={[s.confFill, { width: `${c.confidence * 100}%`, backgroundColor: COLL_RISK_COLOR[c.risk] }]} />
+                  <View style={[s.confFill, { width: `${c.confidence * 100}%`, backgroundColor: COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR] }]} />
                 </View>
                 <Text style={s.confT}>%{Math.round(c.confidence * 100)}</Text>
               </View>
@@ -75,7 +75,7 @@ export default function AdvCollectionForecastScreen() {
               <Text style={s.driverHead}>Etkileyen faktörler:</Text>
               {c.drivers.map((d, i) => (
                 <View key={i} style={s.driverRow}>
-                  <Ionicons name="ellipse" size={6} color={COLL_RISK_COLOR[c.risk]} />
+                  <Ionicons name="ellipse" size={6} color={COLL_RISK_COLOR[c.risk as keyof typeof COLL_RISK_COLOR]} />
                   <Text style={s.driverT}>{d}</Text>
                 </View>
               ))}

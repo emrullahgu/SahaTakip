@@ -31,7 +31,7 @@ export default function LiveOpsMapScreen() {
       <View style={s.filterRow}>
         {KINDS.map(k => (
           <TouchableOpacity key={k} style={[s.fBtn, filter === k && { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' }]} onPress={() => setFilter(k)}>
-            <Text style={[s.fT, filter === k && { color: '#fff' }]}>{k === 'all' ? 'Tümü' : ENTITY_LABEL[k]}</Text>
+            <Text style={[s.fT, filter === k && { color: '#fff' }]}>{k === 'all' ? 'Tümü' : ENTITY_LABEL[k as keyof typeof ENTITY_LABEL]}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -43,8 +43,8 @@ export default function LiveOpsMapScreen() {
               const x = ((e.lng - bounds.minLng) / Math.max(0.001, bounds.maxLng - bounds.minLng)) * 100;
               const y = (1 - (e.lat - bounds.minLat) / Math.max(0.001, bounds.maxLat - bounds.minLat)) * 100;
               return (
-                <View key={e.id} style={[s.dot, { left: `${x}%`, top: `${y}%`, backgroundColor: ENTITY_COLOR[e.kind] }]}>
-                  <Ionicons name={ENTITY_ICON[e.kind] as any} size={10} color="#fff" />
+                <View key={e.id} style={[s.dot, { left: `${x}%`, top: `${y}%`, backgroundColor: ENTITY_COLOR[e.kind as keyof typeof ENTITY_COLOR] }]}>
+                  <Ionicons name={ENTITY_ICON[e.kind as keyof typeof ENTITY_ICON] as any} size={10} color="#fff" />
                 </View>
               );
             })}
@@ -65,11 +65,11 @@ export default function LiveOpsMapScreen() {
           />
         }
         renderItem={({ item }) => (
-          <View style={[s.card, { borderLeftColor: ENTITY_COLOR[item.kind] }]}>
-            <Ionicons name={ENTITY_ICON[item.kind] as any} size={20} color={ENTITY_COLOR[item.kind]} />
+          <View style={[s.card, { borderLeftColor: ENTITY_COLOR[item.kind as keyof typeof ENTITY_COLOR] }]}>
+            <Ionicons name={ENTITY_ICON[item.kind as keyof typeof ENTITY_ICON] as any} size={20} color={ENTITY_COLOR[item.kind as keyof typeof ENTITY_COLOR]} />
             <View style={{ flex: 1 }}>
               <Text style={s.n}>{item.name}</Text>
-              <Text style={s.k}>{ENTITY_LABEL[item.kind]}{item.status ? ` · ${item.status}` : ''}</Text>
+              <Text style={s.k}>{ENTITY_LABEL[item.kind as keyof typeof ENTITY_LABEL]}{item.status ? ` · ${item.status}` : ''}</Text>
               <Text style={s.c}>{item.lat.toFixed(4)}, {item.lng.toFixed(4)}</Text>
             </View>
           </View>

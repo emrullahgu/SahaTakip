@@ -55,8 +55,8 @@ export default function AdvEcommerceScreen() {
                     <Text style={s.cardT}>{c.name}</Text>
                     <Text style={s.cardD}>{c.productsSynced} ürün senkron</Text>
                   </View>
-                  <View style={[s.statusPill, { borderColor: STATUS_BG[c.status] }]}>
-                    <Text style={[s.statusT, { color: STATUS_BG[c.status] }]}>{STATUS_LBL[c.status]}</Text>
+                  <View style={[s.statusPill, { borderColor: STATUS_BG[c.status as keyof typeof STATUS_BG] }]}>
+                    <Text style={[s.statusT, { color: STATUS_BG[c.status as keyof typeof STATUS_BG] }]}>{STATUS_LBL[c.status as keyof typeof STATUS_LBL]}</Text>
                   </View>
                 </View>
                 <View style={s.metricsRow}>
@@ -77,14 +77,14 @@ export default function AdvEcommerceScreen() {
           />
         }
         renderItem={({ item: o }) => (
-          <View style={[s.row, { borderLeftColor: ECOM_STATUS_COLOR[o.status], marginBottom: spacing.xs }]}>
+          <View style={[s.row, { borderLeftColor: ECOM_STATUS_COLOR[o.status as keyof typeof ECOM_STATUS_COLOR], marginBottom: spacing.xs }]}>
             <View style={{ flex: 1 }}>
               <Text style={s.rowT}>{o.customer}</Text>
               <Text style={s.rowD}>{o.channel} · {o.items} kalem · {o.at}</Text>
             </View>
             <Text style={s.rowAmount}>₺{o.amount.toLocaleString('tr-TR')}</Text>
-            <View style={[s.miniPill, { backgroundColor: ECOM_STATUS_COLOR[o.status] + '22', borderColor: ECOM_STATUS_COLOR[o.status] }]}>
-              <Text style={[s.miniT, { color: ECOM_STATUS_COLOR[o.status] }]}>{ECOM_STATUS_LABEL[o.status]}</Text>
+            <View style={[s.miniPill, { backgroundColor: ECOM_STATUS_COLOR[o.status as keyof typeof ECOM_STATUS_COLOR] + '22', borderColor: ECOM_STATUS_COLOR[o.status as keyof typeof ECOM_STATUS_COLOR] }]}>
+              <Text style={[s.miniT, { color: ECOM_STATUS_COLOR[o.status as keyof typeof ECOM_STATUS_COLOR] }]}>{ECOM_STATUS_LABEL[o.status as keyof typeof ECOM_STATUS_LABEL]}</Text>
             </View>
           </View>
         )}

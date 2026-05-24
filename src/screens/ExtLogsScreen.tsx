@@ -58,12 +58,12 @@ export default function ExtLogsScreen() {
           />
         }
         renderItem={({ item: l }) => (
-          <View key={l.id} style={[s.row, { borderLeftColor: LEVEL_COLOR[l.level] }]}>
-            <Ionicons name={LEVEL_ICON[l.level] as any} size={18} color={LEVEL_COLOR[l.level]} />
+          <View key={l.id} style={[s.row, { borderLeftColor: LEVEL_COLOR[l.level as keyof typeof LEVEL_COLOR] }]}>
+            <Ionicons name={LEVEL_ICON[l.level as keyof typeof LEVEL_ICON] as any} size={18} color={LEVEL_COLOR[l.level as keyof typeof LEVEL_COLOR]} />
             <View style={{ flex: 1 }}>
               <View style={s.rowHead}>
-                <View style={[s.levelPill, { borderColor: LEVEL_COLOR[l.level] }]}>
-                  <Text style={[s.levelT, { color: LEVEL_COLOR[l.level] }]}>{LEVEL_LABEL[l.level]}</Text>
+                <View style={[s.levelPill, { borderColor: LEVEL_COLOR[l.level as keyof typeof LEVEL_COLOR] }]}>
+                  <Text style={[s.levelT, { color: LEVEL_COLOR[l.level as keyof typeof LEVEL_COLOR] }]}>{LEVEL_LABEL[l.level as keyof typeof LEVEL_LABEL]}</Text>
                 </View>
                 <Text style={s.at}>{l.at}</Text>
               </View>

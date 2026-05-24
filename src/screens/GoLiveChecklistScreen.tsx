@@ -57,8 +57,8 @@ export default function GoLiveChecklistScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.itemT, i.done && { textDecorationLine: 'line-through', color: colors.text.muted }]}>{i.text}</Text>
               <View style={s.metaRow}>
-                <View style={[s.pill, { backgroundColor: CAT_COLOR[i.category] + '33', borderColor: CAT_COLOR[i.category] }]}>
-                  <Text style={[s.pillT, { color: CAT_COLOR[i.category] }]}>{CAT_LABEL[i.category]}</Text>
+                <View style={[s.pill, { backgroundColor: CAT_COLOR[i.category as keyof typeof CAT_COLOR] + '33', borderColor: CAT_COLOR[i.category as keyof typeof CAT_COLOR] }]}>
+                  <Text style={[s.pillT, { color: CAT_COLOR[i.category as keyof typeof CAT_COLOR] }]}>{CAT_LABEL[i.category as keyof typeof CAT_LABEL]}</Text>
                 </View>
                 <Text style={s.owner}>{i.owner}</Text>
                 {i.critical && <View style={[s.pill, { borderColor: '#ef4444' }]}><Text style={[s.pillT, { color: '#ef4444' }]}>Kritik</Text></View>}

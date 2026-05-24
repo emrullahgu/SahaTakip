@@ -73,8 +73,8 @@ export default function DocChecklistScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.itemT, i.done && { textDecorationLine: 'line-through', color: colors.text.muted }]}>{i.text}</Text>
               <View style={s.itemMetaRow}>
-                <View style={[s.catPill, { backgroundColor: CAT_COLOR[i.category] + '33', borderColor: CAT_COLOR[i.category] }]}>
-                  <Text style={[s.catT, { color: CAT_COLOR[i.category] }]}>{CAT_LABEL[i.category]}</Text>
+                <View style={[s.catPill, { backgroundColor: CAT_COLOR[i.category as keyof typeof CAT_COLOR] + '33', borderColor: CAT_COLOR[i.category as keyof typeof CAT_COLOR] }]}>
+                  <Text style={[s.catT, { color: CAT_COLOR[i.category as keyof typeof CAT_COLOR] }]}>{CAT_LABEL[i.category as keyof typeof CAT_LABEL]}</Text>
                 </View>
                 {i.critical && (
                   <View style={[s.criticalTag, { borderColor: '#ef4444' }]}>

@@ -27,7 +27,7 @@ export default function AdvBIScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <FlatList
+      <FlatList<AdvBIDataset>
         {...FLATLIST_DEFAULTS}
         data={datasets}
         keyExtractor={d => d.id}
@@ -57,17 +57,17 @@ export default function AdvBIScreen() {
           />
         }
         renderItem={({ item: d }) => (
-          <View key={d.id} style={[s.card, { borderLeftColor: BI_STATUS_COLOR[d.status], marginBottom: spacing.xs }]}>
+          <View style={[s.card, { borderLeftColor: BI_STATUS_COLOR[d.status as keyof typeof BI_STATUS_COLOR], marginBottom: spacing.xs }]}>
             <View style={s.row}>
-              <View style={[s.iconBox, { backgroundColor: DEST_COLOR[d.destination] + '22' }]}>
-                <Ionicons name={DEST_ICON[d.destination] as any} size={20} color={DEST_COLOR[d.destination]} />
+              <View style={[s.iconBox, { backgroundColor: (DEST_COLOR[d.destination as keyof typeof DEST_COLOR] || '#ccc') + '22' }]}>
+                <Ionicons name={DEST_ICON[d.destination as keyof typeof DEST_ICON] as any} size={20} color={DEST_COLOR[d.destination as keyof typeof DEST_COLOR]} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardT}>{d.name}</Text>
                 <Text style={s.cardD}>{d.destination} · {d.rows.toLocaleString('tr-TR')} satır · {d.lastSync}</Text>
               </View>
-              <View style={[s.statusPill, { borderColor: BI_STATUS_COLOR[d.status] }]}>
-                <Text style={[s.statusT, { color: BI_STATUS_COLOR[d.status] }]}>{BI_STATUS_LABEL[d.status]}</Text>
+              <View style={[s.statusPill, { borderColor: BI_STATUS_COLOR[d.status as keyof typeof BI_STATUS_COLOR] }]}>
+                <Text style={[s.statusT, { color: BI_STATUS_COLOR[d.status as keyof typeof BI_STATUS_COLOR] }]}>{BI_STATUS_LABEL[d.status as keyof typeof BI_STATUS_LABEL]}</Text>
               </View>
             </View>
           </View>

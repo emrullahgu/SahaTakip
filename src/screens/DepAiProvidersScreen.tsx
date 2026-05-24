@@ -40,15 +40,15 @@ export default function DepAiProvidersScreen() {
           />
         }
         renderItem={({ item: p }) => (
-          <View key={p.id} style={[s.card, { borderLeftColor: STATUS_COLOR[p.status] }]}>
+          <View key={p.id} style={[s.card, { borderLeftColor: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] }]}>
             <View style={s.headRow}>
               <View style={s.priBadge}><Text style={s.priT}>#{p.priority}</Text></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.name}>{p.name}</Text>
                 <Text style={s.model}>{p.model}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: STATUS_COLOR[p.status] + '33', borderColor: STATUS_COLOR[p.status] }]}>
-                <Text style={[s.pillT, { color: STATUS_COLOR[p.status] }]}>{STATUS_LABEL[p.status]}</Text>
+              <View style={[s.pill, { backgroundColor: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] + '33', borderColor: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] }]}>
+                <Text style={[s.pillT, { color: STATUS_COLOR[p.status as keyof typeof STATUS_COLOR] }]}>{STATUS_LABEL[p.status as keyof typeof STATUS_LABEL]}</Text>
               </View>
             </View>
             <View style={s.tagRow}>

@@ -48,7 +48,7 @@ export default function GesProposalsScreen() {
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('GesProposalForm', { quoteId: q.id })}>
             <View style={{ flex: 1 }}>
               <Text style={s.cardTitle}>{q.customerName || 'Müşteri'}</Text>
-              <Text style={s.cardMeta}>{GES_TYPE_LABEL[q.input.type]} · {q.input.capacityKwp} kWp · {q.input.panelCount}× {q.input.panelWatt}W</Text>
+              <Text style={s.cardMeta}>{GES_TYPE_LABEL[q.input.type as keyof typeof GES_TYPE_LABEL]} · {q.input.capacityKwp} kWp · {q.input.panelCount}× {q.input.panelWatt}W</Text>
               <Text style={s.price}>₺{q.total.toLocaleString('tr-TR')}</Text>
               <Text style={s.cardMeta}>Malzeme: ₺{q.materialCost.toLocaleString('tr-TR')} · İşçilik: ₺{q.laborCost.toLocaleString('tr-TR')}</Text>
             </View>

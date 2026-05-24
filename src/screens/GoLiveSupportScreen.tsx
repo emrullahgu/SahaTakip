@@ -39,15 +39,15 @@ export default function GoLiveSupportScreen() {
           />
         }
         renderItem={({ item: it }) => (
-          <View key={it.id} style={[s.card, { borderLeftColor: FREQ_COLOR[it.frequency] }]}>
+          <View key={it.id} style={[s.card, { borderLeftColor: FREQ_COLOR[it.frequency as keyof typeof FREQ_COLOR] }]}>
             <View style={s.headRow}>
               <Ionicons name="shield-checkmark" size={20} color="#f97316" />
               <Text style={s.area}>{it.area}</Text>
             </View>
             <Text style={s.desc}>{it.description}</Text>
             <View style={s.metaRow}>
-              <View style={[s.pill, { backgroundColor: FREQ_COLOR[it.frequency] + '33', borderColor: FREQ_COLOR[it.frequency] }]}>
-                <Text style={[s.pillT, { color: FREQ_COLOR[it.frequency] }]}>{FREQ_LABEL[it.frequency]}</Text>
+              <View style={[s.pill, { backgroundColor: FREQ_COLOR[it.frequency as keyof typeof FREQ_COLOR] + '33', borderColor: FREQ_COLOR[it.frequency as keyof typeof FREQ_COLOR] }]}>
+                <Text style={[s.pillT, { color: FREQ_COLOR[it.frequency as keyof typeof FREQ_COLOR] }]}>{FREQ_LABEL[it.frequency as keyof typeof FREQ_LABEL]}</Text>
               </View>
               <View style={[s.pill, { borderColor: '#06b6d4' }]}>
                 <Ionicons name="person" size={10} color="#06b6d4" /> <Text style={[s.pillT, { color: '#06b6d4' }]}>{it.owner}</Text>

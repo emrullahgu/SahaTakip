@@ -106,7 +106,7 @@ export default function AssetsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.title}>{item.name}</Text>
                 <Text style={styles.sub}>
-                  {ASSET_TYPE_LABEL[item.type]}
+                  {ASSET_TYPE_LABEL[item.type as keyof typeof ASSET_TYPE_LABEL]}
                   {item.serialNo ? ` · SN: ${item.serialNo}` : ''}
                 </Text>
                 {item.customerName ? (

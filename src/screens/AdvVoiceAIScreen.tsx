@@ -55,10 +55,10 @@ export default function AdvVoiceAIScreen() {
           />
         }
         renderItem={({ item: t }) => (
-          <View key={t.id} style={[s.card, { borderLeftColor: VOICE_CATEGORY_COLOR[t.category], marginBottom: spacing.xs }]}>
+          <View key={t.id} style={[s.card, { borderLeftColor: VOICE_CATEGORY_COLOR[t.category as keyof typeof VOICE_CATEGORY_COLOR], marginBottom: spacing.xs }]}>
             <View style={s.cardHead}>
-              <View style={[s.catPill, { borderColor: VOICE_CATEGORY_COLOR[t.category] }]}>
-                <Text style={[s.catT, { color: VOICE_CATEGORY_COLOR[t.category] }]}>{VOICE_CATEGORY_LABEL[t.category]}</Text>
+              <View style={[s.catPill, { borderColor: VOICE_CATEGORY_COLOR[t.category as keyof typeof VOICE_CATEGORY_COLOR] }]}>
+                <Text style={[s.catT, { color: VOICE_CATEGORY_COLOR[t.category as keyof typeof VOICE_CATEGORY_COLOR] }]}>{VOICE_CATEGORY_LABEL[t.category as keyof typeof VOICE_CATEGORY_LABEL]}</Text>
               </View>
               <Text style={s.meta}>{t.user} · {t.at}</Text>
             </View>

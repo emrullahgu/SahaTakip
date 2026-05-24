@@ -66,14 +66,14 @@ export default function GoLiveLogsScreen() {
           />
         }
         renderItem={({ item: l }) => (
-          <View key={l.id} style={[s.card, { borderLeftColor: l.resolved ? '#22c55e' : GO_LIVE_SEVERITY_COLOR[l.severity] }]}>
+          <View key={l.id} style={[s.card, { borderLeftColor: l.resolved ? '#22c55e' : GO_LIVE_SEVERITY_COLOR[l.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] }]}>
             <View style={s.headRow}>
-              <View style={[s.kindPill, { backgroundColor: KIND_COLOR[l.kind] + '33', borderColor: KIND_COLOR[l.kind] }]}>
-                <Ionicons name={KIND_ICON[l.kind] as any} size={11} color={KIND_COLOR[l.kind]} />
-                <Text style={[s.kindT, { color: KIND_COLOR[l.kind] }]}>{KIND_LABEL[l.kind]}</Text>
+              <View style={[s.kindPill, { backgroundColor: KIND_COLOR[l.kind as keyof typeof KIND_COLOR] + '33', borderColor: KIND_COLOR[l.kind as keyof typeof KIND_COLOR] }]}>
+                <Ionicons name={KIND_ICON[l.kind as keyof typeof KIND_ICON] as any} size={11} color={KIND_COLOR[l.kind as keyof typeof KIND_COLOR]} />
+                <Text style={[s.kindT, { color: KIND_COLOR[l.kind as keyof typeof KIND_COLOR] }]}>{KIND_LABEL[l.kind as keyof typeof KIND_LABEL]}</Text>
               </View>
-              <View style={[s.sevPill, { backgroundColor: GO_LIVE_SEVERITY_COLOR[l.severity] + '33', borderColor: GO_LIVE_SEVERITY_COLOR[l.severity] }]}>
-                <Text style={[s.sevT, { color: GO_LIVE_SEVERITY_COLOR[l.severity] }]}>{GO_LIVE_SEVERITY_LABEL[l.severity]}</Text>
+              <View style={[s.sevPill, { backgroundColor: GO_LIVE_SEVERITY_COLOR[l.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] + '33', borderColor: GO_LIVE_SEVERITY_COLOR[l.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] }]}>
+                <Text style={[s.sevT, { color: GO_LIVE_SEVERITY_COLOR[l.severity as keyof typeof GO_LIVE_SEVERITY_COLOR] }]}>{GO_LIVE_SEVERITY_LABEL[l.severity as keyof typeof GO_LIVE_SEVERITY_LABEL]}</Text>
               </View>
               {l.resolved && (
                 <View style={[s.resolvedPill, { borderColor: '#22c55e' }]}>

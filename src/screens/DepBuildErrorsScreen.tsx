@@ -65,22 +65,22 @@ export default function DepBuildErrorsScreen() {
           />
         }
         renderItem={({ item: e }) => (
-          <View key={e.id} style={[s.card, { borderLeftColor: e.fixed ? '#22c55e' : SEV_COLOR[e.severity], opacity: e.fixed ? 0.6 : 1 }]}>
+          <View key={e.id} style={[s.card, { borderLeftColor: e.fixed ? '#22c55e' : SEV_COLOR[e.severity as keyof typeof SEV_COLOR], opacity: e.fixed ? 0.6 : 1 }]}>
             <View style={s.headRow}>
-              <Ionicons name={e.fixed ? 'checkmark-done-circle' : SEV_ICON[e.severity] as any} size={20} color={e.fixed ? '#22c55e' : SEV_COLOR[e.severity]} />
+              <Ionicons name={e.fixed ? 'checkmark-done-circle' : SEV_ICON[e.severity as keyof typeof SEV_ICON] as any} size={20} color={e.fixed ? '#22c55e' : SEV_COLOR[e.severity as keyof typeof SEV_COLOR]} />
               <View style={{ flex: 1 }}>
                 <Text style={s.code}>{e.file.split('/').pop()}</Text>
                 <Text style={s.msg}>{e.message}</Text>
               </View>
-              <View style={[s.pill, { backgroundColor: SEV_COLOR[e.severity] + '33', borderColor: SEV_COLOR[e.severity] }]}>
-                <Text style={[s.pillT, { color: SEV_COLOR[e.severity] }]}>{CAT_LABEL[e.category]}</Text>
+              <View style={[s.pill, { backgroundColor: SEV_COLOR[e.severity as keyof typeof SEV_COLOR] + '33', borderColor: SEV_COLOR[e.severity as keyof typeof SEV_COLOR] }]}>
+                <Text style={[s.pillT, { color: SEV_COLOR[e.severity as keyof typeof SEV_COLOR] }]}>{CAT_LABEL[e.category as keyof typeof CAT_LABEL]}</Text>
               </View>
             </View>
             {e.file && (
               <Text style={s.file}>{e.file}:{e.line}</Text>
             )}
             <View style={s.metaRow}>
-              <Text style={s.metaT}>{PLAT_LABEL[e.platform]}</Text>
+              <Text style={s.metaT}>{PLAT_LABEL[e.platform as keyof typeof PLAT_LABEL]}</Text>
               <TouchableOpacity onPress={() => onToggle(e.id)} style={[s.toggleBtn, { borderColor: e.fixed ? '#f59e0b' : '#22c55e' }]}>
                 <Ionicons name={e.fixed ? 'arrow-undo' : 'checkmark'} size={12} color={e.fixed ? '#f59e0b' : '#22c55e'} />
                 <Text style={[s.toggleT, { color: e.fixed ? '#f59e0b' : '#22c55e' }]}>{e.fixed ? 'Geri Al' : 'Düzeltildi'}</Text>

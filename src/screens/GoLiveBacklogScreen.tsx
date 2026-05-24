@@ -40,15 +40,15 @@ export default function GoLiveBacklogScreen() {
           />
         }
         renderItem={({ item: it, index: idx }) => (
-          <View key={it.id} style={[s.card, { borderLeftColor: IMPACT_COLOR[it.impact] }]}>
+          <View key={it.id} style={[s.card, { borderLeftColor: IMPACT_COLOR[it.impact as keyof typeof IMPACT_COLOR] }]}>
             <View style={s.headRow}>
               <View style={s.rankBox}><Text style={s.rank}>#{idx + 1}</Text></View>
               <Text style={s.scoreV}>{it.priorityScore}</Text>
-              <View style={[s.pill, { backgroundColor: IMPACT_COLOR[it.impact] + '33', borderColor: IMPACT_COLOR[it.impact] }]}>
-                <Text style={[s.pillT, { color: IMPACT_COLOR[it.impact] }]}>Etki: {IMPACT_LABEL[it.impact]}</Text>
+              <View style={[s.pill, { backgroundColor: IMPACT_COLOR[it.impact as keyof typeof IMPACT_COLOR] + '33', borderColor: IMPACT_COLOR[it.impact as keyof typeof IMPACT_COLOR] }]}>
+                <Text style={[s.pillT, { color: IMPACT_COLOR[it.impact as keyof typeof IMPACT_COLOR] }]}>Etki: {IMPACT_LABEL[it.impact as keyof typeof IMPACT_LABEL]}</Text>
               </View>
               <View style={[s.pill, { borderColor: '#06b6d4' }]}>
-                <Text style={[s.pillT, { color: '#06b6d4' }]}>Efor: {EFFORT_LABEL[it.effort]}</Text>
+                <Text style={[s.pillT, { color: '#06b6d4' }]}>Efor: {EFFORT_LABEL[it.effort as keyof typeof EFFORT_LABEL]}</Text>
               </View>
             </View>
             <Text style={s.title}>{it.title}</Text>

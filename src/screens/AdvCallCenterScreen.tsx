@@ -53,7 +53,7 @@ export default function AdvCallCenterScreen() {
             {agents.map(a => (
               <View key={a.id} style={[s.card, { marginBottom: spacing.xs }]}>
                 <View style={s.row}>
-                  <View style={[s.dot, { backgroundColor: CALL_AGENT_STATUS_COLOR[a.status] }]} />
+                  <View style={[s.dot, { backgroundColor: CALL_AGENT_STATUS_COLOR[a.status as keyof typeof CALL_AGENT_STATUS_COLOR] }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={s.cardT}>{a.name}</Text>
                     <Text style={s.cardD}>{a.calls} çağrı · ort. {fmt(a.avgDurationSec)}</Text>
@@ -64,8 +64,8 @@ export default function AdvCallCenterScreen() {
                       <Text style={s.satT}>{a.satisfaction.toFixed(1)}</Text>
                     </View>
                   )}
-                  <View style={[s.statusPill, { borderColor: CALL_AGENT_STATUS_COLOR[a.status] }]}>
-                    <Text style={[s.statusT, { color: CALL_AGENT_STATUS_COLOR[a.status] }]}>{CALL_AGENT_STATUS_LABEL[a.status]}</Text>
+                  <View style={[s.statusPill, { borderColor: CALL_AGENT_STATUS_COLOR[a.status as keyof typeof CALL_AGENT_STATUS_COLOR] }]}>
+                    <Text style={[s.statusT, { color: CALL_AGENT_STATUS_COLOR[a.status as keyof typeof CALL_AGENT_STATUS_COLOR] }]}>{CALL_AGENT_STATUS_LABEL[a.status as keyof typeof CALL_AGENT_STATUS_LABEL]}</Text>
                   </View>
                 </View>
               </View>
@@ -82,7 +82,7 @@ export default function AdvCallCenterScreen() {
           />
         }
         renderItem={({ item: r }) => (
-          <View key={r.id} style={[s.card, { borderLeftColor: CALL_OUTCOME_COLOR[r.outcome], borderLeftWidth: 4, marginBottom: spacing.xs }]}>
+          <View style={[s.card, { borderLeftColor: CALL_OUTCOME_COLOR[r.outcome as keyof typeof CALL_OUTCOME_COLOR], borderLeftWidth: 4, marginBottom: spacing.xs }]}>
             <View style={s.row}>
               <Ionicons name={r.direction === 'in' ? 'call' : 'arrow-redo'} size={20} color={r.direction === 'in' ? '#22c55e' : '#3b82f6'} />
               <View style={{ flex: 1 }}>
@@ -90,8 +90,8 @@ export default function AdvCallCenterScreen() {
                 <Text style={s.cardD}>{r.agent} · {r.at} · {fmt(r.durationSec)}</Text>
               </View>
               {r.hasRecording && <Ionicons name="recording" size={16} color={colors.text.muted} />}
-              <View style={[s.statusPill, { borderColor: CALL_OUTCOME_COLOR[r.outcome] }]}>
-                <Text style={[s.statusT, { color: CALL_OUTCOME_COLOR[r.outcome] }]}>{CALL_OUTCOME_LABEL[r.outcome]}</Text>
+              <View style={[s.statusPill, { borderColor: CALL_OUTCOME_COLOR[r.outcome as keyof typeof CALL_OUTCOME_COLOR] }]}>
+                <Text style={[s.statusT, { color: CALL_OUTCOME_COLOR[r.outcome as keyof typeof CALL_OUTCOME_COLOR] }]}>{CALL_OUTCOME_LABEL[r.outcome as keyof typeof CALL_OUTCOME_LABEL]}</Text>
               </View>
             </View>
           </View>

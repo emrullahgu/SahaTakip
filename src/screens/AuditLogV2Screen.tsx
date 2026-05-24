@@ -81,9 +81,9 @@ export default function AuditLogV2Screen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('AuditDetail', { entryId: item.id })}>
-            <View style={[s.actionDot, { backgroundColor: AUDIT_ACTION_COLOR[item.action] }]} />
+            <View style={[s.actionDot, { backgroundColor: AUDIT_ACTION_COLOR[item.action as keyof typeof AUDIT_ACTION_COLOR] }]} />
             <View style={{ flex: 1 }}>
-              <Text style={s.t}>{AUDIT_ACTION_LABEL[item.action]} · {item.resource}{item.resourceId ? ' · ' + item.resourceId : ''}</Text>
+              <Text style={s.t}>{AUDIT_ACTION_LABEL[item.action as keyof typeof AUDIT_ACTION_LABEL]} · {item.resource}{item.resourceId ? ' · ' + item.resourceId : ''}</Text>
               <Text style={s.sub}>{item.actorName || '—'} · {new Date(item.occurredAt).toLocaleString('tr-TR')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />

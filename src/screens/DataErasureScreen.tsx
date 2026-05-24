@@ -64,21 +64,21 @@ export default function DataErasureScreen() {
           />
         }
         renderItem={({ item: j }) => (
-          <View key={j.id} style={[s.card, { borderLeftColor: SEC_JOB_COLOR[j.status] }]}>
+          <View key={j.id} style={[s.card, { borderLeftColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>
             <View style={s.row}>
-              <View style={[s.iconBox, { backgroundColor: SCOPE_COLOR[j.scope] + '22', borderColor: SCOPE_COLOR[j.scope] }]}>
-                <Ionicons name={SCOPE_ICON[j.scope] as any} size={20} color={SCOPE_COLOR[j.scope]} />
+              <View style={[s.iconBox, { backgroundColor: SCOPE_COLOR[j.scope as keyof typeof SCOPE_COLOR] + '22', borderColor: SCOPE_COLOR[j.scope as keyof typeof SCOPE_COLOR] }]}>
+                <Ionicons name={SCOPE_ICON[j.scope as keyof typeof SCOPE_ICON] as any} size={20} color={SCOPE_COLOR[j.scope as keyof typeof SCOPE_COLOR]} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.user}>{j.userName}</Text>
-                <Text style={[s.scope, { color: SCOPE_COLOR[j.scope] }]}>{SCOPE_LABEL[j.scope]}</Text>
+                <Text style={[s.scope, { color: SCOPE_COLOR[j.scope as keyof typeof SCOPE_COLOR] }]}>{SCOPE_LABEL[j.scope as keyof typeof SCOPE_LABEL]}</Text>
                 <Text style={s.meta}>{new Date(j.requestedAt).toLocaleDateString('tr-TR')}</Text>
                 {j.affectedRecords !== undefined && (
                   <Text style={s.meta}>{j.affectedRecords.toLocaleString('tr-TR')} kayıt etkilendi</Text>
                 )}
               </View>
-              <View style={[s.pill, { backgroundColor: SEC_JOB_COLOR[j.status] + '33', borderColor: SEC_JOB_COLOR[j.status] }]}>
-                <Text style={[s.pillT, { color: SEC_JOB_COLOR[j.status] }]}>{SEC_JOB_LABEL[j.status]}</Text>
+              <View style={[s.pill, { backgroundColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] + '33', borderColor: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>
+                <Text style={[s.pillT, { color: SEC_JOB_COLOR[j.status as keyof typeof SEC_JOB_COLOR] }]}>{SEC_JOB_LABEL[j.status as keyof typeof SEC_JOB_LABEL]}</Text>
               </View>
             </View>
           </View>

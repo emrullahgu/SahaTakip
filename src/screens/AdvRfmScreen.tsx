@@ -39,10 +39,10 @@ export default function AdvRfmScreen() {
             <Text style={s.sectionT}>Segment Dağılımı</Text>
             <View style={s.segGrid}>
               {SEGMENTS.map(seg => (
-                <View key={seg} style={[s.segCard, { borderColor: RFM_SEGMENT_COLOR[seg] }]}>
-                  <Ionicons name={RFM_SEGMENT_ICON[seg] as any} size={24} color={RFM_SEGMENT_COLOR[seg]} />
-                  <Text style={[s.segN, { color: RFM_SEGMENT_COLOR[seg] }]}>{counts[seg]}</Text>
-                  <Text style={s.segL}>{RFM_SEGMENT_LABEL[seg]}</Text>
+                <View key={seg} style={[s.segCard, { borderColor: RFM_SEGMENT_COLOR[seg as AdvRfmSegment] }]}>
+                  <Ionicons name={RFM_SEGMENT_ICON[seg as AdvRfmSegment] as any} size={24} color={RFM_SEGMENT_COLOR[seg as AdvRfmSegment]} />
+                  <Text style={[s.segN, { color: RFM_SEGMENT_COLOR[seg as AdvRfmSegment] }]}>{counts[seg as AdvRfmSegment]}</Text>
+                  <Text style={s.segL}>{RFM_SEGMENT_LABEL[seg as AdvRfmSegment]}</Text>
                 </View>
               ))}
             </View>
@@ -58,12 +58,12 @@ export default function AdvRfmScreen() {
           />
         }
         renderItem={({ item: c }) => (
-          <View key={c.id} style={[s.card, { borderLeftColor: RFM_SEGMENT_COLOR[c.segment], marginBottom: spacing.sm }]}>
+          <View key={c.id} style={[s.card, { borderLeftColor: RFM_SEGMENT_COLOR[c.segment as AdvRfmSegment], marginBottom: spacing.sm }]}>
             <View style={s.cardHead}>
-              <Ionicons name={RFM_SEGMENT_ICON[c.segment] as any} size={20} color={RFM_SEGMENT_COLOR[c.segment]} />
+              <Ionicons name={RFM_SEGMENT_ICON[c.segment as AdvRfmSegment] as any} size={20} color={RFM_SEGMENT_COLOR[c.segment as AdvRfmSegment]} />
               <View style={{ flex: 1 }}>
                 <Text style={s.cardT}>{c.name}</Text>
-                <Text style={s.cardD}>{RFM_SEGMENT_LABEL[c.segment]} · RFM {c.rfmScore}</Text>
+                <Text style={s.cardD}>{RFM_SEGMENT_LABEL[c.segment as AdvRfmSegment]} · RFM {c.rfmScore}</Text>
               </View>
               <Text style={s.amount}>₺{(c.monetary / 1000).toFixed(0)}K</Text>
             </View>
