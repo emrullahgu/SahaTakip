@@ -42,7 +42,7 @@ export async function hydrateThemeMode(): Promise<void> {
     const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       storedMode = stored;
-      const effective = stored === 'system' ? 'dark' : stored;
+      const effective = stored === 'system' ? 'light' : stored;
       if (Platform.OS !== 'web' && effective !== __activeThemeMode) {
         const g: any = globalThis as any;
         if (!g.__SAHATAKIP_THEME_RELOAD_DONE__) {

@@ -17,8 +17,17 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
 };
 
 // Sağlayıcı kartına tıklandığında otomatik dolduracağımız built-in anahtarlar —
-// kaynak koda gömmek yerine .env (EXPO_PUBLIC_*) üzerinden okunur.
+// Önce Supabase'den indirilmiş `ai_settings.keys` map'i, yoksa .env fallback.
 export function getBuiltinKey(p: AiProvider): string | undefined {
+  // 1) Supabase cache (admin'in `app_settings.ai_settings.keys` üzerinden gönderdiği map)
+  try {
+    // require yerine senkron erişmek için AsyncStorage kullanılamaz; cache'i ayrı bir
+    // module-level değişkende tutuyoruz; syncRemoteAiSettings çağrısı her giriş yapan
+    // kullanıcı için bunu doldurur.
+    const map = _cachedRemoteKeys;
+    if (map && map[p]) return map[p];
+  } catch { /* ignore */ }
+  // 2) .env fallback
   switch (p) {
     case 'openai': return process.env.EXPO_PUBLIC_OPENAI_KEY;
     case 'claude': return process.env.EXPO_PUBLIC_CLAUDE_KEY;
@@ -26,6 +35,8 @@ export function getBuiltinKey(p: AiProvider): string | undefined {
     default: return undefined;
   }
 }
+
+let _cachedRemoteKeys: Partial<Record<AiProvider, string>> | null = null;
 
 // Remote (Supabase) → tüm kullanıcılar tarafından paylaşılan ayarları çek.
 // Admin bir kere yazar, herkes okur. RLS bunu zorunlu kılar.
@@ -38,7 +49,11 @@ async function fetchRemoteAiSettings(): Promise<AiSettings | null> {
       .eq('key', SETTINGS_REMOTE_KEY)
       .maybeSingle();
     if (error || !data?.value) return null;
-    const v = data.value as AiSettings;
+    const v = data.value as AiSettings & { keys?: Partial<Record<AiProvider, string>> };
+    // `keys` map'ini cache'e al — sağlayıcı değiştirildiğinde UI doğru anahtarı bulur.
+    if (v?.keys && typeof v.keys === 'object') {
+      _cachedRemoteKeys = v.keys;
+    }
     if (v?.provider && v.provider !== 'mock' && v.apiKey) return v;
     return null;
   } catch {

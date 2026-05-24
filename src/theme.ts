@@ -31,7 +31,8 @@ function readInitialMode(): 'light' | 'dark' {
   } catch {
     /* sessiz */
   }
-  return 'dark';
+  // Varsayılan: açık renk tema (kullanıcı sonradan seçtiyse o tercih kaydedilip yüklenir)
+  return 'light';
 }
 
 export const __activeThemeMode: 'light' | 'dark' = readInitialMode();
