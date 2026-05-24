@@ -2188,6 +2188,7 @@ export interface FieldShift {
   endedAt?: string;
   totalMinutes: number;
   breakMinutes: number;
+  remoteShiftId?: string | null; // Supabase shifts.id (canlı mesai takibi için)
 }
 
 export interface FieldJob {

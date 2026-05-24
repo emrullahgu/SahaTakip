@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,24 +10,17 @@ import {
  FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography } from '../theme';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { useAppContext } from '../context/AppContext';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { listExpenses, addExpense, deleteExpense, type Expense } from '../services/expenses';
 
 const EXPENSE_TYPES = ['Yol', 'Yemek', 'Malzeme', 'Diğer'];
-
-interface Expense {
-  id: string;
-  type: string;
-  amount: number;
-  date: string;
-  description: string;
-  status: 'Bekliyor' | 'Onaylandı';
-}
 
 export default function ExpensesScreen() {
   const { toast, showToast } = useAppContext();
@@ -38,25 +31,38 @@ export default function ExpensesScreen() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
-  const handleAdd = () => {
+  const load = useCallback(async () => {
+    setExpenses(await listExpenses());
+  }, []);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const handleAdd = async () => {
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) {
       Alert.alert('Geçersiz Tutar', 'Lütfen geçerli bir tutar girin.');
       return;
     }
-    const newExpense: Expense = {
-      id: `MSF-${Date.now().toString().slice(-4)}`,
-      type,
-      amount: parsed,
-      date: new Date().toISOString().split('T')[0],
-      description,
-      status: 'Bekliyor',
-    };
-    setExpenses(prev => [newExpense, ...prev]);
-    setAmount('');
-    setDescription('');
-    setShowForm(false);
-    showToast('Masraf başarıyla kaydedildi!');
+    try {
+      await addExpense({
+        type,
+        amount: parsed,
+        date: new Date().toISOString().split('T')[0],
+        description,
+      });
+      setAmount('');
+      setDescription('');
+      setShowForm(false);
+      showToast('Masraf başarıyla kaydedildi!');
+      await load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Masraf kaydedilemedi');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteExpense(id);
+    showToast('Masraf silindi');
+    await load();
   };
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
@@ -204,6 +210,17 @@ export default function ExpensesScreen() {
                   </Text>
                 </View>
               </View>
+              <RowMenu
+                items={[
+                  {
+                    label: 'Sil',
+                    icon: 'trash-outline',
+                    destructive: true,
+                    confirm: `Bu masraf silinecek.`,
+                    onPress: () => handleDelete(e.id),
+                  },
+                ]}
+              />
             </View>
           )}
         />

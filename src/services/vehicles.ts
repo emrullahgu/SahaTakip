@@ -12,8 +12,15 @@ const KEY = '@SahaTakip:vehicles';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function uuidOrNull(v?: string | null): string | null { return v && UUID_RE.test(v) ? v : null; }
 
+// RFC4122 v4 — Math.random based (yeterli; pgcrypto'ya hiç ulaşamıyorsak da geçerli olur)
 function uid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  const hex = (n: number) => {
+    let s = '';
+    for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 16).toString(16);
+    return s;
+  };
+  const variant = (8 + Math.floor(Math.random() * 4)).toString(16); // 8,9,a,b
+  return `${hex(8)}-${hex(4)}-4${hex(3)}-${variant}${hex(3)}-${hex(12)}`;
 }
 
 function fromRow(r: any): Vehicle {
@@ -100,8 +107,14 @@ export async function upsertVehicle(v: Vehicle) {
         .upsert(toRow(v), { onConflict: 'id' })
         .select()
         .single();
-      if (!error && data) saved = fromRow(data);
-    } catch { /* ignore */ }
+      if (error) {
+        console.warn('[vehicles.upsert]', error.message);
+      } else if (data) {
+        saved = fromRow(data);
+      }
+    } catch (e: any) {
+      console.warn('[vehicles.upsert.exception]', e?.message ?? e);
+    }
   }
   const all = await listVehicles();
   const idx = all.findIndex(x => x.id === saved.id || x.id === v.id);

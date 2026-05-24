@@ -5,6 +5,8 @@ import type {
   FieldZone, FieldShiftPlan, FieldEmergencyDispatch, FieldOpsLiveStat,
   FieldShiftStatus, FieldJobStage, FieldPriority, FieldChecklistType,
 } from '../types';
+import { supabase } from './supabase';
+import { shiftsRepo } from './data/shiftsRepo';
 
 const K = {
   shift: 'fo_shift_v1',
@@ -35,7 +37,7 @@ function uid(p: string) { return `${p}-${Date.now()}-${Math.floor(Math.random() 
 
 // === SHIFT ===
 async function seedShift(): Promise<FieldShift> {
-  return { id: 'shift-self', userId: '', userName: '', status: 'idle', totalMinutes: 0, breakMinutes: 0 };
+  return { id: 'shift-self', userId: '', userName: '', status: 'idle', totalMinutes: 0, breakMinutes: 0, remoteShiftId: null };
 }
 export async function getShift(): Promise<FieldShift> {
   const cur = await get<FieldShift | null>(K.shift, null);
@@ -44,16 +46,56 @@ export async function getShift(): Promise<FieldShift> {
   await set(K.shift, s);
   return s;
 }
+
+async function currentUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  } catch { return null; }
+}
+
 export async function startShift(): Promise<FieldShift> {
   const s = await getShift();
-  s.status = 'on_shift'; s.startedAt = new Date().toISOString();
-  await set(K.shift, s); return s;
+  s.status = 'on_shift';
+  s.startedAt = new Date().toISOString();
+  s.endedAt = undefined;
+  // Supabase senkronu (canlı mesai paneline yansısın diye)
+  try {
+    const uid = await currentUserId();
+    if (uid) {
+      s.userId = uid;
+      const remote = await shiftsRepo.start(uid);
+      if (remote?.id) s.remoteShiftId = remote.id;
+    }
+  } catch (e: any) {
+    console.warn('[fieldOps.startShift.sync]', e?.message ?? e);
+  }
+  await set(K.shift, s);
+  return s;
 }
 export async function endShift(): Promise<FieldShift> {
   const s = await getShift();
-  s.status = 'finished'; s.endedAt = new Date().toISOString();
+  s.status = 'finished';
+  s.endedAt = new Date().toISOString();
   if (s.startedAt) s.totalMinutes = Math.round((Date.now() - new Date(s.startedAt).getTime()) / 60000);
-  await set(K.shift, s); return s;
+  // Supabase senkronu
+  try {
+    if (s.remoteShiftId) {
+      await shiftsRepo.end(s.remoteShiftId);
+    } else {
+      // remoteShiftId yoksa aktif vardiyayı bulup kapat
+      const uid = await currentUserId();
+      if (uid) {
+        const active = await shiftsRepo.getActive(uid);
+        if (active?.id) await shiftsRepo.end(active.id);
+      }
+    }
+    s.remoteShiftId = null;
+  } catch (e: any) {
+    console.warn('[fieldOps.endShift.sync]', e?.message ?? e);
+  }
+  await set(K.shift, s);
+  return s;
 }
 export async function toggleBreak(): Promise<FieldShift> {
   const s = await getShift();
