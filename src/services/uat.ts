@@ -117,37 +117,21 @@ const DEFAULT_E2E: UatE2EFlow[] = [
   { id: 'e-notif', flow: 'notification', title: 'Bildirim Akışları', steps: 8, passed: 7, failed: 1, blocked: 0, durationMin: 9, status: 'fail', lastRunAt: '2026-05-23T11:35:00Z' },
 ];
 
-const DEFAULT_NOTIF: UatNotificationCheck[] = [
-  { id: 'n1', channel: 'push', trigger: 'İş emri atama', delivered: true, latencyMs: 1240 },
-  { id: 'n2', channel: 'push', trigger: 'Teklif onayı', delivered: true, latencyMs: 980 },
-  { id: 'n3', channel: 'email', trigger: 'Kullanıcı daveti', delivered: true, latencyMs: 3200 },
-  { id: 'n4', channel: 'email', trigger: 'Teklif PDF', delivered: true, latencyMs: 4100 },
-  { id: 'n5', channel: 'sms', trigger: 'Müşteri OTP', delivered: true, latencyMs: 2100 },
-  { id: 'n6', channel: 'sms', trigger: 'İş emri hatırlatması', delivered: false, latencyMs: 0, errorMessage: 'SMS sağlayıcı zaman aşımı' },
-  { id: 'n7', channel: 'whatsapp', trigger: 'Teklif paylaşımı', delivered: true, latencyMs: 1820 },
-  { id: 'n8', channel: 'whatsapp', trigger: 'İş tamamlandı', delivered: false, latencyMs: 0, errorMessage: 'WhatsApp template onayı bekleniyor' },
-];
+const DEFAULT_NOTIF: UatNotificationCheck[] = [];
 
-const DEFAULT_BUGS: UatBug[] = [
-  { id: 'b1', title: 'KPI ay filtresinde tablo boş geliyor', scenarioId: 'sc-m3', severity: 'high', status: 'open', reportedBy: 'Ahmet (Yönetici)', reportedAt: '2026-05-21T15:10:00Z', module: 'Manager / KPI' },
-  { id: 'b2', title: 'Stok düşme negatife düşebiliyor', scenarioId: 'sc-f3', severity: 'critical', status: 'open', reportedBy: 'Mehmet (Saha)', reportedAt: '2026-05-22T08:00:00Z', module: 'Stok' },
-  { id: 'b3', title: 'WhatsApp template hatası', severity: 'medium', status: 'open', reportedBy: 'QA Ekibi', reportedAt: '2026-05-23T11:40:00Z', module: 'Bildirim' },
-  { id: 'b4', title: 'SMS sağlayıcı zaman aşımı', severity: 'high', status: 'fixed', reportedBy: 'QA Ekibi', reportedAt: '2026-05-22T10:00:00Z', module: 'Bildirim' },
-  { id: 'b5', title: 'Müşteri portalında geçmiş iş tarihi sıralaması ters', severity: 'low', status: 'fixed', reportedBy: 'Müşteri (Acme)', reportedAt: '2026-05-20T12:00:00Z', module: 'Müşteri Portal' },
-  { id: 'b6', title: 'PDF Türkçe karakter sorunu eski Android', severity: 'medium', status: 'wontfix', reportedBy: 'QA Ekibi', reportedAt: '2026-05-18T09:00:00Z', module: 'PDF' },
-];
+const DEFAULT_BUGS: UatBug[] = [];
 
 const DEFAULT_REPORT: UatReport = {
-  totalScenarios: 12,
-  passed: 8,
-  failed: 1,
+  totalScenarios: 0,
+  passed: 0,
+  failed: 0,
   blocked: 0,
-  passRate: 67,
-  totalBugs: 6,
-  criticalBugs: 1,
-  openBugs: 3,
-  testCoverage: 78,
-  lastRunAt: '2026-05-23T11:45:00Z',
+  passRate: 0,
+  totalBugs: 0,
+  criticalBugs: 0,
+  openBugs: 0,
+  testCoverage: 0,
+  lastRunAt: '',
 };
 
 async function ensure<T>(key: string, fallback: T): Promise<T> {
