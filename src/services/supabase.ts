@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
 // .env değişkenleri Expo tarafından EXPO_PUBLIC_ prefix ile yüklenir
@@ -13,14 +14,38 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+const isWeb = Platform.OS === 'web';
+
 export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder', {
   auth: {
-    storage: AsyncStorage,
+    // Native'de AsyncStorage; web'de tarayıcının localStorage'ı default kullanılır.
+    storage: isWeb ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Web'de e-posta linkinden dönen hash fragment'tan session'ı yakala.
+    // Native'de URL parsing kullanılmaz (deep link AuthContext'te ele alınır).
+    detectSessionInUrl: isWeb,
+    flowType: 'pkce',
   },
 });
+
+/**
+ * E-posta onay / şifre sıfırlama linklerinin yönleneceği URL.
+ * - Web: kullanıcının açık olduğu site origin'i (Netlify production veya preview).
+ * - Native: deep link scheme (`sahatakip://auth-callback`).
+ *
+ * NOT: Bu URL'in Supabase Dashboard → Authentication → URL Configuration →
+ * Redirect URLs listesinde TANIMLI olması zorunludur. Aksi halde Supabase
+ * varsayılan Site URL'e (örn. http://localhost:3000) düşer.
+ */
+export function getAuthRedirectUrl(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/auth-callback`;
+  }
+  const envUrl = process.env.EXPO_PUBLIC_SITE_URL;
+  if (envUrl) return `${envUrl.replace(/\/$/, '')}/auth-callback`;
+  return 'sahatakip://auth-callback';
+}
 
 // =============================================================
 // AUTH HELPERS
@@ -33,7 +58,10 @@ export async function signUp(email: string, password: string, fullName: string) 
   return supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: { full_name: fullName },
+      emailRedirectTo: getAuthRedirectUrl(),
+    },
   });
 }
 

@@ -186,6 +186,50 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.gridLabel}>Raporlar</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('StockHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+              <Ionicons name="cube-outline" size={26} color={colors.emerald.default} />
+            </View>
+            <Text style={styles.gridLabel}>Stok & Zimmet</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('VehicleHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
+              <Ionicons name="car-sport-outline" size={26} color={colors.rose.default} />
+            </View>
+            <Text style={styles.gridLabel}>Araç & Filo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('AssetHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.blue.bg }]}>
+              <Ionicons name="hardware-chip-outline" size={26} color={colors.blue.default} />
+            </View>
+            <Text style={styles.gridLabel}>Ekipman & Bakım</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('AiHub')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.indigo.bg }]}>
+              <Ionicons name="sparkles-outline" size={26} color={colors.indigo.default} />
+            </View>
+            <Text style={styles.gridLabel}>AI Asistan</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Quick Report CTA */}

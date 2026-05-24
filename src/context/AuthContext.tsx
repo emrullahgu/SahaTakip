@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../services/supabase';
+import { supabase, getAuthRedirectUrl } from '../services/supabase';
 
 export type UserRole = 'admin' | 'manager' | 'engineer' | 'field';
 
@@ -131,7 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo: getAuthRedirectUrl(),
+      },
     });
     return { error: error?.message ?? null };
   };
@@ -158,7 +161,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     if (!SUPABASE_CONFIGURED) return { error: 'Supabase yapılandırılmamış.' };
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getAuthRedirectUrl(),
+    });
     return { error: error?.message ?? null };
   };
 
