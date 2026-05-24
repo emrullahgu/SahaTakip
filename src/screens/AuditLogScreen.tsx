@@ -7,8 +7,41 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
 import { auditRepo, AuditLogRow } from '../services/data/auditRepo';
 import { isOnlineMode } from '../services/data';
+import { useAppContext } from '../context/AppContext';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+
+const ACTION_LABELS: Record<string, string> = {
+  'work_order.create': 'Iş Emri Oluşturuldu',
+  'work_order.update': 'Iş Emri Güncellendi',
+  'work_order.delete': 'Iş Emri Silindi',
+  'work_order.approve': 'Iş Emri Onaylandı',
+  'work_order.status': 'Iş Emri Durumu Değişti',
+  'work_order.assign': 'Iş Emri Atandı',
+  'work_order.transfer': 'Iş Emri Devredildi',
+  'work_order.media': 'Iş Emri Medyası Eklendi',
+  'work_order.client_accept': 'Müşteri Onayı',
+  'customer.create': 'Müşteri Eklendi',
+  'customer.update': 'Müşteri Güncellendi',
+  'customer.delete': 'Müşteri Silindi',
+  'quote.create': 'Teklif Oluşturuldu',
+  'quote.update': 'Teklif Güncellendi',
+  'quote.delete': 'Teklif Silindi',
+  'quote.status': 'Teklif Durumu Değişti',
+  'quote.share_token': 'Teklif Paylaşım Linki',
+  'employee.wage_update': 'Ücret Güncellendi',
+  'vehicle.create': 'Araç Eklendi',
+  'vehicle.update': 'Araç Güncellendi',
+  'vehicle.delete': 'Araç Silindi',
+  'expense.create': 'Masraf Eklendi',
+  'expense.delete': 'Masraf Silindi',
+  'shift.start': 'Mesai Başladı',
+  'shift.end': 'Mesai Bitti',
+};
+
+function labelOf(action: string): string {
+  return ACTION_LABELS[action] ?? action;
+}
 
 function fmt(iso: string) {
   try { const d = new Date(iso); return d.toLocaleString('tr-TR'); } catch { return iso; }
@@ -27,6 +60,18 @@ export default function AuditLogScreen() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const online = isOnlineMode();
+  const { employees } = useAppContext();
+
+  const userNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of employees) m[e.id] = e.name;
+    return m;
+  }, [employees]);
+
+  const userLabel = useCallback((uid: string | null) => {
+    if (!uid) return '—';
+    return userNameById[uid] ?? `#${uid.slice(0, 8)}`;
+  }, [userNameById]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -41,10 +86,12 @@ export default function AuditLogScreen() {
     if (!q) return rows;
     return rows.filter(r =>
       r.action.toLowerCase().includes(q) ||
+      labelOf(r.action).toLowerCase().includes(q) ||
       (r.table_name ?? '').toLowerCase().includes(q) ||
-      (r.ref_id ?? '').toLowerCase().includes(q)
+      (r.ref_id ?? '').toLowerCase().includes(q) ||
+      userLabel(r.user_id).toLowerCase().includes(q)
     );
-  }, [rows, query]);
+  }, [rows, query, userLabel]);
 
   if (!online) {
     return (
@@ -94,18 +141,22 @@ export default function AuditLogScreen() {
           }
           renderItem={({ item }) => {
             const c = actionColor(item.action);
+            const metaPreview = item.meta && typeof item.meta === 'object'
+              ? Object.entries(item.meta).slice(0, 3).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join(' · ')
+              : '';
             return (
               <View style={styles.row}>
                 <View style={[styles.dot, { backgroundColor: c }]} />
                 <View style={{ flex: 1 }}>
                   <View style={styles.rowHeader}>
-                    <Text style={[styles.action, { color: c }]}>{item.action}</Text>
+                    <Text style={[styles.action, { color: c }]}>{labelOf(item.action)}</Text>
                     <Text style={styles.time}>{fmt(item.created_at)}</Text>
                   </View>
                   <Text style={styles.meta}>
                     {item.table_name ?? '-'}{item.ref_id ? ` · ${item.ref_id.slice(0, 8)}` : ''}
                   </Text>
-                  {item.user_id && <Text style={styles.user}>kullanıcı: {item.user_id.slice(0, 8)}</Text>}
+                  <Text style={styles.user}>Kullanıcı: {userLabel(item.user_id)}</Text>
+                  {metaPreview ? <Text style={styles.user} numberOfLines={2}>{metaPreview}</Text> : null}
                 </View>
               </View>
             );

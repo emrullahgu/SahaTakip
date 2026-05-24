@@ -6,6 +6,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Vehicle } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
+
+async function currentUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id ?? null;
+  } catch { return null; }
+}
 
 const KEY = '@SahaTakip:vehicles';
 
@@ -100,6 +108,7 @@ export async function saveVehicles(list: Vehicle[]) {
 
 export async function upsertVehicle(v: Vehicle) {
   let saved: Vehicle = v;
+  const isNew = !UUID_RE.test(v.id) || !(await getVehicle(v.id));
   if (SUPABASE_CONFIGURED) {
     try {
       const { data, error } = await supabase
@@ -121,14 +130,35 @@ export async function upsertVehicle(v: Vehicle) {
   if (idx >= 0) all[idx] = saved;
   else all.unshift(saved);
   await saveVehicles(all);
+  // Audit
+  const uid = await currentUserId();
+  if (uid) {
+    void auditRepo.log(uid, {
+      action: isNew ? 'vehicle.create' : 'vehicle.update',
+      tableName: 'vehicles',
+      refId: saved.id,
+      meta: { plate: saved.plate },
+    });
+  }
 }
 
 export async function deleteVehicle(id: string) {
+  const target = await getVehicle(id);
   if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
     try { await supabase.from('vehicles').delete().eq('id', id); } catch { /* ignore */ }
   }
   const all = await listVehicles();
   await saveVehicles(all.filter(v => v.id !== id));
+  // Audit
+  const uid = await currentUserId();
+  if (uid) {
+    void auditRepo.log(uid, {
+      action: 'vehicle.delete',
+      tableName: 'vehicles',
+      refId: id,
+      meta: { plate: target?.plate },
+    });
+  }
 }
 
 export function newVehicle(): Vehicle {

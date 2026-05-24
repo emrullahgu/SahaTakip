@@ -5,6 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 export interface Expense {
   id: string;
@@ -110,6 +111,14 @@ export async function addExpense(input: Omit<Expense, 'id' | 'status'> & Partial
         const fromDb = fromRow(data);
         const all = await getCache();
         await setCache([fromDb, ...all]);
+        if (createdBy) {
+          void auditRepo.log(createdBy, {
+            action: 'expense.create',
+            tableName: 'expenses',
+            refId: fromDb.id,
+            meta: { category: fromDb.type, amount: fromDb.amount },
+          });
+        }
         return fromDb;
       }
     } catch (ex: any) {
@@ -118,13 +127,29 @@ export async function addExpense(input: Omit<Expense, 'id' | 'status'> & Partial
   }
   const all = await getCache();
   await setCache([e, ...all]);
+  if (createdBy) {
+    void auditRepo.log(createdBy, {
+      action: 'expense.create',
+      tableName: 'expenses',
+      refId: e.id,
+      meta: { category: e.type, amount: e.amount, offline: !SUPABASE_CONFIGURED },
+    });
+  }
   return e;
 }
 
 export async function deleteExpense(id: string) {
+  let createdBy: string | null = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    createdBy = data.user?.id ?? null;
+  } catch {}
   if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
     try { await supabase.from('expenses').delete().eq('id', id); } catch {}
   }
   const all = await getCache();
   await setCache(all.filter(x => x.id !== id));
+  if (createdBy) {
+    void auditRepo.log(createdBy, { action: 'expense.delete', tableName: 'expenses', refId: id });
+  }
 }

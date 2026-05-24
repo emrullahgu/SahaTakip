@@ -25,6 +25,7 @@ import {
 } from '../services/vehicles';
 import { Vehicle, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
+import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Vehicles'>;
@@ -138,11 +139,17 @@ export default function VehiclesScreen() {
                   </Text>
                 )}
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 4 }}>
                 {typeof item.kmTotal === 'number' && (
                   <Text style={styles.km}>{item.kmTotal.toLocaleString('tr-TR')} km</Text>
                 )}
-                <Ionicons name="chevron-forward" size={16} color={colors.text.muted} />
+                <RowMenu
+                  items={[
+                    { label: 'Detay', icon: 'eye-outline', onPress: () => navigation.navigate('VehicleDetail', { vehicleId: item.id }) },
+                    { label: 'Düzenle', icon: 'create-outline', onPress: () => navigation.navigate('VehicleForm', { vehicleId: item.id }) },
+                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: { title: 'Aracı Sil', message: `"${item.plate}" silinsin mi?` }, onPress: async () => { await deleteVehicle(item.id); load(); } },
+                  ]}
+                />
               </View>
             </TouchableOpacity>
           );
