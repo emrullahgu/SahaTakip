@@ -2,7 +2,7 @@
 // Otonom AI Agent konsolu. Görev gir → ajan kendi başına çalışır →
 // her adım canlı transcript'te görünür. Destructive işlemler için onay sorulur.
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
@@ -24,6 +24,7 @@ import { runAgent, type AgentEvent } from '../services/agent/loop';
 import type { RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+type Rt = RouteProp<RootStackParamList, 'AgentConsole'>;
 
 interface TranscriptItem {
   id: string;
@@ -35,7 +36,10 @@ interface TranscriptItem {
 const AgentConsoleScreen: React.FC = () => {
   const app = useAppContext();
   const nav = useNavigation<Nav>();
-  const [goal, setGoal] = useState('');
+  const route = useRoute<Rt>();
+  const initialGoal = route.params?.initialGoal ?? '';
+  const autoStart = !!route.params?.autoStart;
+  const [goal, setGoal] = useState(initialGoal);
   const [running, setRunning] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
   const stopRef = useRef(false);
@@ -144,6 +148,17 @@ const AgentConsoleScreen: React.FC = () => {
 
   const clear = useCallback(() => setTranscript([]), []);
 
+  // initialGoal + autoStart ile geldiyse otomatik başlat
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && initialGoal && !startedRef.current && !running) {
+      startedRef.current = true;
+      // bir tick bekleyip start çağır (goal state'i set olsun)
+      setTimeout(() => { void start(); }, 50);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, initialGoal]);
+
   const presetGoals = useMemo(
     () => [
       'Sistemi tara, sorunları bul ve her birini öneri olarak kaydet.',
@@ -151,6 +166,7 @@ const AgentConsoleScreen: React.FC = () => {
       'EMO duyurularını tara, son 1 ayın değişikliklerini özetle ve önemli olanları öneri olarak kaydet.',
       'Resmî Gazete\'de elektrik tesisatı ile ilgili güncel mevzuatları araştır ve özetle.',
       'Web\'de "TS HD 60364" standardını araştır, kapsamı özetle.',
+      'Google Drive\'da "teklif" geçen son dosyaları bul ve özetle.',
       'Bugünkü iş emirlerini özetle ve gecikenleri listele.',
       'Açık (Onay Bekliyor) iş emirlerinden en eski 3 tanesini bul.',
       'Son 5 teklifi listele, tutarı en yüksek olanı göster.',

@@ -383,6 +383,22 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         <Text style={styles.materialsCtaText}>Malzeme Kullanımı</Text>
       </TouchableOpacity>
 
+      {/* AI Ajan — bu iş emri üzerinde otonom çalış */}
+      <TouchableOpacity
+        style={[styles.materialsCta, { backgroundColor: '#7c3aed' }]}
+        onPress={() => navigation.navigate('AgentConsole', {
+          initialGoal:
+            `İş emri "${wo.title}" (id: ${wo.id}, müşteri: ${wo.customerName}) için: ` +
+            `1) Geçmiş benzer işleri analiz et, 2) Olası riskleri/sorunları öneri olarak kaydet, ` +
+            `3) Gerekirse ilgili teknik standartları web'de araştır ve özetle.`,
+          autoStart: false,
+        })}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="sparkles" size={18} color="#fff" />
+        <Text style={styles.materialsCtaText}>AI Ajan: Analiz et</Text>
+      </TouchableOpacity>
+
       {/* PRIORITY */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Öncelik</Text>

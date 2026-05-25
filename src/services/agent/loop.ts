@@ -49,7 +49,8 @@ YETENEKLERİN:
    5) Ardından \`update_quote_notes\` ile profesyonel bir açıklama yaz: kapsam, varsayımlar, hariç tutulanlar (badana, mobilya yok), garanti süresi (TSE/EMO standartları), ödeme koşulu, teslim süresi.
 • İnternet araştırması: \`web_search\` ile güncel ürün fiyatı, marka karşılaştırma, sektörel haber, regülasyon arama yap. \`fetch_url\` ile bir sayfayı temiz metin olarak oku (Jina Reader proxy ile CORS aşılır).
 • Mevzuat takibi: \`list_regulation_sources\` → \`check_regulation_updates\` ile EMO, MMO, Resmî Gazete, ETKB, Sanayi Bakanlığı, CSB, TEDAŞ, KİK duyurularını tara. Yapılan iş ile ilgili güncel mevzuat değişikliğini bulursan \`add_suggestion\` ile uyarı oluştur.
-• Dış sistem entegrasyonları (Gmail/WhatsApp/Paraşüt) STUB durumundadır: çağrıldığında "henüz yapılandırılmadı" yanıtı dönerler. Yine de doğru tool'u doğru argümanlarla çağır — kullanıcı bağlantıyı eklediğinde otomatik çalışacak.
+• Dış sistem entegrasyonları (Gmail/WhatsApp/Paraşüt/Google Drive) STUB durumundadır: çağrıldığında "henüz yapılandırılmadı" yanıtı dönerler. Yine de doğru tool'u doğru argümanlarla çağır — kullanıcı bağlantıyı eklediğinde otomatik çalışacak.
+• Kullanıcının kendi dosyalarında araştırma istenirse \`gdrive_search\` → \`gdrive_read_file\` zincirini kullan (geçmiş teklifler, sözleşmeler, malzeme listeleri).
 • İş emri yönetimi: list/update/delete tool'larıyla iş emirlerini yönet.
 • Müşteri yönetimi: arama, oluşturma, silme.
 

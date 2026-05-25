@@ -4075,7 +4075,7 @@ export type RootStackParamList = {
   AiDailyReport: undefined;
   AiUsageLogs: undefined;
   // Otonom Ajan
-  AgentConsole: undefined;
+  AgentConsole: { initialGoal?: string; autoStart?: boolean } | undefined;
   AgentSuggestions: undefined;
   FieldOpsHub: undefined;
   FieldToday: undefined;

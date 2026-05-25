@@ -203,6 +203,25 @@ export default function QuoteDetailScreen() {
             </Text>
           </TouchableOpacity>
 
+          {/* AI Ajan — bu teklif üzerinde otonom çalış */}
+          <TouchableOpacity
+            style={[styles.linkBtn, { backgroundColor: '#7c3aed1a', borderColor: '#7c3aed' }]}
+            onPress={() => navigation.navigate('AgentConsole', {
+              initialGoal:
+                `Teklif ${quote.number} (id: ${quote.id}) için profesyonel bir açıklama yaz: ` +
+                `kapsam, varsayımlar, hariç tutulanlar, garanti (TSE/EMO standartları), ` +
+                `ödeme koşulu, teslim süresi. Gerekirse web'de ilgili standartları araştır ve ` +
+                `\`update_quote_notes\` ile teklife yaz.`,
+              autoStart: false,
+            })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="sparkles" size={16} color="#7c3aed" />
+            <Text style={[styles.linkBtnText, { color: '#7c3aed' }]}>
+              AI Ajan: Açıklamayı otomatik doldur
+            </Text>
+          </TouchableOpacity>
+
           {/* FAZ 4 — Müşteri kabul linki paylaş (POZ-DEV-040) */}
           {quote.status !== 'Reddedildi' && quote.status !== 'Faturalandırıldı' && !quote.generatedWorkOrderId && (
             <TouchableOpacity

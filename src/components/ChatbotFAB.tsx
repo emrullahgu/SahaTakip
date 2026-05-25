@@ -2,10 +2,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { askCopilot, type CopilotMessage } from '../services/aiCopilot';
+import type { RootStackParamList } from '../types';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string }
 
@@ -35,6 +38,15 @@ export default function ChatbotFAB() {
   const scrollRef = useRef<ScrollView>(null);
   const { workOrders, customers, quotes, employees } = useAppContext();
   const { profile, user } = useAuth();
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const launchAgent = () => {
+    const seed = (input.trim() || msgs.filter(m => m.role === 'user').slice(-1)[0]?.text || '').trim();
+    setOpen(false);
+    setInput('');
+    // @ts-ignore - AgentConsole route param tipi initialGoal kabul ediyor
+    nav.navigate('AgentConsole', seed ? { initialGoal: seed, autoStart: true } : undefined);
+  };
   const userName = profile?.full_name || profile?.email || user?.email || 'Kullanıcı';
 
   useEffect(() => {
@@ -78,6 +90,10 @@ export default function ChatbotFAB() {
             <View style={s.modalHeader}>
               <View style={s.headerIcon}><Ionicons name="chatbubbles" size={18} color="#fff" /></View>
               <Text style={s.modalTitle}>SahaTakip Asistanı</Text>
+              <TouchableOpacity onPress={launchAgent} style={s.agentBtn} accessibilityLabel="Otonom ajan">
+                <Ionicons name="sparkles" size={14} color="#fff" />
+                <Text style={s.agentBtnText}>Ajan</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setOpen(false)}>
                 <Ionicons name="close" size={22} color={colors.text.primary} />
               </TouchableOpacity>
@@ -125,4 +141,6 @@ const s = StyleSheet.create({
   inputRow: { flexDirection: 'row', gap: 6, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
   input: { flex: 1, backgroundColor: colors.bg.primary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text.primary, fontSize: typography.sm },
   sendBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
+  agentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#7c3aed', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.md },
+  agentBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '800' },
 });
