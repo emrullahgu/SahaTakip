@@ -32,7 +32,15 @@ export async function drainSyncQueue(): Promise<{ ok: number; failed: number }> 
         await applyOp(op);
         await clearSyncOp(op.id);
         ok++;
-      } catch (e) {
+      } catch (e: any) {
+        const msg = String(e?.message || e);
+        // Kalıcı hata: yerel-id (UUID değil) bir kayıt → DB'ye asla yazılamaz, kuyruktan düş
+        if (/invalid input syntax for type uuid/i.test(msg)) {
+          console.warn('[sync] dropping unrecoverable op', op.table, op.action, op.id, msg);
+          await clearSyncOp(op.id);
+          failed++;
+          continue;
+        }
         console.warn('[sync] op failed', op.table, op.action, e);
         failed++;
       }

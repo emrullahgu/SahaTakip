@@ -31,6 +31,7 @@ import {
 } from '../data/pozCatalog';
 import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recentPozes';
 import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
+import { newUuid } from '../services/data/repository';
 import Toast from '../components/Toast';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
@@ -116,7 +117,7 @@ export default function NewQuoteScreen() {
     }
     const number = generateQuoteNumber();
     const quote: Quote = {
-      id: `Q-${Date.now()}`,
+      id: newUuid(),
       number,
       customerName: customer.shortName,
       customerTitle: customer.title,
