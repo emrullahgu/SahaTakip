@@ -59,7 +59,7 @@ const __TOKENS = __activeThemeMode === 'light' ? LIGHT_TOKENS : DARK_TOKENS;
 
 export const colors = {
   bg: { ...__TOKENS.bg, tertiary: __TOKENS.bg.secondary },
-  border: __TOKENS.border,
+  border: { ...__TOKENS.border, default: __TOKENS.border.primary },
   text: __TOKENS.text,
   // PRIMARY (yeşil) — logo yeşili
   emerald: {

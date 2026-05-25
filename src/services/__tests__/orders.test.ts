@@ -2,17 +2,9 @@
 import { listOrders, getOrder, getOrdSummary, nextStatus } from '../orders';
 
 describe('orders service', () => {
-  it('listOrders 8 demo sipariş döner', async () => {
+  it('listOrders dizi döner (demo seed kaldırıldı, Supabase tablosu hazır olunca dolacak)', async () => {
     const orders = await listOrders();
     expect(Array.isArray(orders)).toBe(true);
-    expect(orders.length).toBeGreaterThan(0);
-  });
-
-  it('getOrder mevcut id ile bulur', async () => {
-    const orders = await listOrders();
-    const first = orders[0];
-    const found = await getOrder(first.id);
-    expect(found?.id).toBe(first.id);
   });
 
   it('getOrder olmayan id için undefined', async () => {
@@ -20,10 +12,10 @@ describe('orders service', () => {
     expect(found).toBeUndefined();
   });
 
-  it('getOrdSummary toplam ve durum dağılımı içerir', async () => {
+  it('getOrdSummary geçerli iskelet döner', async () => {
     const sum = await getOrdSummary();
-    expect(sum.totalOrders).toBeGreaterThan(0);
-    expect(sum.totalValue).toBeGreaterThan(0);
+    expect(sum.totalOrders).toBe(0);
+    expect(sum.totalValue).toBe(0);
     expect(sum.byStatus).toBeDefined();
     expect(Array.isArray(sum.topProducts)).toBe(true);
   });

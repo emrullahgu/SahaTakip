@@ -10,10 +10,11 @@ import { AI_PROVIDER_LABEL, getAiSettings, setAiSettings, pingAi, getBuiltinKey 
 import { AiProvider, AiSettings } from '../types';
 import { useHasRole } from '../components/RoleGuard';
 
-const PROVIDERS: AiProvider[] = ['mock', 'openai', 'claude', 'gemini'];
+const PROVIDERS: AiProvider[] = ['mock', 'groq', 'openai', 'claude', 'gemini'];
 
 const HINTS: Record<AiProvider, { defaultModel: string; help: string }> = {
   mock: { defaultModel: '—', help: 'Tüm AI çıktıları yerel demo verisi olur. API gerekmez.' },
+  groq: { defaultModel: 'llama-3.3-70b-versatile', help: 'console.groq.com adresinden ücretsiz API anahtarı alın (hızlı).' },
   openai: { defaultModel: 'gpt-4o-mini', help: 'platform.openai.com adresinden API anahtarı alın.' },
   claude: { defaultModel: 'claude-3-5-sonnet-20241022', help: 'console.anthropic.com adresinden API anahtarı alın.' },
   gemini: { defaultModel: 'gemini-1.5-flash', help: 'aistudio.google.com adresinden API anahtarı alın.' },

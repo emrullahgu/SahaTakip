@@ -388,7 +388,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         style={[styles.materialsCta, { backgroundColor: '#7c3aed' }]}
         onPress={() => navigation.navigate('AgentConsole', {
           initialGoal:
-            `İş emri "${wo.title}" (id: ${wo.id}, müşteri: ${wo.customerName}) için: ` +
+            `İş emri "${wo.serviceName}" (id: ${wo.id}, müşteri: ${wo.customerName ?? wo.client}) için: ` +
             `1) Geçmiş benzer işleri analiz et, 2) Olası riskleri/sorunları öneri olarak kaydet, ` +
             `3) Gerekirse ilgili teknik standartları web'de araştır ve özetle.`,
           autoStart: false,

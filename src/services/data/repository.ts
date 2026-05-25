@@ -44,6 +44,10 @@ function ensureNetSubscribed() {
       };
       void refresh();
       _netIntervalId = setInterval(refresh, 15000);
+      // Test/Node ortam\u0131nda event loop'u tutmas\u0131n
+      if (_netIntervalId && typeof (_netIntervalId as any).unref === 'function') {
+        (_netIntervalId as any).unref();
+      }
     }
   } catch { /* sessiz — paket yoksa varsayılan true kalır */ }
 }

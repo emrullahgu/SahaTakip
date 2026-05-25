@@ -44,11 +44,11 @@ const slim = <T extends Record<string, any>>(o: T, keys: (keyof T)[]) =>
 const slimWO = (w: WorkOrder) =>
   slim(w, ['id', 'client', 'serviceName', 'status', 'date', 'plannedStart', 'plannedEnd', 'assignedTo', 'quoteAmount']);
 const slimCust = (c: Customer) =>
-  slim(c, ['id', 'name', 'phone', 'email', 'taxNumber', 'address', 'segment']);
+  slim(c, ['id', 'shortName', 'title', 'phone', 'email', 'taxNumber', 'address', 'type']);
 const slimQuote = (q: Quote) =>
   slim(q, ['id', 'number', 'customerName', 'title', 'status', 'date', 'grandTotal']);
 const slimEmp = (e: Employee) =>
-  slim(e, ['id', 'name', 'role', 'phone', 'dailyRate', 'active']);
+  slim(e, ['id', 'name', 'role', 'monthlyWage', 'dailyRate', 'daysWorked']);
 
 // =================================================================
 // TOOL DEFINITIONS
@@ -106,7 +106,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       if (args.search) {
         const q = String(args.search).toLocaleLowerCase('tr-TR');
         res = res.filter(c =>
-          (c.name + ' ' + (c.phone || '') + ' ' + (c.email || '')).toLocaleLowerCase('tr-TR').includes(q),
+          (c.shortName + ' ' + (c.title || '') + ' ' + (c.phone || '') + ' ' + (c.email || '')).toLocaleLowerCase('tr-TR').includes(q),
         );
       }
       const limit = Math.max(1, Math.min(50, Number(args.limit) || 20));
@@ -206,7 +206,6 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           brand: h.item.brand,
           category: h.item.category,
           price: h.item.price,
-          unit: h.item.unit,
         })),
       };
     },
@@ -235,8 +234,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         quotes: {
           total: ctx.app.quotes.length,
           draft: ctx.app.quotes.filter(q => q.status === 'Taslak').length,
-          sent: ctx.app.quotes.filter(q => q.status === 'Gönderildi').length,
-          accepted: ctx.app.quotes.filter(q => q.status === 'Onaylandı').length,
+          sent: ctx.app.quotes.filter(q => q.status === 'Müşteriye Gönderildi').length,
+          accepted: ctx.app.quotes.filter(q => q.status === 'Kabul Edildi').length,
         },
         customers: ctx.app.customers.length,
         employees: ctx.app.employees.length,
@@ -371,7 +370,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           severity: 'low',
           title: 'İletişim bilgisi eksik müşteriler',
           count: custMissing.length,
-          examples: custMissing.slice(0, 5).map(c => ({ id: c.id, name: c.name })),
+          examples: custMissing.slice(0, 5).map(c => ({ id: c.id, name: c.shortName })),
         });
 
       // 2) Açık iş emirleri — 7 günden eski "Onay Bekliyor"
@@ -417,8 +416,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           examples: dustyDrafts.slice(0, 5).map(slimQuote),
         });
 
-      // 5) Aktif olmayan personele atanmış açık iş
-      const inactiveIds = new Set(ctx.app.employees.filter(e => !e.active).map(e => e.id));
+      // 5) Aktif olmayan personele atanmış açık iş — attendance boşsa pasif kabul ediyoruz
+      const inactiveIds = new Set(
+        ctx.app.employees.filter(e => !e.attendance || Object.keys(e.attendance).length === 0).map(e => e.id),
+      );
       const orphan = ctx.app.workOrders.filter(
         w => w.status !== 'Tamamlandı' && w.assignedTo && inactiveIds.has((w as any).assignedTo),
       );

@@ -1,32 +1,12 @@
-// jest.setup.js — Test ortamı setup'ı
+// jest.setup.js — Test setup
 /* global jest */
-// AsyncStorage mock
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
-
-// expo-location mock
-jest.mock('expo-location', () => ({
-  requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
-  getCurrentPositionAsync: jest.fn(() =>
-    Promise.resolve({ coords: { latitude: 38.42, longitude: 27.13, accuracy: 5 } }),
-  ),
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(() => Promise.resolve(null)),
+  setItem: jest.fn(() => Promise.resolve()),
+  removeItem: jest.fn(() => Promise.resolve()),
+  multiGet: jest.fn(() => Promise.resolve([])),
+  multiSet: jest.fn(() => Promise.resolve()),
+  multiRemove: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+  getAllKeys: jest.fn(() => Promise.resolve([])),
 }));
-
-// react-native-maps mock (test ortamı için tamamen no-op)
-jest.mock('react-native-maps', () => {
-  const React = require('react');
-  const RN = require('react-native');
-  const Stub = (props) => React.createElement(RN.View, props, props.children);
-  return {
-    __esModule: true,
-    default: Stub,
-    Marker: Stub,
-    Polyline: Stub,
-    Circle: Stub,
-    Polygon: Stub,
-    Callout: Stub,
-    PROVIDER_GOOGLE: 'google',
-    PROVIDER_DEFAULT: undefined,
-  };
-});
