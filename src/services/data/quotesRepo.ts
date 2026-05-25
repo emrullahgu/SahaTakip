@@ -7,6 +7,7 @@
 import {
   supabase,
   isOnlineMode,
+  isUuid,
   cacheGet,
   cacheSet,
   enqueueSync,
@@ -46,6 +47,13 @@ export const quotesRepo: Repository<Quote> = {
       await cacheSet(CACHE_KEY, [quote, ...cached]);
       return quote;
     }
+    // Yerel-id (UUID değil) → DB'ye yazma, kuyruğa düş (sync drain UUID üretebilir veya backend yapar)
+    if (!isUuid(quote.id)) {
+      await enqueueSync({ id: quote.id, table: 'quotes', action: 'insert', payload: quote });
+      const cached = (await cacheGet<Quote[]>(CACHE_KEY)) ?? [];
+      await cacheSet(CACHE_KEY, [quote, ...cached]);
+      return quote;
+    }
     const { error: e1 } = await supabase.from('quotes').insert(quoteToRow(quote));
     if (e1) throw new Error(`[quotes.insert] ${e1.message}`);
     if (quote.lines.length) {
@@ -62,11 +70,20 @@ export const quotesRepo: Repository<Quote> = {
       await enqueueSync({ id, table: 'quotes', action: 'update', payload: quote });
       return quote;
     }
+    // Yerel-id (UUID değil) → DB'ye yazma, sadece cache + kuyruğa düş
+    if (!isUuid(id)) {
+      await enqueueSync({ id, table: 'quotes', action: 'update', payload: quote });
+      return quote;
+    }
     const { error: e1 } = await supabase.from('quotes').update(quoteToRow(quote)).eq('id', id);
     if (e1) throw new Error(`[quotes.update] ${e1.message}`);
-    await supabase.from('quote_lines').delete().eq('quote_id', id);
+    const { error: eDel } = await supabase.from('quote_lines').delete().eq('quote_id', id);
+    if (eDel) throw new Error(`[quote_lines.delete] ${eDel.message}`);
     if (quote.lines.length) {
-      await supabase.from('quote_lines').insert(quote.lines.map(l => quoteLineToRow(id, l)));
+      const { error: eIns } = await supabase
+        .from('quote_lines')
+        .insert(quote.lines.map(l => quoteLineToRow(id, l)));
+      if (eIns) throw new Error(`[quote_lines.insert] ${eIns.message}`);
     }
     return quote;
   },
@@ -76,6 +93,8 @@ export const quotesRepo: Repository<Quote> = {
       await enqueueSync({ id, table: 'quotes', action: 'delete', payload: { id } });
       return;
     }
+    // Yerel-id (UUID değil) → DB'de yok, sessizce başarılı say
+    if (!isUuid(id)) return;
     const { error } = await supabase.from('quotes').delete().eq('id', id);
     if (error) throw new Error(`[quotes.delete] ${error.message}`);
   },

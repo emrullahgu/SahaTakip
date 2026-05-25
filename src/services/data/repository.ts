@@ -15,13 +15,59 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabase';
 
+// ---- Runtime network durumu (web'de güvenilir; native'de varsayılan true) ----
+let _runtimeOnline = true;
+let _netSubscribed = false;
+
+function ensureNetSubscribed() {
+  if (_netSubscribed) return;
+  _netSubscribed = true;
+  try {
+    // Web tarayici
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'onLine' in navigator) {
+      _runtimeOnline = !!(navigator as any).onLine;
+      window.addEventListener('online', () => { _runtimeOnline = true; });
+      window.addEventListener('offline', () => { _runtimeOnline = false; });
+      return;
+    }
+    // Native: expo-network ile periyodik kontrol
+    // require ile dynamic import — web bundle'da çağrılmaz
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Network = require('expo-network');
+    if (Network && typeof Network.getNetworkStateAsync === 'function') {
+      const refresh = async () => {
+        try {
+          const st = await Network.getNetworkStateAsync();
+          _runtimeOnline = !!(st?.isConnected && st?.isInternetReachable !== false);
+        } catch { /* ignore */ }
+      };
+      void refresh();
+      setInterval(refresh, 15000);
+    }
+  } catch { /* sessiz — paket yoksa varsayılan true kalır */ }
+}
+ensureNetSubscribed();
+
+/** Native taraf NetInfo/expo-network yoksa elle set edilebilsin. */
+export function setRuntimeOnline(online: boolean): void {
+  _runtimeOnline = !!online;
+}
+export function getRuntimeOnline(): boolean {
+  return _runtimeOnline;
+}
+
 export const isOnlineMode = (): boolean => {
-  return Boolean(
+  const configured = Boolean(
     process.env.EXPO_PUBLIC_SUPABASE_URL &&
       process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY &&
       !process.env.EXPO_PUBLIC_SUPABASE_URL.includes('placeholder')
   );
+  return configured && _runtimeOnline;
 };
+
+/** Bir id Supabase UUID formatında mı? Yerel oluşturulan "Q-..."/"WO-..." id'leri DB'ye yazılmaz. */
+export const isUuid = (id: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 // AsyncStorage key prefix
 const CACHE_PREFIX = '@SahaTakip:cache:';

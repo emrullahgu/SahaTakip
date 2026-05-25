@@ -84,10 +84,12 @@ async function applyOp(op: { table: string; action: string; payload: any }) {
     const { error } = await supabase.from(table).update(toRow()).eq('id', payload.id);
     if (error) throw new Error(error.message);
     if (table === 'quotes') {
-      await supabase.from('quote_lines').delete().eq('quote_id', payload.id);
+      const { error: eDel } = await supabase.from('quote_lines').delete().eq('quote_id', payload.id);
+      if (eDel) throw new Error(eDel.message);
       if (payload.lines?.length) {
         const lineRows = payload.lines.map((l: any) => quoteLineToRow(payload.id, l));
-        await supabase.from('quote_lines').insert(lineRows);
+        const { error: eIns } = await supabase.from('quote_lines').insert(lineRows);
+        if (eIns) throw new Error(eIns.message);
       }
     }
   }
