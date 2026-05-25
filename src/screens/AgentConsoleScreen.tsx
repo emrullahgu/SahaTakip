@@ -147,7 +147,10 @@ const AgentConsoleScreen: React.FC = () => {
   const presetGoals = useMemo(
     () => [
       'Sistemi tara, sorunları bul ve her birini öneri olarak kaydet.',
-      '130m² ev iç tesisat elektrik projelendirme + malzeme + işçilik için taslak teklif oluştur.',
+      '130m² ev iç tesisat elektrik projelendirme + malzeme + işçilik için taslak teklif oluştur, ardından profesyonel teklif açıklaması yaz.',
+      'EMO duyurularını tara, son 1 ayın değişikliklerini özetle ve önemli olanları öneri olarak kaydet.',
+      'Resmî Gazete\'de elektrik tesisatı ile ilgili güncel mevzuatları araştır ve özetle.',
+      'Web\'de "TS HD 60364" standardını araştır, kapsamı özetle.',
       'Bugünkü iş emirlerini özetle ve gecikenleri listele.',
       'Açık (Onay Bekliyor) iş emirlerinden en eski 3 tanesini bul.',
       'Son 5 teklifi listele, tutarı en yüksek olanı göster.',

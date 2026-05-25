@@ -17,6 +17,8 @@ import { calcQuoteTotals } from '../../context/AppContext';
 import { MATERIAL_CATALOG } from '../../data/initialData';
 import { POZ_CATALOG, type PozItem } from '../../data/pozCatalog';
 import { suggestionStore, type SuggestionSeverity } from './suggestionStore';
+import { WEB_TOOLS } from './webTools';
+import { INTEGRATION_TOOLS } from './integrationStubs';
 
 export interface AgentContext {
   app: AppContextType;
@@ -777,6 +779,93 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     handler: async (args) => ({ ok: true, summary: String(args.summary || '') }),
   },
+
+  // ----- QUOTE NOTES / DESCRIPTION (autofill) -----
+  update_quote_notes: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'update_quote_notes',
+        description:
+          'Bir teklifin "notes" alanını günceller. Teklif açıklamasını otomatik dolduruken kullan (kapsam, varsayımlar, hariç tutulanlar, garanti süresi, ödeme koşulu, teslim süresi vb.). Mevcut notları "append" ile sona ekleyebilir veya tamamen yeniden yazabilirsin.',
+        parameters: {
+          type: 'object',
+          required: ['id', 'notes'],
+          properties: {
+            id: { type: 'string', description: 'Teklif id.' },
+            notes: { type: 'string', description: 'Yeni notes içeriği (Türkçe, çok satırlı destekli).' },
+            mode: { type: 'string', description: '"replace" (varsayılan) veya "append".' },
+          },
+        },
+      },
+    },
+    handler: async (args, ctx) => {
+      const id = String(args.id);
+      const q = ctx.app.quotes.find(x => x.id === id);
+      if (!q) return { ok: false, error: 'Teklif bulunamadı: ' + id };
+      const incoming = String(args.notes || '');
+      const mode = String(args.mode || 'replace');
+      const next = mode === 'append' && q.notes ? q.notes + '\n\n' + incoming : incoming;
+      ctx.app.updateQuote({ ...q, notes: next });
+      return { ok: true, id, mode, length: next.length, message: 'Teklif notu güncellendi.' };
+    },
+  },
+
+  update_quote_line_notes: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'update_quote_line_notes',
+        description:
+          'Belirli bir teklif kaleminin "notes" alanını günceller. Tek tek kalemleri açıklamak için kullan (örn "TS-EN 60898 standardına uygun B tipi otomat").',
+        parameters: {
+          type: 'object',
+          required: ['quoteId', 'lineIndex', 'notes'],
+          properties: {
+            quoteId: { type: 'string' },
+            lineIndex: { type: 'number', description: '0-tabanlı kalem indeksi.' },
+            notes: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (args, ctx) => {
+      const q = ctx.app.quotes.find(x => x.id === String(args.quoteId));
+      if (!q) return { ok: false, error: 'Teklif bulunamadı' };
+      const idx = Number(args.lineIndex);
+      if (idx < 0 || idx >= (q.lines?.length || 0)) return { ok: false, error: 'Geçersiz satır indeksi' };
+      const lines = q.lines.map((l, i) => (i === idx ? { ...l, notes: String(args.notes) } : l));
+      ctx.app.updateQuote({ ...q, lines });
+      return { ok: true, message: 'Kalem notu güncellendi.' };
+    },
+  },
+
+  set_quote_status: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'set_quote_status',
+        description:
+          'Bir teklifin durumunu değiştirir. Status: "Taslak" | "Gönderildi" | "Onaylandı" | "Reddedildi" | "Süresi Doldu".',
+        parameters: {
+          type: 'object',
+          required: ['id', 'status'],
+          properties: {
+            id: { type: 'string' },
+            status: { type: 'string' },
+          },
+        },
+      },
+    },
+    handler: async (args, ctx) => {
+      ctx.app.setQuoteStatus(String(args.id), args.status);
+      return { ok: true, message: 'Teklif durumu güncellendi.' };
+    },
+  },
+
+  // ----- WEB & INTEGRATION TOOLS (merged) -----
+  ...WEB_TOOLS,
+  ...INTEGRATION_TOOLS,
 };
 
 export function getAllToolSchemas(): ToolSchema[] {
