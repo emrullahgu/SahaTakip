@@ -3,7 +3,7 @@
 // QR / NFC ile lokasyon doğrulama kayıtları
 // ====================================================================
 
-import { supabase, isOnlineMode, cacheGet, cacheSet, newUuid } from './repository';
+import { supabase, isOnlineMode, cacheGet, cacheSet, newUuid, isUuid } from './repository';
 
 export interface Checkin {
   id?: string;
@@ -56,7 +56,7 @@ export const checkinsRepo = {
   },
 
   async listMine(userId: string, limit = 20): Promise<Checkin[]> {
-    if (!isOnlineMode()) return (await cacheGet<Checkin[]>(CACHE_KEY)) ?? [];
+    if (!isOnlineMode() || !isUuid(userId)) return (await cacheGet<Checkin[]>(CACHE_KEY)) ?? [];
     const { data, error } = await supabase
       .from('location_checkins')
       .select('*')

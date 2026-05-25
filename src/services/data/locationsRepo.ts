@@ -3,7 +3,7 @@
 // Canlı konum yazma + en son konumları getirme + realtime subscribe
 // ====================================================================
 
-import { supabase, isOnlineMode, cacheGet, cacheSet } from './repository';
+import { supabase, isOnlineMode, cacheGet, cacheSet, isUuid } from './repository';
 import type { GeoPosition } from '../location';
 
 export interface LocationRow {
@@ -98,7 +98,7 @@ export const locationsRepo = {
 
   /** Bir kullanıcının konum geçmişi (POZ-DEV-016) */
   async history(userId: string, fromIso: string, toIso: string): Promise<LocationRow[]> {
-    if (!isOnlineMode()) return [];
+    if (!isOnlineMode() || !isUuid(userId)) return [];
     const { data, error } = await supabase
       .from('locations')
       .select('*')

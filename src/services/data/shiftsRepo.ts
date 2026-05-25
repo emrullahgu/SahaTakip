@@ -2,7 +2,7 @@
 // Shifts Repository — POZ-DEV-019 (Mesai başlat/bitir)
 // ====================================================================
 
-import { supabase, isOnlineMode, cacheGet, cacheSet } from './repository';
+import { supabase, isOnlineMode, cacheGet, cacheSet, isUuid } from './repository';
 
 export interface Shift {
   id: string;
@@ -37,7 +37,7 @@ const CACHE_ACTIVE = 'shifts:active';
 export const shiftsRepo = {
   /** Aktif vardiyamı getir (endAt null olan) */
   async getActive(userId: string): Promise<Shift | null> {
-    if (!isOnlineMode()) {
+    if (!isOnlineMode() || !isUuid(userId)) {
       return (await cacheGet<Shift | null>(CACHE_ACTIVE)) ?? null;
     }
     const { data, error } = await supabase
@@ -63,7 +63,7 @@ export const shiftsRepo = {
       start_lat: lat ?? null,
       start_lng: lng ?? null,
     };
-    if (!isOnlineMode()) {
+    if (!isOnlineMode() || !isUuid(userId)) {
       const shift: Shift = {
         id: 'local-' + Date.now(),
         userId,
@@ -105,7 +105,7 @@ export const shiftsRepo = {
 
   /** Güvenli bitir: shiftId yoksa veya hatalıysa user_id üzerinden tüm aktif vardıyaları kapat. */
   async forceEndByUser(userId: string, lat?: number, lng?: number): Promise<number> {
-    if (!isOnlineMode()) {
+    if (!isOnlineMode() || !isUuid(userId)) {
       await cacheSet(CACHE_ACTIVE, null);
       return 0;
     }
@@ -120,7 +120,7 @@ export const shiftsRepo = {
   },
 
   async listMine(userId: string, limit = 30): Promise<Shift[]> {
-    if (!isOnlineMode()) return [];
+    if (!isOnlineMode() || !isUuid(userId)) return [];
     const { data, error } = await supabase
       .from('shifts')
       .select('*')
@@ -142,7 +142,7 @@ export const shiftsRepo = {
       .gte('start_at', start)
       .lt('start_at', end)
       .order('start_at', { ascending: true });
-    if (userId) q = q.eq('user_id', userId);
+    if (userId && isUuid(userId)) q = q.eq('user_id', userId);
     const { data, error } = await q;
     if (error) return [];
     return (data ?? []).map(fromRow);
