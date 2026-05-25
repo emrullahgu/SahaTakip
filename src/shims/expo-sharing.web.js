@@ -12,6 +12,10 @@ async function isAvailableAsync() {
 async function shareAsync(uri, options = {}) {
   if (!uri || typeof window === 'undefined') return;
 
+  // Blob URL'ler (expo-print web shim'inden) zaten yeni sekmede açılıp
+  // otomatik print diyaloğunu tetikledi → tekrar paylaşım/indirme gereksiz.
+  if (typeof uri === 'string' && uri.startsWith('blob:')) return;
+
   // Web Share API varsa onu tercih et (mobile browser)
   try {
     if (
