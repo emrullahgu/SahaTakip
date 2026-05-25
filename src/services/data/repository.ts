@@ -161,5 +161,9 @@ export async function clearSyncOp(opId: string) {
   );
 }
 
+export async function clearSyncQueue() {
+  await cacheSet(SYNC_QUEUE_KEY, []);
+}
+
 // Re-export supabase for child repos
 export { supabase };

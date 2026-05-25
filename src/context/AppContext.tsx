@@ -35,6 +35,7 @@ import {
   employeesRepo,
   auditRepo,
   drainSyncQueue,
+  clearSyncQueue,
 } from '../services/data';
 import { useAuth } from './AuthContext';
 
@@ -122,7 +123,7 @@ const INITIAL_CUSTOMERS: Customer[] = REAL_CUSTOMERS;
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const { session } = useAuth();
+  const { session, isDemoMode } = useAuth();
   const userId = session?.user?.id ?? null;
 
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>(INITIAL_WORK_ORDERS);
@@ -174,8 +175,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // İlk yükleme + auth değiştiğinde
   useEffect(() => {
     refresh();
-    // Offline iken biriken işlemleri sırayla gönder
-    if (isOnlineMode()) {
+    // Demo modda kuyruk anlamsız (Supabase'e drain edilmiyor) — sessizce temizle
+    if (isDemoMode) {
+      clearSyncQueue().catch(e => console.warn('[AppContext.clearSyncQueue]', e));
+    } else if (isOnlineMode()) {
+      // Offline iken biriken işlemleri sırayla gönder
       drainSyncQueue().then(({ ok, failed }) => {
         if (ok > 0) showToast(`${ok} bekleyen işlem senkronize edildi.`);
         if (failed > 0) showToast(`${failed} işlem senkronize edilemedi.`, 'error');
@@ -190,7 +194,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, isDemoMode]);
 
   // ===== WORK ORDER actions =====
   const approveReport = (id: string) => {

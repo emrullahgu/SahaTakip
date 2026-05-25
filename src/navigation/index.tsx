@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, brand } from '../theme';
 import { RootStackParamList, TabParamList, AuthStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
+
+export const navigationRef = createNavigationContainerRef<any>();
 
 import HomeScreen from '../screens/HomeScreen';
 import WorkOrdersScreen from '../screens/WorkOrdersScreen';
@@ -647,7 +649,7 @@ export default function AppNavigator() {
     sessionActive && !isDemoMode && (approvalStatus === 'pending' || approvalStatus === 'rejected');
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {blockedByApproval ? (
         <GateFlow />
       ) : session || isDemoMode ? (

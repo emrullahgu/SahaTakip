@@ -4,13 +4,16 @@
 // ====================================================================
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { navigationRef } from '../navigation';
 import { isOnlineMode, getSyncQueue } from '../services/data';
 
 export default function ConnectionBanner() {
   const { syncState } = useAppContext();
+  const { isDemoMode } = useAuth();
   const [queueLen, setQueueLen] = useState(0);
 
   useEffect(() => {
@@ -27,6 +30,8 @@ export default function ConnectionBanner() {
     };
   }, [syncState]);
 
+  // Demo modda kuyruk anlamsız (Supabase'e drain edilmez) — banner'ı gizle
+  if (isDemoMode) return null;
   // Online + boş kuyruk = gizli (UX kalabalığı yapmaz)
   if (isOnlineMode() && syncState === 'idle' && queueLen === 0) return null;
 
@@ -48,11 +53,24 @@ export default function ConnectionBanner() {
     label = `${queueLen} işlem bekliyor`;
   }
 
+  const tappable = queueLen > 0;
+  const onPress = () => {
+    if (tappable && navigationRef.isReady()) {
+      navigationRef.navigate('OfflineQueue' as never);
+    }
+  };
+
   return (
-    <View style={[styles.banner, { backgroundColor: bg }]}>
+    <TouchableOpacity
+      activeOpacity={tappable ? 0.7 : 1}
+      disabled={!tappable}
+      onPress={onPress}
+      style={[styles.banner, { backgroundColor: bg }]}
+    >
       <Ionicons name={icon} size={14} color="#fff" />
       <Text style={styles.text}>{label}</Text>
-    </View>
+      {tappable ? <Ionicons name="chevron-forward" size={14} color="#fff" /> : null}
+    </TouchableOpacity>
   );
 }
 
