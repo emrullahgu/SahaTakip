@@ -265,7 +265,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       );
       const target = updated.find(e => e.id === empId);
       if (target) {
-        employeesRepo.update(empId, target).catch(e => console.warn(e));
+        employeesRepo.update(empId, target).catch(e => {
+          console.warn('[employee.wage]', e);
+          showToast('⚠️ Maaş güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+        });
         auditRepo.log(userId, { action: 'employee.wage_update', tableName: 'employees', refId: empId, meta: { newWage } });
       }
       return updated;
@@ -380,7 +383,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       assignmentStatus: 'Atanmadı',
     };
     setWorkOrders(prev => [newWo, ...prev]);
-    workOrdersRepo.insert(newWo).catch(e => console.warn('[wo.insert.fromQuote]', e));
+    workOrdersRepo.insert(newWo).catch(e => {
+      console.warn('[wo.insert.fromQuote]', e);
+      showToast('⚠️ İş emri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
 
     const acceptedQuote: Quote = {
       ...q,
@@ -391,7 +397,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       generatedWorkOrderId: woId,
     };
     setQuotes(prev => prev.map(x => (x.id === q.id ? acceptedQuote : x)));
-    quotesRepo.update(q.id, acceptedQuote).catch(e => console.warn(e));
+    quotesRepo.update(q.id, acceptedQuote).catch(e => {
+      console.warn('[quote.accept]', e);
+      showToast('⚠️ Teklif kabul kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
     auditRepo.log(userId, {
       action: 'quote.accept',
       tableName: 'quotes',
@@ -405,14 +414,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // ===== CUSTOMER actions =====
   const addCustomer = (c: Customer) => {
     setCustomers(prev => [c, ...prev]);
-    customersRepo.insert(c).catch(e => console.warn('[customer.insert]', e));
+    customersRepo.insert(c).catch(e => {
+      console.warn('[customer.insert]', e);
+      showToast('⚠️ Müşteri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
     auditRepo.log(userId, { action: 'customer.create', tableName: 'customers', refId: c.id });
     showToast(`${c.shortName} eklendi.`);
   };
 
   const updateCustomer = (c: Customer) => {
     setCustomers(prev => prev.map(x => (x.id === c.id ? c : x)));
-    customersRepo.update(c.id, c).catch(e => console.warn('[customer.update]', e));
+    customersRepo.update(c.id, c).catch(e => {
+      console.warn('[customer.update]', e);
+      showToast('⚠️ Müşteri güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
     auditRepo.log(userId, { action: 'customer.update', tableName: 'customers', refId: c.id });
     showToast(`${c.shortName} güncellendi.`);
   };
@@ -447,7 +462,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // FAZ 3 — İş Emri Akışı (POZ-DEV-024..035)
   // =====================================================
   const persistWorkOrder = (w: WorkOrder) => {
-    workOrdersRepo.update(w.id, w).catch(e => console.warn('[wo.update]', e));
+    workOrdersRepo.update(w.id, w).catch(e => {
+      console.warn('[wo.update]', e);
+      showToast('⚠️ İş emri güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
   };
 
   const updateWorkOrderStatus = (id: string, status: WorkOrder['status']): boolean => {
