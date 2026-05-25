@@ -294,6 +294,8 @@ import RestoreTestsScreen from '../screens/RestoreTestsScreen';
 import SystemHealthScreen from '../screens/SystemHealthScreen';
 import MaintenanceModeScreen from '../screens/MaintenanceModeScreen';
 import AiAssistantHubScreen from '../screens/AiAssistantHubScreen';
+import AgentConsoleScreen from '../screens/AgentConsoleScreen';
+import AgentSuggestionsScreen from '../screens/AgentSuggestionsScreen';
 import AiPermissionsScreen from '../screens/AiPermissionsScreen';
 import AiSessionsScreen from '../screens/AiSessionsScreen';
 import AiChatScreen from '../screens/AiChatScreen';
@@ -1604,6 +1606,8 @@ function MainStack() {
       <Stack.Screen name="SystemHealth" component={SystemHealthScreen} options={{ headerShown: true, title: 'Sistem Sağlığı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="MaintenanceMode" component={MaintenanceModeScreen} options={{ headerShown: true, title: 'Bakım Modu', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiAssistantHub" component={AiAssistantHubScreen} options={{ headerShown: true, title: 'AI Asistan', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AgentConsole" component={AgentConsoleScreen} options={{ headerShown: true, title: 'Otonom Ajan', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AgentSuggestions" component={AgentSuggestionsScreen} options={{ headerShown: true, title: 'Sistem Önerileri', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiPermissions" component={AiPermissionsScreen} options={{ headerShown: true, title: 'AI Yetkileri', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiSessions" component={AiSessionsScreen} options={{ headerShown: true, title: 'AI Sohbetler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiChat" component={AiChatScreen} options={{ headerShown: true, title: 'AI Sohbet', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

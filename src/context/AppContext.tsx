@@ -73,7 +73,7 @@ export const calcQuoteTotals = (lines: QuoteLine[]) => {
 // ======================================================
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
 
-interface AppContextType {
+export interface AppContextType {
   workOrders: WorkOrder[];
   employees: Employee[];
   quotes: Quote[];

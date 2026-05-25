@@ -13,6 +13,7 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: 'gpt-4o-mini',
   claude: 'claude-3-5-sonnet-20241022',
   gemini: 'gemini-1.5-flash',
+  groq: 'llama-3.3-70b-versatile',
   mock: 'mock',
 };
 
@@ -32,6 +33,7 @@ export function getBuiltinKey(p: AiProvider): string | undefined {
     case 'openai': return process.env.EXPO_PUBLIC_OPENAI_KEY;
     case 'claude': return process.env.EXPO_PUBLIC_CLAUDE_KEY;
     case 'gemini': return process.env.EXPO_PUBLIC_GEMINI_KEY;
+    case 'groq': return process.env.EXPO_PUBLIC_GROQ_KEY;
     default: return undefined;
   }
 }
@@ -127,6 +129,7 @@ export const AI_PROVIDER_LABEL: Record<AiProvider, string> = {
   openai: 'OpenAI (ChatGPT)',
   claude: 'Anthropic (Claude)',
   gemini: 'Google (Gemini)',
+  groq: 'Groq (Llama 3.3 70B — ücretsiz, hızlı)',
   mock: 'Demo (yerel)',
 };
 
@@ -171,6 +174,29 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
       }),
     });
     if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
+    const json = await res.json();
+    return json.choices?.[0]?.message?.content ?? '';
+  }
+  if (settings.provider === 'groq') {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${settings.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`Groq HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
     const json = await res.json();
     return json.choices?.[0]?.message?.content ?? '';
   }
@@ -459,3 +485,93 @@ export const SEVERITY_COLOR_AI: Record<DamageSeverity, string> = {
   high: '#ea580c',
   critical: '#dc2626',
 };
+
+// ============================================================================
+// Tool-calling (OpenAI-compatible) — Groq/OpenAI ile uyumlu agent altyapısı
+// ============================================================================
+
+export interface ToolSchema {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, any>; // JSON Schema
+  };
+}
+
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+}
+
+export type ChatMessage =
+  | { role: 'system'; content: string }
+  | { role: 'user'; content: string }
+  | { role: 'assistant'; content: string | null; tool_calls?: ToolCall[] }
+  | { role: 'tool'; tool_call_id: string; content: string };
+
+export interface ChatWithToolsResult {
+  content: string | null;
+  toolCalls: ToolCall[];
+  finishReason: string;
+  raw?: any;
+}
+
+/**
+ * Tool-calling destekli chat çağrısı.
+ * Şu an Groq + OpenAI'da çalışır (OpenAI-uyumlu /chat/completions).
+ * Diğer sağlayıcılar fallback olarak `chat()` üzerinden text-only döner.
+ */
+export async function chatWithTools(
+  messages: ChatMessage[],
+  tools: ToolSchema[],
+  settings?: AiSettings,
+): Promise<ChatWithToolsResult> {
+  const s = settings ?? (await getAiSettings());
+  if (s.provider === 'mock' || !s.apiKey) {
+    throw new Error('AI provider yapılandırılmamış (Agent için Groq/OpenAI gerekli).');
+  }
+  const model = s.model || DEFAULT_MODEL[s.provider];
+
+  // OpenAI-uyumlu endpoint (Groq + OpenAI)
+  if (s.provider === 'groq' || s.provider === 'openai') {
+    const url =
+      s.provider === 'groq'
+        ? 'https://api.groq.com/openai/v1/chat/completions'
+        : 'https://api.openai.com/v1/chat/completions';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${s.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        tools: tools.length ? tools : undefined,
+        tool_choice: tools.length ? 'auto' : undefined,
+        temperature: 0.2,
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`${s.provider.toUpperCase()} HTTP ${res.status}: ${txt.slice(0, 240)}`);
+    }
+    const json = await res.json();
+    const choice = json.choices?.[0];
+    const msg = choice?.message ?? {};
+    return {
+      content: msg.content ?? null,
+      toolCalls: Array.isArray(msg.tool_calls) ? msg.tool_calls : [],
+      finishReason: choice?.finish_reason ?? 'stop',
+      raw: json,
+    };
+  }
+
+  // Fallback: tool-calling olmayan sağlayıcılar
+  const sysParts = messages.filter(m => m.role === 'system').map(m => (m as any).content).filter(Boolean);
+  const lastUser = [...messages].reverse().find(m => m.role === 'user') as any;
+  const content = await chat(lastUser?.content ?? '', s, sysParts.join('\n'));
+  return { content, toolCalls: [], finishReason: 'stop' };
+}

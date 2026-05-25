@@ -879,7 +879,7 @@ export interface SalesVisit {
 // =============================================================
 // FAZ 13 — Yapay Zeka (POZ-DEV-090..094)
 // =============================================================
-export type AiProvider = 'openai' | 'claude' | 'gemini' | 'mock';
+export type AiProvider = 'openai' | 'claude' | 'gemini' | 'groq' | 'mock';
 export interface AiSettings {
   provider: AiProvider;
   apiKey?: string;
@@ -4074,6 +4074,9 @@ export type RootStackParamList = {
   AiRiskAlerts: undefined;
   AiDailyReport: undefined;
   AiUsageLogs: undefined;
+  // Otonom Ajan
+  AgentConsole: undefined;
+  AgentSuggestions: undefined;
   FieldOpsHub: undefined;
   FieldToday: undefined;
   FieldShift: undefined;

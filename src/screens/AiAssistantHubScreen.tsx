@@ -12,6 +12,8 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Tile = { route: keyof RootStackParamList; label: string; icon: keyof typeof Ionicons.glyphMap; color: string };
 
 const TILES: Tile[] = [
+  { route: 'AgentConsole', label: '🤖 Otonom Ajan', icon: 'sparkles', color: '#16a34a' },
+  { route: 'AgentSuggestions', label: 'Sistem Önerileri', icon: 'bulb-outline', color: '#eab308' },
   { route: 'CoPilot', label: '⭐ Saha Copilot', icon: 'sparkles', color: '#a855f7' },
   { route: 'AiKnowledgeBase', label: 'Bilgi Tabanı', icon: 'library-outline', color: '#ec4899' },
   { route: 'AiSessions', label: 'AI Sohbet', icon: 'chatbubbles-outline', color: '#06b6d4' },
