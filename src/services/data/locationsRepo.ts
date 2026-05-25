@@ -71,7 +71,14 @@ export const locationsRepo = {
       return;
     }
     const { error } = await supabase.from('locations').insert(rowTo(row));
-    if (error) console.warn('[locations.write]', error.message);
+    if (error) {
+      // Tracking listener'ı kırmamak için throw etmiyoruz; ancak error-level loglayıp
+      // son başarısız noktayı cache'e düşürelim — reconnect ile harita yine düzgün olur.
+      console.error('[locations.write] insert failed', error.message);
+      const list = (await cacheGet<LocationRow[]>(CACHE_LATEST)) ?? [];
+      const filtered = list.filter(x => x.userId !== userId);
+      await cacheSet(CACHE_LATEST, [row, ...filtered]);
+    }
   },
 
   /** Tüm kullanıcıların son konumu (harita için) */

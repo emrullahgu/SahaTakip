@@ -18,6 +18,7 @@ import { supabase } from '../supabase';
 // ---- Runtime network durumu (web'de güvenilir; native'de varsayılan true) ----
 let _runtimeOnline = true;
 let _netSubscribed = false;
+let _netIntervalId: ReturnType<typeof setInterval> | null = null;
 
 function ensureNetSubscribed() {
   if (_netSubscribed) return;
@@ -42,9 +43,15 @@ function ensureNetSubscribed() {
         } catch { /* ignore */ }
       };
       void refresh();
-      setInterval(refresh, 15000);
+      _netIntervalId = setInterval(refresh, 15000);
     }
   } catch { /* sessiz — paket yoksa varsayılan true kalır */ }
+}
+
+/** Network polling'i kapat (test/teardown için). */
+export function cleanupNetworkChecking(): void {
+  if (_netIntervalId) { clearInterval(_netIntervalId); _netIntervalId = null; }
+  _netSubscribed = false;
 }
 ensureNetSubscribed();
 

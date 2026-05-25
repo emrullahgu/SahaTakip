@@ -117,12 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
+    let cancelled = false;
     supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single()
       .then(async ({ data, error }) => {
+        if (cancelled) return;
         if (data) {
           setProfile(data as UserProfile);
           return;
@@ -135,18 +137,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .from('profiles')
             .upsert({
               id: user.id,
-              full_name: (user.user_metadata as any)?.full_name || user.email,
+              full_name: (user.user_metadata as any)?.full_name ?? user.email,
               role: 'engineer',
             })
             .select()
             .single();
-          if (created) setProfile(created as UserProfile);
+          if (!cancelled && created) setProfile(created as UserProfile);
         }
       });
     // Kullanıcı giriş yaptığında paylaşımlı AI ayarlarını arka planda senkronize et.
     import('../services/ai')
-      .then(m => m.syncRemoteAiSettings?.())
+      .then(m => { if (!cancelled) m.syncRemoteAiSettings?.(); })
       .catch(() => { /* ignore */ });
+    return () => { cancelled = true; };
   }, [user]);
 
   const signIn = async (email: string, password: string) => {
