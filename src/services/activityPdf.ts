@@ -37,6 +37,7 @@ export async function generateAndShareActivityPdf(
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
+<title>Aktivite Raporu ${date}</title>
 <style>
   body { font-family: 'Helvetica', Arial, sans-serif; padding: 30px; font-size: 11px; color: #333; }
   h1 { color: #1e40af; margin-bottom: 5px; }

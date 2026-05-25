@@ -42,6 +42,7 @@ export function buildReceiptHtml(p: Payment, company?: { title?: string; address
 <html lang="tr">
 <head>
 <meta charset="utf-8" />
+<title>Makbuz ${esc(p.receiptNo)}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; color: #111; margin: 24px; }

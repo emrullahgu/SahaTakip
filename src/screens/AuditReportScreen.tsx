@@ -18,7 +18,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const pctColor = (p: number) => p >= 85 ? '#22c55e' : p >= 70 ? '#eab308' : p >= 50 ? '#f59e0b' : '#ef4444';
 
 const buildHtml = (r: AuditReport) => `
-<html><head><meta charset="utf-8"/><style>
+<html><head><meta charset="utf-8"/><title>Denetim Raporu - ${r.auditTitle}</title><style>
 body { font-family: -apple-system, sans-serif; padding: 24px; color: #0f172a; }
 h1 { color: #14b8a6; margin: 0; }
 .header { border-bottom: 3px solid #14b8a6; padding-bottom: 12px; margin-bottom: 16px; }
