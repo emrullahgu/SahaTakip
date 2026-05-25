@@ -210,6 +210,22 @@ function AdminShiftDashboardInner() {
                 <Text style={s.statLabel}>Son Senkron</Text>
               </View>
             </View>
+            <TouchableOpacity
+              style={s.historyCta}
+              onPress={() => nav.navigate('ShiftHistory')}
+              activeOpacity={0.85}
+            >
+              <View style={s.historyCtaIcon}>
+                <Ionicons name="time-outline" size={22} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.historyCtaTitle}>Mesai Geçmişi</Text>
+                <Text style={s.historyCtaDesc}>
+                  Tamamlanan vardiyalar — personel, başlangıç/bitiş saatleri ve PDF çıktısı.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.text.muted} />
+            </TouchableOpacity>
             {isDemoMode ? (
               <View style={s.demoWarn}>
                 <Ionicons name="information-circle-outline" size={16} color="#f59e0b" />
@@ -278,6 +294,27 @@ const s = StyleSheet.create({
     marginBottom: spacing.md,
   },
   demoWarnText: { flex: 1, ...typography.caption, color: '#92400e' },
+  historyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    marginBottom: spacing.md,
+  },
+  historyCtaIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: brand.blue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyCtaTitle: { ...typography.body, color: colors.text.primary, fontWeight: '700' },
+  historyCtaDesc: { ...typography.caption, color: colors.text.muted, marginTop: 2 },
   card: {
     backgroundColor: colors.bg.card,
     borderRadius: radius.md,

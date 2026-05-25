@@ -16,6 +16,7 @@ export interface UserProfile {
   role: UserRole;
   phone: string | null;
   avatar_url: string | null;
+  email?: string | null;
   approval_status?: ApprovalStatus;
   approved_at?: string | null;
   approved_by?: string | null;

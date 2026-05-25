@@ -194,21 +194,46 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
     return json.content?.[0]?.text ?? '';
   }
   if (settings.provider === 'gemini') {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(settings.apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3 },
-        }),
+    // API anahtarı ve model ismindeki olası boşlukları temizle
+    const apiKey = settings.apiKey.trim();
+    const modelName = (settings.model || DEFAULT_MODEL.gemini).trim();
+
+    // model ismi 'models/' prefix'i içermiyorsa ekle.
+    const modelPath = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
+
+    // Gemini API için doğru JSON yapısı (system_instruction snake_case olmalı)
+    const body = JSON.stringify({
+      system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
       },
-    );
-    if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
-    const json = await res.json();
-    return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    });
+
+    const headers = { 'Content-Type': 'application/json' };
+
+    try {
+      // Sistem talimatları (system_instruction) için v1beta kullanımı zorunludur.
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        { method: 'POST', headers, body }
+      );
+
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => ({}));
+        console.warn('[Gemini API Error]', errorJson);
+        throw new Error(`Gemini HTTP ${res.status}: ${errorJson.error?.message || 'Bilinmeyen hata'}`);
+      }
+
+      const json = await res.json();
+      return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    } catch (e: any) {
+      console.warn('[Gemini Call Error]', e.message);
+      throw e;
+    }
   }
   throw new Error('Bilinmeyen sağlayıcı');
 }

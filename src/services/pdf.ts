@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 import type { Quote } from '../types';
 import { calcLineTotal } from '../context/AppContext';
 
@@ -394,6 +395,23 @@ export async function generateAndShareAttendanceCsv(
   });
   // BOM ile Excel Türkçe karakterleri doğru okur
   const csv = '\ufeff' + [header, ...lines].join('\r\n');
+
+  if (Platform.OS === 'web') {
+    try {
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `puantaj-${yyyyMm}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch {} }, 0);
+      return { uri: url };
+    } catch (e) {
+      console.warn('[pdf.ts] CSV web download failed', e);
+      return { uri: '' };
+    }
+  }
 
   const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '';
   const uri = `${dir}puantaj-${yyyyMm}.csv`;

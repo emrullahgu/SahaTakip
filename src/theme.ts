@@ -58,7 +58,7 @@ const LIGHT_TOKENS = {
 const __TOKENS = __activeThemeMode === 'light' ? LIGHT_TOKENS : DARK_TOKENS;
 
 export const colors = {
-  bg: __TOKENS.bg,
+  bg: { ...__TOKENS.bg, tertiary: __TOKENS.bg.secondary },
   border: __TOKENS.border,
   text: __TOKENS.text,
   // PRIMARY (yeşil) — logo yeşili
@@ -120,4 +120,12 @@ export const typography = {
   xl: 20,
   xxl: 24,
   xxxl: 28,
+  // Semantic style objects (spread into StyleSheet entries)
+  h1: { fontSize: 28, fontWeight: '700' as const, lineHeight: 34 },
+  h2: { fontSize: 24, fontWeight: '700' as const, lineHeight: 30 },
+  h3: { fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },
+  h4: { fontSize: 18, fontWeight: '600' as const, lineHeight: 24 },
+  title: { fontSize: 18, fontWeight: '600' as const, lineHeight: 24 },
+  body: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+  caption: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
 };

@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { colors, spacing, radius, typography } from '../theme';
 import { auditRepo, AuditLogRow } from '../services/data/auditRepo';
-import { isOnlineMode } from '../services/data';
+import { isOnlineMode, supabase } from '../services/data';
 import { useAppContext } from '../context/AppContext';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
@@ -59,6 +59,7 @@ export default function AuditLogScreen() {
   const [rows, setRows] = useState<AuditLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [profilesById, setProfilesById] = useState<Record<string, string>>({});
   const online = isOnlineMode();
   const { employees } = useAppContext();
 
@@ -70,14 +71,31 @@ export default function AuditLogScreen() {
 
   const userLabel = useCallback((uid: string | null) => {
     if (!uid) return '—';
-    return userNameById[uid] ?? `#${uid.slice(0, 8)}`;
-  }, [userNameById]);
+    return userNameById[uid] ?? profilesById[uid] ?? `#${uid.slice(0, 8)}`;
+  }, [userNameById, profilesById]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    setRows(await auditRepo.list(200));
+    const list = await auditRepo.list(200);
+    setRows(list);
+    // Toplu profil çözümle (auth uid → ad)
+    try {
+      const ids = Array.from(new Set(list.map((r) => r.user_id).filter((id): id is string => !!id && !profilesById[id])));
+      if (ids.length && supabase) {
+        const { data } = await supabase.from('profiles').select('id, full_name').in('id', ids);
+        if (data) {
+          setProfilesById((prev) => {
+            const next = { ...prev };
+            for (const p of data as any[]) {
+              if (p?.id && p?.full_name) next[p.id] = p.full_name;
+            }
+            return next;
+          });
+        }
+      }
+    } catch {}
     setLoading(false);
-  }, []);
+  }, [profilesById]);
 
   useEffect(() => { refresh(); }, [refresh]);
 

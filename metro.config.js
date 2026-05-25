@@ -6,6 +6,9 @@ const config = getDefaultConfig(__dirname);
 
 const WEB_SHIM_MAP = {
   'react-native-maps': path.resolve(__dirname, 'src/shims/react-native-maps.web.tsx'),
+  'expo-notifications': path.resolve(__dirname, 'src/shims/expo-notifications.web.js'),
+  'expo-print': path.resolve(__dirname, 'src/shims/expo-print.web.js'),
+  'expo-sharing': path.resolve(__dirname, 'src/shims/expo-sharing.web.js'),
 };
 
 const originalResolveRequest = config.resolver.resolveRequest;

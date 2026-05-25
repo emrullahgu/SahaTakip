@@ -37,19 +37,43 @@ export const supabase = createClient(supabaseUrl || 'https://placeholder.supabas
 
 /**
  * E-posta onay / şifre sıfırlama linklerinin yönleneceği URL.
- * - Web: kullanıcının açık olduğu site origin'i (Netlify production veya preview).
- * - Native: deep link scheme (`sahatakip://auth-callback`).
+ *
+ * Öncelik sırası:
+ *   1) `EXPO_PUBLIC_SITE_URL` env (production canonical URL) — her zaman tercih.
+ *   2) Web + non-localhost `window.location.origin`.
+ *   3) Native deep link: `sahatakip://auth-callback`.
+ *
+ * NEDEN: Geliştirme/preview için localhost veya geçici Netlify deploy URL'sinden
+ * signup yapıldığında, kullanıcıya gönderilen e-postadaki onay linki
+ * `http://localhost:xxxx/auth-callback` olarak gidiyor ve alıcı bu linki
+ * kendi cihazında açamıyor. Production URL env üzerinden zorlanarak
+ * gerçek dağıtım adresine yönlendirme garantilenir.
  *
  * NOT: Bu URL'in Supabase Dashboard → Authentication → URL Configuration →
  * Redirect URLs listesinde TANIMLI olması zorunludur. Aksi halde Supabase
- * varsayılan Site URL'e (örn. http://localhost:3000) düşer.
+ * varsayılan Site URL'e düşer.
  */
 export function getAuthRedirectUrl(): string {
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
-    return `${window.location.origin}/auth-callback`;
-  }
   const envUrl = process.env.EXPO_PUBLIC_SITE_URL;
   if (envUrl) return `${envUrl.replace(/\/$/, '')}/auth-callback`;
+
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin;
+    // Localhost / 127.0.0.1 / LAN IP'ten gelen e-posta linkleri alıcının
+    // tarayıcısında çalışmaz. Bu durumda native scheme'a düşmek de yanlış
+    // olur; bilinçli bir uyarı bırakıp yine origin döndürüyoruz ki
+    // geliştirici aynı makinede testi tamamlayabilsin.
+    const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(origin);
+    if (isLocal) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[Supabase] Auth redirect URL ${origin}/auth-callback localhost'tur. ` +
+        `Üretim için netlify.toml içine EXPO_PUBLIC_SITE_URL ekleyin (örn. https://<site>.netlify.app).`
+      );
+    }
+    return `${origin}/auth-callback`;
+  }
+
   return 'sahatakip://auth-callback';
 }
 

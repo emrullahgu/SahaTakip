@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
-import { SERVICE_CATALOG, MATERIAL_CATALOG } from '../data/initialData';
+import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { createApproval } from '../services/governance';
 import { uploadPhoto } from '../services/photoUpload';
 import { Customer, SelectedMaterial, ServiceCatalogItem, TabParamList, RootStackParamList } from '../types';
@@ -59,6 +60,10 @@ export default function NewServiceScreen() {
   const [showMaterialPicker, setShowMaterialPicker] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [materialSearch, setMaterialSearch] = useState('');
+  const [materialCategory, setMaterialCategory] = useState<string | null>(null);
+  const [materialBrand, setMaterialBrand] = useState<string | null>(null);
+  const [showAllMatCats, setShowAllMatCats] = useState(false);
+  const [showAllMatBrands, setShowAllMatBrands] = useState(false);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ shortName: '', title: '', phone: '' });
 
@@ -75,11 +80,20 @@ export default function NewServiceScreen() {
 
   const filteredMaterials = useMemo(() => {
     const q = materialSearch.trim().toLocaleLowerCase('tr-TR');
-    if (!q) return MATERIAL_CATALOG;
-    return MATERIAL_CATALOG.filter(m =>
-      (m.name || '').toLocaleLowerCase('tr-TR').includes(q),
-    );
-  }, [materialSearch]);
+    let base = MATERIAL_CATALOG;
+    if (materialCategory) base = base.filter(m => m.category === materialCategory);
+    if (materialBrand) base = base.filter(m => m.brand === materialBrand);
+    if (q) {
+      base = base.filter(m =>
+        (m.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (m.code || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (m.brand || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
+      );
+    }
+    // Performans: ilk 400 sonuç yeterli (FlatList zaten lazy render eder).
+    return base.slice(0, 400);
+  }, [materialSearch, materialCategory, materialBrand]);
 
   const handleCreateCustomer = () => {
     const shortName = newCustomer.shortName.trim();
@@ -117,37 +131,58 @@ export default function NewServiceScreen() {
   };
 
   const pickPhoto = async (type: 'before' | 'after' | 'form') => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('İzin Gerekli', 'Fotoğraf çekmek için kamera izni gereklidir.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-      allowsEditing: false,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      if (type === 'before') setBeforePhoto(result.assets[0].uri);
-      else if (type === 'after') setAfterPhoto(result.assets[0].uri);
-      else setFormPhoto(result.assets[0].uri);
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('İzin Gerekli', 'Fotoğraf çekmek için kamera izni gereklidir.');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        allowsEditing: false,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        if (type === 'before') setBeforePhoto(uri);
+        else if (type === 'after') setAfterPhoto(uri);
+        else setFormPhoto(uri);
+      }
+    } catch (err: any) {
+      console.warn('[pickPhoto]', err);
+      // Web'de kamera yoksa galeriyi açmayı teklif et
+      if (Platform.OS === 'web') {
+        pickFromGallery(type);
+      } else {
+        Alert.alert('Hata', 'Kamera başlatılamadı: ' + err.message);
+      }
     }
   };
 
   const pickFromGallery = async (type: 'before' | 'after' | 'form') => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('İzin Gerekli', 'Galeri erişimi için izin gereklidir.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      if (type === 'before') setBeforePhoto(result.assets[0].uri);
-      else if (type === 'after') setAfterPhoto(result.assets[0].uri);
-      else setFormPhoto(result.assets[0].uri);
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('İzin Gerekli', 'Galeri erişimi için izin gereklidir.');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        if (type === 'before') setBeforePhoto(uri);
+        else if (type === 'after') setAfterPhoto(uri);
+        else setFormPhoto(uri);
+      }
+    } catch (err: any) {
+      console.warn('[pickFromGallery]', err);
+      Alert.alert('Hata', 'Galeri açılamadı: ' + err.message);
     }
   };
 
@@ -640,14 +675,16 @@ export default function NewServiceScreen() {
         onRequestClose={() => setShowMaterialPicker(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { maxHeight: '85%' }]}>
-            <Text style={styles.modalTitle}>Malzeme Seçin</Text>
+          <View style={[styles.modalBox, { maxHeight: '90%' }]}>
+            <Text style={styles.modalTitle}>
+              Malzeme / Ürün Seçin ({MATERIAL_CATALOG.length.toLocaleString('tr-TR')} kayıt)
+            </Text>
 
             <View style={styles.searchRow}>
               <Ionicons name="search-outline" size={16} color={colors.text.muted} />
               <TextInput
                 style={styles.searchInputInline}
-                placeholder="Malzeme adında ara"
+                placeholder="Ad, kod, marka veya kategori"
                 placeholderTextColor={colors.text.faint}
                 value={materialSearch}
                 onChangeText={setMaterialSearch}
@@ -660,11 +697,65 @@ export default function NewServiceScreen() {
               )}
             </View>
 
+            {/* Kategori chipleri */}
+            <View style={styles.filterLabelRow}>
+              <Text style={styles.filterLabel}>Kategori {materialCategory ? `· ${materialCategory}` : ''}</Text>
+              <TouchableOpacity onPress={() => setShowAllMatCats(v => !v)} style={styles.toggleBtn}>
+                <Text style={styles.toggleText}>{showAllMatCats ? 'Daralt ▲' : `Tümü (${MATERIAL_CATEGORIES.length}) ▼`}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.chipWrap, !showAllMatCats && styles.chipWrapCollapsed]}>
+              <TouchableOpacity
+                onPress={() => setMaterialCategory(null)}
+                style={[styles.chip, !materialCategory && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, !materialCategory && styles.chipTextActive]}>Tüm Kategoriler</Text>
+              </TouchableOpacity>
+              {MATERIAL_CATEGORIES.map(cat => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setMaterialCategory(materialCategory === cat ? null : cat)}
+                  style={[styles.chip, materialCategory === cat && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, materialCategory === cat && styles.chipTextActive]} numberOfLines={1}>
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Marka chipleri */}
+            <View style={styles.filterLabelRow}>
+              <Text style={styles.filterLabel}>Marka {materialBrand ? `· ${materialBrand}` : ''}</Text>
+              <TouchableOpacity onPress={() => setShowAllMatBrands(v => !v)} style={styles.toggleBtn}>
+                <Text style={styles.toggleText}>{showAllMatBrands ? 'Daralt ▲' : `Tümü (${MATERIAL_BRANDS.length}) ▼`}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.chipWrap, !showAllMatBrands && styles.chipWrapCollapsed]}>
+              <TouchableOpacity
+                onPress={() => setMaterialBrand(null)}
+                style={[styles.chip, !materialBrand && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, !materialBrand && styles.chipTextActive]}>Tüm Markalar</Text>
+              </TouchableOpacity>
+              {MATERIAL_BRANDS.map(b => (
+                <TouchableOpacity
+                  key={b}
+                  onPress={() => setMaterialBrand(materialBrand === b ? null : b)}
+                  style={[styles.chip, materialBrand === b && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, materialBrand === b && styles.chipTextActive]} numberOfLines={1}>
+                    {b}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <FlatList
               data={filteredMaterials}
               keyExtractor={m => m.id}
               keyboardShouldPersistTaps="handled"
-              style={{ maxHeight: 380 }}
+              style={{ maxHeight: 420 }}
               ListEmptyComponent={
                 <Text style={[styles.modalItemSub, { textAlign: 'center', marginVertical: spacing.lg }]}>
                   Arama sonucu boş.
@@ -672,6 +763,10 @@ export default function NewServiceScreen() {
               }
               renderItem={({ item: m }) => {
                 const inList = selectedMaterials.find(x => x.id === m.id);
+                const tags = [m.brand, m.category].filter(Boolean).join(' · ');
+                const priceLabel = m.currency && m.currency !== 'TL' && m.currency !== 'TRY' && m.listPrice
+                  ? `₺${m.price.toLocaleString('tr-TR')}  (${m.listPrice} ${m.currency})`
+                  : `₺${m.price.toLocaleString('tr-TR')}`;
                 return (
                   <TouchableOpacity
                     style={styles.modalItem}
@@ -680,7 +775,8 @@ export default function NewServiceScreen() {
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={styles.modalItemText} numberOfLines={2}>{m.name}</Text>
-                      <Text style={styles.modalItemSub}>₺{m.price.toLocaleString('tr-TR')}</Text>
+                      {!!tags && <Text style={styles.modalItemSub} numberOfLines={1}>{tags}</Text>}
+                      <Text style={styles.modalItemSub}>{priceLabel}</Text>
                     </View>
                     {inList ? (
                       <View style={styles.qtyBadge}>
@@ -970,6 +1066,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   qtyBadgeText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
+  filterLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 4 },
+  filterLabel: { color: colors.text.faint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 1 },
+  toggleBtn: { paddingHorizontal: 6, paddingVertical: 2 },
+  toggleText: { color: colors.emerald.default, fontSize: 11, fontWeight: '700' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingVertical: 2 },
+  chipWrapCollapsed: { maxHeight: 36, overflow: 'hidden' },
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.bg.primary,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    maxWidth: 220,
+  },
+  chipActive: {
+    backgroundColor: colors.emerald.default,
+    borderColor: colors.emerald.default,
+  },
+  chipText: { color: colors.text.primary, fontSize: typography.xs, fontWeight: '600' },
+  chipTextActive: { color: '#fff' },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -137,8 +138,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     fontSize: typography.sm,
     fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowRadius: 4,
+    ...Platform.select({
+      ios: {
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowRadius: 4,
+        textShadowOffset: { width: 0, height: 1 },
+      },
+      android: {
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowRadius: 4,
+        textShadowOffset: { width: 0, height: 1 },
+      },
+      web: {
+        textShadow: '0px 1px 4px rgba(0, 0, 0, 0.6)',
+      } as any,
+    }),
   },
   againBtn: {
     marginTop: spacing.lg,

@@ -9,6 +9,8 @@ interface Props {
   icon?: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle?: string;
+  /** Alias for `subtitle` (some legacy screens use this name) */
+  description?: string;
   actionLabel?: string;
   onAction?: () => void;
   iconColor?: string;
@@ -18,15 +20,17 @@ export default function EmptyState({
   icon = 'document-outline',
   title,
   subtitle,
+  description,
   actionLabel,
   onAction,
   iconColor = colors.text.muted,
 }: Props) {
+  const sub = subtitle ?? description;
   return (
     <View style={s.container}>
       <Ionicons name={icon} size={56} color={iconColor} />
       <Text style={s.title}>{title}</Text>
-      {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+      {sub ? <Text style={s.subtitle}>{sub}</Text> : null}
       {actionLabel && onAction ? (
         <Pressable style={s.button} onPress={onAction} {...a11yButton(actionLabel)}>
           <Text style={s.buttonText}>{actionLabel}</Text>

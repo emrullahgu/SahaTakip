@@ -294,10 +294,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteQuote = (id: string) => {
+    const snapshot = [...quotes];
     setQuotes(prev => prev.filter(q => q.id !== id));
-    quotesRepo.delete(id).catch(e => console.warn('[quote.delete]', e));
-    auditRepo.log(userId, { action: 'quote.delete', tableName: 'quotes', refId: id });
-    showToast('Teklif silindi.', 'error');
+    quotesRepo.delete(id)
+      .then(() => {
+        showToast('Teklif silindi.', 'error');
+        auditRepo.log(userId, { action: 'quote.delete', tableName: 'quotes', refId: id });
+      })
+      .catch(e => {
+        console.warn('[quote.delete]', e);
+        setQuotes(snapshot);
+        showToast('Teklif silinemedi: ' + (e?.message || 'yetki yok'), 'error');
+      });
   };
 
   const setQuoteStatus = (id: string, status: QuoteStatus) => {
@@ -405,10 +413,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteCustomer = (id: string) => {
     const cust = customers.find(c => c.id === id);
+    const snapshot = [...customers];
     setCustomers(prev => prev.filter(x => x.id !== id));
-    customersRepo.delete(id).catch(e => console.warn('[customer.delete]', e));
-    auditRepo.log(userId, { action: 'customer.delete', tableName: 'customers', refId: id });
-    if (cust) showToast(`${cust.shortName} silindi.`, 'error');
+    customersRepo.delete(id)
+      .then(() => {
+        if (cust) showToast(`${cust.shortName} silindi.`, 'error');
+        auditRepo.log(userId, { action: 'customer.delete', tableName: 'customers', refId: id });
+      })
+      .catch(e => {
+        console.warn('[customer.delete]', e);
+        setCustomers(snapshot);
+        showToast('Müşteri silinemedi: ' + (e?.message || 'yetki yok'), 'error');
+      });
   };
 
   const addOrder = (o: Order) => {
@@ -621,11 +637,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteWorkOrder = (id: string) => {
     // Optimistik: önce listeden kaldır, hata olursa geri ekle.
-    let snapshot: WorkOrder[] = [];
-    setWorkOrders(prev => {
-      snapshot = prev;
-      return prev.filter(w => w.id !== id);
-    });
+    const snapshot = [...workOrders];
+    setWorkOrders(prev => prev.filter(w => w.id !== id));
+
     workOrdersRepo.delete(id)
       .then(() => {
         showToast('İş emri silindi.');
@@ -636,8 +650,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         // Rollback: silinemediği için listeyi eski haline döndür.
         setWorkOrders(snapshot);
         const msg = e?.message ?? 'yetkiniz olmayabilir';
-        showToast(`Silinemedi: ${msg}`);
-        // Web'de toast'ı kaçıranlar için Alert da bas.
+        showToast(`Silinemedi: ${msg}`, 'error');
         try { Alert.alert('İş emri silinemedi', msg); } catch { /* ignore */ }
       });
   };

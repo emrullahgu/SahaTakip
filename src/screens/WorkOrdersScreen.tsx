@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,9 +83,12 @@ export default function WorkOrdersScreen() {
   });
 
   const total = source.length;
-  const done = source.filter(o => o.status === 'Tamamlandı').length;
-  const waiting = source.filter(o => o.status === 'Bekliyor' || o.status === 'Atandı').length;
-  const late = source.filter(o => o.breached || o.status === 'Gecikti').length;
+  const done = source.filter(o => o.status?.trim().toLowerCase() === 'tamamlandı').length;
+  const waiting = source.filter(o => {
+    const s = o.status?.trim().toLowerCase();
+    return s === 'bekliyor' || s === 'atandı';
+  }).length;
+  const late = source.filter(o => o.breached || o.status?.trim().toLowerCase() === 'gecikti').length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -187,25 +191,26 @@ export default function WorkOrdersScreen() {
                   <View style={[styles.statusPill, { backgroundColor: statusColor(item.status as any) }]}>
                     <Text style={styles.statusPillText}>{item.status}</Text>
                   </View>
-                  {!!realOrders.find(r => r.id === item.id) && (
-                    <RowMenu
-                      items={[
-                        {
-                          label: 'Detay',
-                          icon: 'open-outline',
-                          onPress: () => navigation.navigate('WorkOrderDetail', { workOrderId: item.id }),
-                        },
-                        {
-                          label: 'Sil',
-                          icon: 'trash-outline',
-                          destructive: true,
-                          confirm: `${item.title} iş emri silinecek. Emin misiniz?`,
-                          confirmTitle: 'Silinsin mi?',
-                          onPress: () => deleteWorkOrder(item.id),
-                        },
-                      ]}
-                    />
-                  )}
+                  <RowMenu
+                    items={[
+                      {
+                        label: 'Detay',
+                        icon: 'open-outline',
+                        onPress: () =>
+                          realOrders.find(r => r.id === item.id)
+                            ? navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
+                            : Alert.alert('Demo Verisi', 'Bu bir örnek iş emridir, detayı bulunmamaktadır.'),
+                      },
+                      {
+                        label: 'Sil',
+                        icon: 'trash-outline',
+                        destructive: true,
+                        confirm: `${item.title} iş emri silinecek. Emin misiniz?`,
+                        confirmTitle: 'Silinsin mi?',
+                        onPress: () => deleteWorkOrder(item.id),
+                      },
+                    ]}
+                  />
                 </View>
               </View>
               <View style={styles.cardBottom}>

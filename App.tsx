@@ -9,8 +9,10 @@ import AppNavigator from './src/navigation';
 import ConnectionBanner from './src/components/ConnectionBanner';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { installGlobalErrorHandler } from './src/services/crashReporter';
+import { installWebAlertShim } from './src/utils/webAlertShim';
 
 installGlobalErrorHandler();
+installWebAlertShim();
 
 export default function App() {
   return (

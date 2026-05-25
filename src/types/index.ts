@@ -78,6 +78,12 @@ export interface WorkOrder {
   audioUri?: string;
   signatureUri?: string;
   templateId?: string;
+  // Optional aliases / metadata used by some legacy screens
+  customerId?: string;
+  customerName?: string;
+  assignedTo?: string;
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface Employee {
@@ -101,6 +107,13 @@ export interface MaterialCatalogItem {
   id: string;
   name: string;
   price: number;
+  // Optional — populated for imported product catalog rows (ürünler.json).
+  brand?: string;
+  code?: string;
+  category?: string;
+  currency?: 'TL' | 'TRY' | 'USD' | 'EUR' | string;
+  listPrice?: number;
+  discountRate?: number;
 }
 
 export interface ToastMessage {
@@ -3850,6 +3863,8 @@ export type RootStackParamList = {
   AiHub: undefined;
   AiSettings: undefined;
   AdminShiftDashboard: undefined;
+  ShiftHistory: undefined;
+  ManagerCommandCenter: undefined;
   SmartPozSuggest: { description?: string } | undefined;
   PhotoAnalysis: { workOrderId?: string } | undefined;
   VoiceReport: { workOrderId?: string; customerId?: string } | undefined;
@@ -3926,6 +3941,7 @@ export type RootStackParamList = {
   ProductItems: { status?: ProductItemStatus; customerId?: string } | undefined;
   ProductItemForm: { itemId?: string } | undefined;
   ProductItemDetail: { itemId: string };
+  ProductCatalog: undefined;
   OsosHub: undefined;
   OsosReadings: { customerId?: string } | undefined;
   OsosImport: undefined;

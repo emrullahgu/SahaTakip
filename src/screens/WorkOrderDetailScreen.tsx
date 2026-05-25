@@ -220,17 +220,20 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   // ---- Foto: İş Öncesi / İş Sonrası ----
   const pickPhoto = async (slot: 'beforePhoto' | 'afterPhoto', source: 'camera' | 'library') => {
     try {
-      const perm = source === 'camera'
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (perm.status !== 'granted') {
-        Alert.alert('İzin gerekli', source === 'camera' ? 'Kamera izni verilmedi.' : 'Galeri izni verilmedi.');
-        return;
+      if (Platform.OS !== 'web') {
+        const perm = source === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (perm.status !== 'granted') {
+          Alert.alert('İzin gerekli', source === 'camera' ? 'Kamera izni verilmedi.' : 'Galeri izni verilmedi.');
+          return;
+        }
       }
       const res = source === 'camera'
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: false })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-      if (!res.canceled && res.assets[0]?.uri) {
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: false })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+
+      if (!res.canceled && res.assets && res.assets.length > 0) {
         const localUri = res.assets[0].uri;
         // 1) Anında lokal URI'yi göster
         attachWorkOrderMedia(wo.id, { [slot]: localUri });
@@ -248,7 +251,11 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         });
       }
     } catch (e: any) {
-      Alert.alert('Hata', e?.message ?? 'Foto alınamadı.');
+      if (Platform.OS === 'web' && source === 'camera') {
+        pickPhoto(slot, 'library');
+      } else {
+        Alert.alert('Hata', e?.message ?? 'Foto alınamadı.');
+      }
     }
   };
 

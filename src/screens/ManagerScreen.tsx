@@ -145,6 +145,43 @@ export default function ManagerScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
+          {/* Yönetici Komuta Merkezi — Hero CTA */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ManagerCommandCenter')}
+            activeOpacity={0.9}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 14,
+              backgroundColor: '#1e40af',
+              borderRadius: 12,
+              marginBottom: 12,
+            }}
+          >
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="speedometer" size={26} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>
+                Yönetici Komuta Merkezi
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 2 }}>
+                Mesai · İş · Teklif · Harcama · Aktivite · Haftalık PDF
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.85)" />
+          </TouchableOpacity>
+
           {/* Hızlı İşlemler */}
           <View style={styles.quickRow}>
             <TouchableOpacity

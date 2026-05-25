@@ -1,6 +1,7 @@
 // csvExport.ts — POZ-DEV-067
 // Basit CSV üretici + paylaşım (xlsx yerine, Türkçe Excel ile uyumlu UTF-8 BOM).
 
+import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
@@ -19,9 +20,28 @@ export function buildCsv(rows: (string | number | undefined | null)[][]): string
 
 export async function shareCsv(filename: string, csv: string) {
   const safeName = filename.replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const payload = '\uFEFF' + csv;
+
+  if (Platform.OS === 'web') {
+    // Web: doğrudan Blob → anchor download (FileSystem yok)
+    try {
+      const blob = new Blob([payload], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${safeName}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch {} }, 0);
+      return url;
+    } catch (e) {
+      console.warn('[csvExport] web download failed', e);
+      return '';
+    }
+  }
+
   const uri = (FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? '') + safeName + '.csv';
-  // UTF-8 BOM Excel için
-  await FileSystem.writeAsStringAsync(uri, '\uFEFF' + csv, {
+  await FileSystem.writeAsStringAsync(uri, payload, {
     encoding: FileSystem.EncodingType.UTF8,
   });
   const can = await Sharing.isAvailableAsync();

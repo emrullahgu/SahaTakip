@@ -14,6 +14,11 @@
   EXPO_PUBLIC_SUPABASE_URL = "https://mdwcasycfssdkogdlbyh.supabase.co"
   EXPO_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_U-ETT9DDji_bbzYMd3KABQ_ENfXfGYa"
   EXPO_PUBLIC_GOOGLE_MAPS_API_KEY = "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
+  # Auth (signup / şifre sıfırlama) e-posta linklerinin döneceği canonical URL.
+  # Localhost veya Netlify preview'dan kayıt olunsa bile mail bu adresi taşır.
+  # Netlify UI → Site settings → Environment variables üzerinden de override
+  # edebilirsiniz (örn. özel domain bağlandığında).
+  EXPO_PUBLIC_SITE_URL = "https://sahatakip.netlify.app"
   # app.json / eas.json mobil derleme yapılandırması içindir; web build'in parçası değildir.
   SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
   # netlify.toml de hariç tutuluyor: build env değerleri burada tanımlı olduğu için

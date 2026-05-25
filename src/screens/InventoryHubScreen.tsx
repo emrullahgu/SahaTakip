@@ -30,6 +30,7 @@ export default function InventoryHubScreen() {
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const TILES = [
+    { key: 'ProductCatalog',  label: 'Ürün Kataloğu',  desc: '16K+ ürün · marka · kategori', icon: 'library-outline' as const,    color: '#10b981', poz: 'POZ-CAT-001' },
     { key: 'ProductItems',    label: 'Ürün Listesi',  desc: 'Seri no + lokasyon',     icon: 'cube-outline' as const,        color: '#0ea5e9', poz: 'POZ-DEV-242' },
     { key: 'ProductItemForm', label: 'Yeni Ürün',     desc: 'Envantere ürün ekle',    icon: 'add-circle-outline' as const,  color: '#22c55e', poz: 'POZ-DEV-243' },
     { key: 'Stock',           label: 'Klasik Stok',   desc: 'Malzeme stoğu',          icon: 'layers-outline' as const,      color: '#8b5cf6', poz: 'POZ-DEV-156' },

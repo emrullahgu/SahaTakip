@@ -69,26 +69,12 @@ export async function generateAndShareActivityPdf(
 </body>
 </html>`;
 
-  if (Platform.OS === 'web') {
-    // Web: yeni sekmede HTML olarak aç (kullanıcı tarayıcıdan PDF kaydedebilir)
-    try {
-      const w = window.open('', '_blank');
-      if (w) {
-        w.document.write(html);
-        w.document.close();
-        setTimeout(() => { try { w.print(); } catch {} }, 300);
-      } else {
-        Alert.alert('Uyarı', 'Pop-up engellendi. Tarayıcı ayarlarından izin verin.');
-      }
-    } catch (e: any) {
-      Alert.alert('Hata', e?.message || 'PDF oluşturulamadı');
-    }
-    return;
-  }
   try {
     const res = await Print.printToFileAsync({ html });
-    if (!res?.uri) throw new Error('PDF dosyası oluşturulamadı');
-    await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Aktivite Raporu' });
+    // Web shim'inde uri boş döner; print diyaloğu zaten açılır → sharing'i sadece native'de tetikle
+    if (Platform.OS !== 'web' && res?.uri) {
+      await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Aktivite Raporu' });
+    }
   } catch (e: any) {
     Alert.alert('Hata', e?.message || 'PDF oluşturulamadı');
   }

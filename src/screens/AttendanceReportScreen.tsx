@@ -1,15 +1,24 @@
 // AttendanceReportScreen — POZ-DEV-118 Aylık puantaj raporu
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 import { colors, spacing, radius, typography } from '../theme';
 import { shiftsRepo, isOnlineMode } from '../services/data';
 import type { Shift } from '../services/data/shiftsRepo';
+import { useAppContext } from '../context/AppContext';
+import type { RootStackParamList } from '../types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 interface UserRow {
   userId: string;
+  name: string;
   totalMinutes: number;
   breakMinutes: number;
   days: number;
@@ -31,12 +40,21 @@ function shiftDurationMin(s: Shift): number {
 }
 
 export default function AttendanceReportScreen() {
+  const nav = useNavigation<Nav>();
+  const { employees } = useAppContext();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const online = isOnlineMode();
+
+  const employeesById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of employees) m[e.id] = e.name;
+    return m;
+  }, [employees]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -50,7 +68,12 @@ export default function AttendanceReportScreen() {
     const byUser = new Map<string, UserRow>();
     const daysSet = new Map<string, Set<string>>();
     for (const s of shifts) {
-      const u = byUser.get(s.userId) ?? { userId: s.userId, totalMinutes: 0, breakMinutes: 0, days: 0, shifts: 0 };
+      const name =
+        (s.employeeId && employeesById[s.employeeId]) ||
+        employeesById[s.userId] ||
+        `Personel #${(s.userId || '').slice(0, 6) || '—'}`;
+      const u = byUser.get(s.userId) ?? { userId: s.userId, name, totalMinutes: 0, breakMinutes: 0, days: 0, shifts: 0 };
+      u.name = name;
       u.totalMinutes += shiftDurationMin(s);
       u.breakMinutes += s.breakMinutes ?? 0;
       u.shifts += 1;
@@ -62,7 +85,7 @@ export default function AttendanceReportScreen() {
     }
     return Array.from(byUser.values()).map(r => ({ ...r, days: daysSet.get(r.userId)?.size ?? 0 }))
       .sort((a, b) => b.totalMinutes - a.totalMinutes);
-  }, [shifts]);
+  }, [shifts, employeesById]);
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -79,6 +102,59 @@ export default function AttendanceReportScreen() {
   };
 
   const monthLabel = new Date(year, month - 1, 1).toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
+
+  const exportPdf = useCallback(async () => {
+    if (rows.length === 0) {
+      Alert.alert('PDF', 'Bu ay için yazdırılacak veri yok.');
+      return;
+    }
+    setExporting(true);
+    try {
+      const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const trs = rows.map((r, i) => `
+        <tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+          <td><strong>${esc(r.name)}</strong></td>
+          <td class="right">${r.days}</td>
+          <td class="right">${r.shifts}</td>
+          <td class="right" style="color:#15803d;font-weight:700">${esc(hhmm(r.totalMinutes))}</td>
+          <td class="right" style="color:#b45309">${esc(hhmm(r.breakMinutes))}</td>
+        </tr>`).join('');
+      const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"/><title>Puantaj ${esc(monthLabel)}</title>
+<style>
+  body { font-family: Helvetica, Arial, sans-serif; color:#1f2937; margin:0; padding:24px; font-size:11px; }
+  .header { border-bottom:3px solid #1e40af; padding-bottom:14px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:flex-end; }
+  .title { font-size:20px; font-weight:900; color:#1e40af; }
+  .sub { font-size:10px; color:#6b7280; }
+  .stats { display:flex; gap:10px; margin-bottom:14px; }
+  .stat { flex:1; border:1px solid #e5e7eb; border-radius:6px; padding:10px; background:#f9fafb; }
+  .stat .l { font-size:9px; color:#6b7280; font-weight:700; text-transform:uppercase; }
+  .stat .v { font-size:16px; font-weight:900; color:#1e40af; margin-top:2px; }
+  table { width:100%; border-collapse:collapse; }
+  th { background:#1e40af; color:#fff; padding:8px 6px; font-size:10px; font-weight:800; text-align:left; text-transform:uppercase; }
+  td { padding:7px 6px; border-bottom:1px solid #e5e7eb; font-size:11px; }
+  td.right { text-align:right; font-variant-numeric:tabular-nums; }
+  .footer { margin-top:22px; font-size:9px; color:#6b7280; text-align:center; border-top:1px solid #e5e7eb; padding-top:10px; }
+</style></head><body>
+<div class="header"><div><div class="title">PUANTAJ RAPORU</div><div class="sub">SahaTakip Mühendislik · ${esc(monthLabel)}</div></div><div class="sub">Hazırlanma: ${esc(new Date().toLocaleString('tr-TR'))}</div></div>
+<div class="stats">
+  <div class="stat"><div class="l">Personel</div><div class="v">${totals.users}</div></div>
+  <div class="stat"><div class="l">Vardiya</div><div class="v">${totals.shifts}</div></div>
+  <div class="stat"><div class="l">Toplam Mesai</div><div class="v">${esc(hhmm(totals.totalMinutes))}</div></div>
+  <div class="stat"><div class="l">Toplam Mola</div><div class="v">${esc(hhmm(totals.breakMinutes))}</div></div>
+</div>
+<table><thead><tr><th>Personel</th><th style="text-align:right">Gün</th><th style="text-align:right">Vardiya</th><th style="text-align:right">Mesai</th><th style="text-align:right">Mola</th></tr></thead><tbody>${trs}</tbody></table>
+<div class="footer">SahaTakip · Bu rapor sistem tarafından üretilmiştir.</div>
+</body></html>`;
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Puantaj ${monthLabel}`, UTI: 'com.adobe.pdf' });
+      }
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'PDF oluşturulamadı.');
+    } finally {
+      setExporting(false);
+    }
+  }, [rows, totals, monthLabel]);
 
   if (!online) {
     return (
@@ -100,6 +176,24 @@ export default function AttendanceReportScreen() {
         <Text style={styles.monthLabel}>{monthLabel}</Text>
         <TouchableOpacity onPress={nextMonth} style={styles.navBtn}>
           <Ionicons name="chevron-forward" size={18} color={colors.text.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          onPress={() => nav.navigate('ShiftHistory')}
+          style={[styles.actionBtn, { backgroundColor: '#1e40af' }]}
+        >
+          <Ionicons name="list-outline" size={14} color="#fff" />
+          <Text style={styles.actionBtnText}>Detaylı Geçmiş</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={exportPdf}
+          disabled={exporting || rows.length === 0}
+          style={[styles.actionBtn, { backgroundColor: '#dc2626' }, (exporting || rows.length === 0) && { opacity: 0.5 }]}
+        >
+          {exporting ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="document-text-outline" size={14} color="#fff" />}
+          <Text style={styles.actionBtnText}>PDF Al</Text>
         </TouchableOpacity>
       </View>
 
@@ -129,7 +223,7 @@ export default function AttendanceReportScreen() {
             </View>
             {rows.map((r, i) => (
               <View key={r.userId} style={[styles.trow, i % 2 === 0 && styles.altRow]}>
-                <Text style={[styles.td, { flex: 2 }]} numberOfLines={1}>{r.userId.slice(0, 8)}</Text>
+                <Text style={[styles.td, { flex: 2 }]} numberOfLines={1}>{r.name}</Text>
                 <Text style={[styles.td, { flex: 1, textAlign: 'right' }]}>{r.days}</Text>
                 <Text style={[styles.td, { flex: 1, textAlign: 'right' }]}>{r.shifts}</Text>
                 <Text style={[styles.td, { flex: 1.4, textAlign: 'right', color: '#22c55e', fontWeight: '700' }]}>{hhmm(r.totalMinutes)}</Text>
@@ -156,6 +250,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border.primary },
   navBtn: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, alignItems: 'center', justifyContent: 'center' },
+  actionRow: { flexDirection: 'row', gap: 8, paddingHorizontal: spacing.md, paddingTop: spacing.sm },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.sm },
+  actionBtnText: { color: '#fff', fontWeight: '800', fontSize: 12 },
   monthLabel: { color: colors.text.primary, fontWeight: '800', fontSize: typography.md, textTransform: 'capitalize' },
   statsRow: { flexDirection: 'row', gap: 8, padding: spacing.md },
   statCard: { flex: 1, padding: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, alignItems: 'center' },

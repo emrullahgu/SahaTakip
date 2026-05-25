@@ -54,7 +54,7 @@ export async function clearHistory(): Promise<void> {
 function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[]): string {
   const today = todayKey();
   const pendingWO = snap.workOrders.filter(w => w.status === 'Onay Bekliyor');
-  const inProgress = snap.workOrders.filter(w => w.status === 'Devam Ediyor');
+  const inProgress = snap.workOrders.filter(w => w.status === 'Başladı');
   const todayWO = snap.workOrders.filter(w => (w.plannedStart || w.date || '').slice(0, 10) === today);
   const overdueWO = snap.workOrders.filter(w => {
     if (!w.plannedEnd) return false;

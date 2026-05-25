@@ -30,6 +30,7 @@ import {
   DEFAULT_VAT,
 } from '../data/pozCatalog';
 import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recentPozes';
+import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import Toast from '../components/Toast';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
@@ -56,6 +57,14 @@ export default function NewQuoteScreen() {
   const [showPozModal, setShowPozModal] = useState(false);
   const [pozCategory, setPozCategory] = useState<PozCategory | 'Tümü'>('Tümü');
   const [pozSearch, setPozSearch] = useState('');
+
+  // Ürün katağundan kalem ekleme
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategory, setProductCategory] = useState<string | null>(null);
+  const [productBrand, setProductBrand] = useState<string | null>(null);
+  const [showAllProductCats, setShowAllProductCats] = useState(false);
+  const [showAllProductBrands, setShowAllProductBrands] = useState(false);
 
   React.useEffect(() => {
     listRecentPozes().then(setRecents);
@@ -138,6 +147,43 @@ export default function NewQuoteScreen() {
     [pozCategory, pozSearch]
   );
 
+  const filteredProducts = useMemo(() => {
+    const q = productSearch.trim().toLocaleLowerCase('tr-TR');
+    let base = MATERIAL_CATALOG;
+    if (productCategory) base = base.filter(m => m.category === productCategory);
+    if (productBrand) base = base.filter(m => m.brand === productBrand);
+    if (q) {
+      base = base.filter(m =>
+        (m.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (m.code || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (m.brand || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
+      );
+    }
+    return base.slice(0, 400);
+  }, [productSearch, productCategory, productBrand]);
+
+  const addProductLine = (p: typeof MATERIAL_CATALOG[number]) => {
+    const newLine: QuoteLine = {
+      lineNo: lines.length + 1,
+      pozId: p.code ? `PRD-${p.code}` : `PRD-${p.id}`,
+      pozName: p.name,
+      unit: 'Ad',
+      quantity: 1,
+      materialPrice: p.price,
+      installPrice: 0,
+      dismantlePrice: 0,
+      withDismantle: false,
+      overheadPct: DEFAULT_OVERHEAD,
+      profitPct: DEFAULT_PROFIT,
+      vatPct: DEFAULT_VAT,
+      discountPct: 0,
+    };
+    setLines(prev => [...prev, newLine]);
+    setShowProductModal(false);
+    setProductSearch('');
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {toast && <Toast toast={toast} />}
@@ -198,6 +244,14 @@ export default function NewQuoteScreen() {
                   <Text style={styles.addLineBtnText}>Son ({recents.length})</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={styles.addLineBtn}
+                onPress={() => setShowProductModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="cube-outline" size={14} color={brand.green} />
+                <Text style={styles.addLineBtnText}>Ürün</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addLineBtn}
                 onPress={() => setShowPozModal(true)}
@@ -376,21 +430,19 @@ export default function NewQuoteScreen() {
             </View>
 
             {/* Category chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40 }}>
-              <View style={styles.catRow}>
-                {(['Tümü', ...POZ_CATEGORIES] as const).map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[styles.catChip, pozCategory === c && styles.catChipActive]}
-                    onPress={() => setPozCategory(c)}
-                  >
-                    <Text style={[styles.catChipText, pozCategory === c && styles.catChipTextActive]}>
-                      {c}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
+            <View style={styles.chipWrap}>
+              {(['Tümü', ...POZ_CATEGORIES] as const).map(c => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.catChip, pozCategory === c && styles.catChipActive]}
+                  onPress={() => setPozCategory(c)}
+                >
+                  <Text style={[styles.catChipText, pozCategory === c && styles.catChipTextActive]}>
+                    {c}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <FlatList
               data={filteredPoz}
@@ -423,6 +475,121 @@ export default function NewQuoteScreen() {
                   </View>
                 </TouchableOpacity>
               )}
+              ListEmptyComponent={
+                <Text style={styles.noResults}>Sonuç bulunamadı.</Text>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ÜRÜN MODAL — ürünler.json katalogu */}
+      <Modal
+        visible={showProductModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowProductModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { height: '90%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Ürün Seç ({MATERIAL_CATALOG.length.toLocaleString('tr-TR')} ürün)
+              </Text>
+              <TouchableOpacity onPress={() => setShowProductModal(false)}>
+                <Ionicons name="close" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalSearch}>
+              <Ionicons name="search-outline" size={16} color={colors.text.faint} />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Ad, kod, marka veya kategori..."
+                placeholderTextColor={colors.text.faint}
+                value={productSearch}
+                onChangeText={setProductSearch}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.filterLabelRow}>
+              <Text style={styles.filterLabel}>Kategori {productCategory ? `· ${productCategory}` : ''}</Text>
+              <TouchableOpacity onPress={() => setShowAllProductCats(v => !v)} style={styles.toggleBtn}>
+                <Text style={styles.toggleText}>{showAllProductCats ? 'Daralt ▲' : `Tümü (${MATERIAL_CATEGORIES.length}) ▼`}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.chipWrap, !showAllProductCats && styles.chipWrapCollapsed]}>
+              <TouchableOpacity
+                style={[styles.catChip, !productCategory && styles.catChipActive]}
+                onPress={() => setProductCategory(null)}
+              >
+                <Text style={[styles.catChipText, !productCategory && styles.catChipTextActive]}>Tüm Kategoriler</Text>
+              </TouchableOpacity>
+              {MATERIAL_CATEGORIES.map(c => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.catChip, productCategory === c && styles.catChipActive]}
+                  onPress={() => setProductCategory(productCategory === c ? null : c)}
+                >
+                  <Text style={[styles.catChipText, productCategory === c && styles.catChipTextActive]}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.filterLabelRow}>
+              <Text style={styles.filterLabel}>Marka {productBrand ? `· ${productBrand}` : ''}</Text>
+              <TouchableOpacity onPress={() => setShowAllProductBrands(v => !v)} style={styles.toggleBtn}>
+                <Text style={styles.toggleText}>{showAllProductBrands ? 'Daralt ▲' : `Tümü (${MATERIAL_BRANDS.length}) ▼`}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.chipWrap, !showAllProductBrands && styles.chipWrapCollapsed]}>
+              <TouchableOpacity
+                style={[styles.catChip, !productBrand && styles.catChipActive]}
+                onPress={() => setProductBrand(null)}
+              >
+                <Text style={[styles.catChipText, !productBrand && styles.catChipTextActive]}>Tüm Markalar</Text>
+              </TouchableOpacity>
+              {MATERIAL_BRANDS.map(b => (
+                <TouchableOpacity
+                  key={b}
+                  style={[styles.catChip, productBrand === b && styles.catChipActive]}
+                  onPress={() => setProductBrand(productBrand === b ? null : b)}
+                >
+                  <Text style={[styles.catChipText, productBrand === b && styles.catChipTextActive]}>{b}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={p => p.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => {
+                const tags = [item.brand, item.category].filter(Boolean).join(' · ');
+                const priceLabel = item.currency && item.currency !== 'TL' && item.currency !== 'TRY' && item.listPrice
+                  ? `₺${item.price.toLocaleString('tr-TR')} (${item.listPrice} ${item.currency})`
+                  : `₺${item.price.toLocaleString('tr-TR')}`;
+                return (
+                  <TouchableOpacity
+                    style={styles.pozItem}
+                    onPress={() => addProductLine(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.pozItemLeft}>
+                      {!!item.code && <Text style={styles.pozItemId}>{item.code}</Text>}
+                      <Text style={styles.pozItemName} numberOfLines={2}>{item.name}</Text>
+                      {!!tags && <Text style={styles.pozPriceTxt}>{tags}</Text>}
+                      <View style={styles.pozPriceRow}>
+                        <Text style={styles.pozPriceTxt}>{priceLabel}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.pozAddBtn}>
+                      <Ionicons name="add" size={20} color={brand.green} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
               ListEmptyComponent={
                 <Text style={styles.noResults}>Sonuç bulunamadı.</Text>
               }
@@ -952,6 +1119,12 @@ const styles = StyleSheet.create({
   modalSearchInput: { flex: 1, color: colors.text.primary, fontSize: typography.sm, paddingVertical: 2 },
 
   catRow: { flexDirection: 'row', gap: 6, paddingVertical: 4 },
+  filterLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 4 },
+  filterLabel: { color: colors.text.faint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 1 },
+  toggleBtn: { paddingHorizontal: 6, paddingVertical: 2 },
+  toggleText: { color: '#10b981', fontSize: 11, fontWeight: '700' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingVertical: 2 },
+  chipWrapCollapsed: { maxHeight: 34, overflow: 'hidden' },
   catChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: 4,

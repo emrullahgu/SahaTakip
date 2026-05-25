@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { RootStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { shiftsRepo, Shift } from '../services/data/shiftsRepo';
 import { locationsRepo } from '../services/data/locationsRepo';
 import { geofencesRepo, Geofence } from '../services/data/geofencesRepo';
@@ -39,6 +40,7 @@ const TRACK_OFF_SHIFT_KEY = '@SahaTakip:tracking_off_shift';
 
 export default function ShiftScreen() {
   const { session } = useAuth();
+  const { showToast } = useAppContext();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const userId = session?.user?.id ?? 'demo-user';
 
@@ -138,32 +140,39 @@ export default function ShiftScreen() {
         style: 'destructive',
         onPress: async () => {
           setLoading(true);
-          const pos = await requestAndGetPosition();
-          let primaryErr: any = null;
           try {
-            await shiftsRepo.end(active.id, pos?.latitude, pos?.longitude);
-          } catch (e: any) {
-            primaryErr = e;
-            console.warn('[ShiftScreen.end] primary failed', e?.message ?? e);
-          }
-          // Fallback: kullanıcının tüm açık mesailerini kapat (orphan/RLS dahil)
-          let fallbackClosed = 0;
-          try {
-            fallbackClosed = await shiftsRepo.forceEndByUser(userId, pos?.latitude, pos?.longitude);
-          } catch (e: any) {
-            console.warn('[ShiftScreen.end] forceEndByUser failed', e?.message ?? e);
-            if (!primaryErr) primaryErr = e;
-          }
-          const stillActive = await shiftsRepo.getActive(userId);
-          setActive(stillActive);
-          setLoading(false);
-          if (stillActive) {
-            Alert.alert(
-              'Mesai bitirilemedi',
-              primaryErr?.message ?? 'Sunucu ile senkron sağlanamadı; tekrar deneyin.'
-            );
-          } else if (primaryErr && fallbackClosed === 0) {
-            Alert.alert('Uyarı', primaryErr?.message ?? 'Mesai kapatma sırasında hata oluştu.');
+            // Konum alma işlemini timeout ile sınırla (hang olmasın)
+            const pos = await Promise.race([
+              requestAndGetPosition(),
+              new Promise<null>(resolve => setTimeout(() => resolve(null), 8000))
+            ]).catch(() => null);
+
+            try {
+              await shiftsRepo.end(active.id, pos?.latitude, pos?.longitude);
+              setActive(null);
+              showToast('Mesai başarıyla bitirildi.');
+            } catch (e: any) {
+              console.warn('[ShiftScreen.end] primary failed', e?.message ?? e);
+
+              // Fallback: kullanıcının tüm açık mesailerini kapatmayı dene
+              try {
+                await shiftsRepo.forceEndByUser(userId, pos?.latitude, pos?.longitude);
+                setActive(null);
+                showToast('Mesai zorlanarak bitirildi.');
+              } catch (fErr: any) {
+                console.warn('[ShiftScreen.end] force fallback failed', fErr.message);
+                Alert.alert(
+                  'Hata',
+                  `Mesai sunucuda bitirilemedi: ${e.message}\n\nLokal olarak kapatmak ister misiniz?`,
+                  [
+                    { text: 'Hayır', style: 'cancel' },
+                    { text: 'Lokal Kapat', style: 'destructive', onPress: () => setActive(null) }
+                  ]
+                );
+              }
+            }
+          } finally {
+            setLoading(false);
           }
         },
       },
