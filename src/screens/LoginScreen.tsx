@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
+  Animated,
+  Easing,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../services/supabase';
@@ -39,6 +41,58 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const rememberRef = useRef(true);
+
+  // ===== Yaratıcı animasyonlar =====
+  const fade = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.6)).current;
+  const logoFloat = useRef(new Animated.Value(0)).current;
+  const ringPulse = useRef(new Animated.Value(0)).current;
+  const orb1 = useRef(new Animated.Value(0)).current;
+  const orb2 = useRef(new Animated.Value(0)).current;
+  const orb3 = useRef(new Animated.Value(0)).current;
+  const sloganProgress = useRef(new Animated.Value(0)).current;
+  const formY = useRef(new Animated.Value(24)).current;
+
+  useEffect(() => {
+    // Giriş sahnesi: logo zıplayarak gelir, ardından slogan harf harf yıkanır,
+    // sonra form aşağıdan yukarı kayar.
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScale, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }),
+        Animated.timing(fade, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ]),
+      Animated.timing(sloganProgress, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.spring(formY, { toValue: 0, friction: 8, useNativeDriver: true }),
+    ]).start();
+
+    // Logo: yumuşak yukarı-aşağı salınım
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoFloat, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(logoFloat, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Logo arkasında radar dalgası (SAHADA TAKİP metaforu)
+    Animated.loop(
+      Animated.timing(ringPulse, { toValue: 1, duration: 2400, easing: Easing.out(Easing.quad), useNativeDriver: true })
+    ).start();
+
+    // Arka plan orb’leri (yavaş sürüklenir)
+    Animated.loop(Animated.timing(orb1, { toValue: 1, duration: 9000, easing: Easing.inOut(Easing.quad), useNativeDriver: true })).start();
+    Animated.loop(Animated.timing(orb2, { toValue: 1, duration: 11000, easing: Easing.inOut(Easing.quad), useNativeDriver: true })).start();
+    Animated.loop(Animated.timing(orb3, { toValue: 1, duration: 13000, easing: Easing.inOut(Easing.quad), useNativeDriver: true })).start();
+  }, []);
+
+  const logoTranslateY = logoFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
+  const ringScale = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.9] });
+  const ringOpacity = ringPulse.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.35, 0] });
+  const ring2Scale = ringPulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1.5] });
+  const ring2Opacity = ringPulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.5, 0.2, 0] });
+
+  const SLOGAN_TEXT = 'SAHADA · TAKİPTE · KONTROLDE';
+  const sloganChars = SLOGAN_TEXT.split('');
+
 
   // Kayıtlı e-posta ve "beni hatırla" tercihini yükle
   useEffect(() => {
@@ -101,24 +155,120 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      {/* Arka plan: yavaş sürüklenen renkli orb’ler */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.orb,
+          styles.orbGreen,
+          {
+            transform: [
+              { translateX: orb1.interpolate({ inputRange: [0, 0.5, 1], outputRange: [-20, 40, -10] }) },
+              { translateY: orb1.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -30, 20] }) },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.orb,
+          styles.orbBlue,
+          {
+            transform: [
+              { translateX: orb2.interpolate({ inputRange: [0, 0.5, 1], outputRange: [10, -40, 30] }) },
+              { translateY: orb2.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 30, -20] }) },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.orb,
+          styles.orbIndigo,
+          {
+            transform: [
+              { translateX: orb3.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 25, -25] }) },
+              { translateY: orb3.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -25, 15] }) },
+            ],
+          },
+        ]}
+      />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {/* Logo */}
-          <View style={styles.logoWrap}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.brand}>SahaTakip</Text>
-            <Text style={styles.slogan}>SAHADA · TAKİPTE · KONTROLDE</Text>
-          </View>
+          {/* Logo + radar halkaları */}
+          <Animated.View style={[styles.logoWrap, { opacity: fade }]}>
+            <View style={styles.logoStage}>
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.radarRing,
+                  { opacity: ringOpacity, transform: [{ scale: ringScale }] },
+                ]}
+              />
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.radarRing,
+                  styles.radarRing2,
+                  { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] },
+                ]}
+              />
+              <Animated.View
+                style={{ transform: [{ scale: logoScale }, { translateY: logoTranslateY }] }}
+              >
+                <Image
+                  source={require('../../assets/logo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </Animated.View>
+            </View>
+            <Animated.Text
+              style={[
+                styles.brand,
+                {
+                  opacity: fade,
+                  transform: [
+                    { translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+                  ],
+                },
+              ]}
+            >
+              SahaTakip
+            </Animated.Text>
+            <View style={styles.sloganRow}>
+              {sloganChars.map((ch, i) => {
+                const t = i / sloganChars.length;
+                const charOpacity = sloganProgress.interpolate({
+                  inputRange: [Math.max(0, t - 0.05), Math.min(1, t + 0.05)],
+                  outputRange: [0, 1],
+                  extrapolate: 'clamp',
+                });
+                const charY = sloganProgress.interpolate({
+                  inputRange: [Math.max(0, t - 0.05), Math.min(1, t + 0.05)],
+                  outputRange: [6, 0],
+                  extrapolate: 'clamp',
+                });
+                return (
+                  <Animated.Text
+                    key={`${i}-${ch}`}
+                    style={[styles.slogan, { opacity: charOpacity, transform: [{ translateY: charY }] }]}
+                  >
+                    {ch === ' ' ? '\u00A0' : ch}
+                  </Animated.Text>
+                );
+              })}
+            </View>
+          </Animated.View>
 
           {/* Form */}
-          <View style={styles.form}>
+          <Animated.View style={[styles.form, { opacity: fade, transform: [{ translateY: formY }] }]}>
             <Text style={styles.label}>E-posta</Text>
             <View style={styles.inputWrap}>
               <Ionicons name="mail-outline" size={18} color={colors.text.faint} />
@@ -224,7 +374,7 @@ export default function LoginScreen() {
                 </Text>
               </View>
             )}
-          </View>
+          </Animated.View>
 
           <Text style={styles.footer}>SahaTakipMühendislik © 2025</Text>
         </ScrollView>
@@ -234,13 +384,36 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg.primary },
+  safe: { flex: 1, backgroundColor: colors.bg.primary, overflow: 'hidden' },
   content: { padding: spacing.lg, paddingTop: spacing.xl, minHeight: '100%' },
 
+  // Arka plan orb’leri
+  orb: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    opacity: 0.18,
+  },
+  orbGreen: { top: -80, left: -90, backgroundColor: brand.green },
+  orbBlue: { top: 180, right: -110, backgroundColor: brand.blue },
+  orbIndigo: { bottom: -100, left: -60, backgroundColor: '#6366f1' },
+
   logoWrap: { alignItems: 'center', marginVertical: spacing.xl },
+  logoStage: { width: 160, height: 160, alignItems: 'center', justifyContent: 'center' },
+  radarRing: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 2,
+    borderColor: brand.green,
+  },
+  radarRing2: { borderColor: brand.blue },
   logo: { width: 110, height: 110 },
   brand: { fontSize: 28, color: colors.text.primary, fontWeight: '900', marginTop: spacing.sm },
-  slogan: { fontSize: 10, color: brand.green, fontWeight: '800', letterSpacing: 1.5, marginTop: 4 },
+  sloganRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
+  slogan: { fontSize: 10, color: brand.green, fontWeight: '800', letterSpacing: 1.5 },
 
   form: { marginTop: spacing.lg },
   label: { fontSize: typography.xs, color: colors.text.muted, fontWeight: '700', marginBottom: 6 },
