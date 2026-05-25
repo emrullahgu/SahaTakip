@@ -3,7 +3,7 @@
 // QR / NFC ile lokasyon doğrulama kayıtları
 // ====================================================================
 
-import { supabase, isOnlineMode, cacheGet, cacheSet } from './repository';
+import { supabase, isOnlineMode, cacheGet, cacheSet, newUuid } from './repository';
 
 export interface Checkin {
   id?: string;
@@ -29,7 +29,7 @@ export const checkinsRepo = {
       lng: c.lng ?? null,
     };
     if (!isOnlineMode()) {
-      const fake: Checkin = { ...c, id: 'local-' + Date.now(), recordedAt: new Date().toISOString() };
+      const fake: Checkin = { ...c, id: newUuid(), recordedAt: new Date().toISOString() };
       const cur = (await cacheGet<Checkin[]>(CACHE_KEY)) ?? [];
       await cacheSet(CACHE_KEY, [fake, ...cur].slice(0, 50));
       return fake;

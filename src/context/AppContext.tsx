@@ -281,14 +281,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addQuote = (q: Quote) => {
     setQuotes(prev => [q, ...prev]);
-    quotesRepo.insert(q).catch(e => console.warn('[quote.insert]', e));
+    quotesRepo.insert(q).catch(e => {
+      console.warn('[quote.insert]', e);
+      showToast('⚠️ Teklif kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
     auditRepo.log(userId, { action: 'quote.create', tableName: 'quotes', refId: q.id });
     showToast(`Teklif ${q.number} kaydedildi.`);
   };
 
   const updateQuote = (q: Quote) => {
     setQuotes(prev => prev.map(x => (x.id === q.id ? q : x)));
-    quotesRepo.update(q.id, q).catch(e => console.warn('[quote.update]', e));
+    quotesRepo.update(q.id, q).catch(e => {
+      console.warn('[quote.update]', e);
+      showToast('⚠️ Teklif güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    });
     auditRepo.log(userId, { action: 'quote.update', tableName: 'quotes', refId: q.id });
     showToast(`Teklif ${q.number} güncellendi.`);
   };
