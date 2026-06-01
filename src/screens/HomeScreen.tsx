@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 
-import { colors, spacing, radius, typography } from '../theme';
+import { colors, spacing, radius, typography, __activeThemeMode } from '../theme';
 import { useTheme } from '../themeMode';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -76,6 +76,7 @@ export default function HomeScreen() {
             <Text style={styles.role}>
               SahaTakip · {profile?.role === 'admin' ? 'Yönetici' : profile?.role === 'manager' ? 'Müdür' : profile?.role === 'engineer' ? 'Mühendis' : profile?.role === 'field' ? 'Saha Personeli' : 'Servis Mühendisi'}
               {isDemoMode && '  ·  DEMO'}
+              {`  ·  v1.0.2  ·  Aktif tema: ${__activeThemeMode}  ·  Kayıtlı: ${mode}`}
             </Text>
           </View>
           <TouchableOpacity

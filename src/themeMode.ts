@@ -102,10 +102,32 @@ export async function setThemeMode(m: ThemeMode): Promise<void> {
   }
   const ok = tryReload();
   if (!ok) {
-    Alert.alert(
-      'Tema Değiştirildi',
-      'Yeni temanın uygulanması için uygulamayı kapatıp yeniden açın.'
-    );
+    if (Platform.OS === 'android') {
+      Alert.alert(
+        'Tema Değiştirildi',
+        `Yeni tema (${effective === 'dark' ? 'Koyu' : 'Açık'}) için uygulama yeniden başlatılacak.`,
+        [
+          {
+            text: 'Şimdi Yeniden Başlat',
+            onPress: () => {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const { BackHandler } = require('react-native');
+                BackHandler.exitApp();
+              } catch {
+                /* sessiz */
+              }
+            },
+          },
+          { text: 'Sonra', style: 'cancel' },
+        ],
+      );
+    } else {
+      Alert.alert(
+        'Tema Değiştirildi',
+        'Yeni temanın uygulanması için uygulamayı kapatıp yeniden açın.'
+      );
+    }
   }
 }
 

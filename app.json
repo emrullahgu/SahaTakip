@@ -2,7 +2,7 @@
   "expo": {
     "name": "SahaTakip",
     "slug": "sahatakip",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "scheme": "sahatakip",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
         "backgroundColor": "#020617"
       },
       "package": "com.sahatakip.app",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
