@@ -2,7 +2,7 @@
 // `theme.ts` aktif modu modül yüklenirken senkron olarak belirler.
 // Buradaki setThemeMode kaydeder ve uygulamayı yeniden yükler.
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useColorScheme, Platform, Alert } from 'react-native';
+import { useColorScheme, Platform, Alert, Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { brand, __activeThemeMode, THEME_STORAGE_KEY } from './theme';
 
@@ -42,15 +42,8 @@ export async function hydrateThemeMode(): Promise<void> {
     const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       storedMode = stored;
-      const effective = stored === 'system' ? 'light' : stored;
-      if (Platform.OS !== 'web' && effective !== __activeThemeMode) {
-        const g: any = globalThis as any;
-        if (!g.__SAHATAKIP_THEME_RELOAD_DONE__) {
-          g.__SAHATAKIP_THEME_RELOAD_DONE__ = true;
-          g.__SAHATAKIP_THEME__ = effective;
-          tryReload();
-        }
-      }
+      // Not: Aktif tema artık index.js içinde AsyncStorage'tan senkron olarak
+      // hidrate ediliyor. Burada reload TETİKLEMİYORUZ — boşuna çağrı olur.
     }
   } catch {
     /* sessiz */
@@ -81,7 +74,9 @@ function tryReload(): boolean {
 
 export async function setThemeMode(m: ThemeMode): Promise<void> {
   storedMode = m;
-  const effective = m === 'system' ? 'dark' : m;
+  const sys = Appearance?.getColorScheme?.();
+  const effective: 'light' | 'dark' =
+    m === 'system' ? (sys === 'dark' ? 'dark' : 'light') : m;
   try {
     (globalThis as any).__SAHATAKIP_THEME__ = effective;
   } catch {
