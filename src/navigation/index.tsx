@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -508,6 +509,7 @@ const GateStackNav = createNativeStackNavigator();
 
 function MainTabs() {
   const { profile, isDemoMode } = useAuth();
+  const insets = useSafeAreaInsets();
   const role = profile?.role ?? 'engineer';
   const canSeeManager = isDemoMode || role === 'admin' || role === 'manager';
   // Saha personeli: teklif/mali bölümleri gizle.
@@ -520,8 +522,8 @@ function MainTabs() {
           backgroundColor: colors.bg.secondary,
           borderTopColor: colors.border.primary,
           borderTopWidth: 1,
-          height: 68,
-          paddingBottom: 10,
+          height: 64 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: brand.green,

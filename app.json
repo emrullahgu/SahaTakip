@@ -1,8 +1,8 @@
-{
+﻿{
   "expo": {
     "name": "SahaTakip",
     "slug": "sahatakip",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "scheme": "sahatakip",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
         "backgroundColor": "#020617"
       },
       "package": "com.sahatakip.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -46,19 +46,19 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "SahaTakip saha fotoğrafı çekmek için kamera iznine ihtiyaç duyuyor."
+          "cameraPermission": "SahaTakip saha fotoÄŸrafÄ± Ã§ekmek iÃ§in kamera iznine ihtiyaÃ§ duyuyor."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "SahaTakip servis raporlarınıza fotoğraf eklemek için galeri iznine ihtiyaç duyuyor."
+          "photosPermission": "SahaTakip servis raporlarÄ±nÄ±za fotoÄŸraf eklemek iÃ§in galeri iznine ihtiyaÃ§ duyuyor."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "SahaTakip saha personelinin konumunu takip etmek için GPS iznine ihtiyaç duyuyor."
+          "locationAlwaysAndWhenInUsePermission": "SahaTakip saha personelinin konumunu takip etmek iÃ§in GPS iznine ihtiyaÃ§ duyuyor."
         }
       ],
       [

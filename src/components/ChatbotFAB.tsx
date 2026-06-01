@@ -1,6 +1,7 @@
 // ChatbotFAB — POZ-DEV-320 Sahada anlık yardım (Copilot LLM + kural tabanlı fallback)
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -36,6 +37,7 @@ export default function ChatbotFAB() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
   const { workOrders, customers, quotes, employees } = useAppContext();
   const { profile, user } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -81,7 +83,7 @@ export default function ChatbotFAB() {
 
   return (
     <>
-      <TouchableOpacity style={s.fab} onPress={() => setOpen(true)} activeOpacity={0.85}>
+      <TouchableOpacity style={[s.fab, { bottom: 84 + insets.bottom }]} onPress={() => setOpen(true)} activeOpacity={0.85}>
         <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
       </TouchableOpacity>
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
@@ -127,7 +129,7 @@ export default function ChatbotFAB() {
 }
 
 const s = StyleSheet.create({
-  fab: { position: 'absolute', left: 20, bottom: 80, width: 56, height: 56, borderRadius: 28, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8 },
+  fab: { position: 'absolute', left: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8 },
   modalRoot: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { height: '75%', backgroundColor: colors.bg.primary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, overflow: 'hidden' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.bg.secondary, borderBottomWidth: 1, borderBottomColor: colors.border.primary },
