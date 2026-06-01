@@ -44,7 +44,51 @@
   };
 })();
 
+import { Appearance, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerRootComponent } from 'expo';
-import App from './App';
 
-registerRootComponent(App);
+// Tema bootstrap: App.tsx (ve dolayısıyla theme.ts) yüklenmeden ÖNCE
+// AsyncStorage'tan kullanıcı tercihini okuyup globalThis.__SAHATAKIP_THEME__
+// içine yaz. Böylece tüm StyleSheet.create çağrıları (module-scope) doğru
+// renklerle bake edilir. Bu sayede release APK'da da Dark mode kalıcı olur.
+const THEME_STORAGE_KEY = 'sahatakip.themeMode';
+
+async function bootstrapTheme() {
+  try {
+    // Web'de localStorage senkron — önce ona bak
+    if (Platform.OS === 'web') {
+      try {
+        const v = (typeof localStorage !== 'undefined') ? localStorage.getItem(THEME_STORAGE_KEY) : null;
+        if (v === 'light' || v === 'dark') {
+          globalThis.__SAHATAKIP_THEME__ = v;
+          return;
+        }
+        if (v === 'system') {
+          globalThis.__SAHATAKIP_THEME__ = Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
+          return;
+        }
+      } catch (_) { /* sessiz */ }
+    }
+    const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark') {
+      globalThis.__SAHATAKIP_THEME__ = stored;
+    } else if (stored === 'system') {
+      globalThis.__SAHATAKIP_THEME__ = Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
+    }
+  } catch (_) {
+    /* sessiz — varsayılan light kalır */
+  }
+}
+
+async function start() {
+  await bootstrapTheme();
+  // App'i dinamik require ile bootstrap'tan SONRA yükle ki theme.ts global stamp'i okusun.
+  // eslint-disable-next-line global-require
+  const App = require('./App').default;
+  registerRootComponent(App);
+}
+
+// AppRegistry'ye main'in zamanında bulunması için fallback: bootstrap çok hızlı
+// (genelde <50ms) bittiği için native köprü hazır olduğunda bileşen mevcut olur.
+start();
