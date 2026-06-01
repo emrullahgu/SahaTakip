@@ -4,8 +4,20 @@ import { REAL_MATERIALS } from './realMaterials';
 import { REAL_PRODUCTS } from './realProducts';
 import { REAL_CUSTOMERS } from './realCustomers';
 
-// Demo veriler kaldırıldı; servis kataloğu sahadan eklenir.
-export const SERVICE_CATALOG: ServiceCatalogItem[] = [];
+// Saha ekibi için varsayılan hizmet kataloğu. Fiyatlar tahmini olup
+// yöneticinin daha sonra düzenleyebileceği başlangıç değerleridir.
+export const SERVICE_CATALOG: ServiceCatalogItem[] = [
+  { id: 'svc-saha', name: 'Saha Servisi', price: 2500, estCost: 1200 },
+  { id: 'svc-periyodik-bakim', name: 'Periyodik Bakım', price: 3500, estCost: 1500 },
+  { id: 'svc-ariza-tespit', name: 'Arıza Tespit', price: 1500, estCost: 600 },
+  { id: 'svc-tamir', name: 'Tamir / Onarım', price: 3000, estCost: 1300 },
+  { id: 'svc-montaj', name: 'Montaj / Kurulum', price: 5000, estCost: 2000 },
+  { id: 'svc-demontaj', name: 'Demontaj / Söküm', price: 2000, estCost: 900 },
+  { id: 'svc-devreye-alma', name: 'Devreye Alma', price: 4000, estCost: 1800 },
+  { id: 'svc-test-olcum', name: 'Test & Ölçüm', price: 2500, estCost: 1000 },
+  { id: 'svc-yedek-parca', name: 'Yedek Parça Değişimi', price: 2000, estCost: 800 },
+  { id: 'svc-danismanlik', name: 'Teknik Danışmanlık', price: 3000, estCost: 1000 },
+];
 
 // Eski malzemeleri (REAL_MATERIALS) + ürün listesi (REAL_PRODUCTS) tek katalogta birleştir.
 // id veya (lower-case) ad-fiyat çiftinde dedupe. Fiyatı 0 (veya negatif) olanlar elenir.

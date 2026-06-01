@@ -187,6 +187,11 @@ export default function NewServiceScreen() {
   };
 
   const showPhotoOptions = (type: 'before' | 'after' | 'form') => {
+    // Web'de Alert.alert çoklu butonu desteklemediği için doğrudan galeri/dosya seçiciyi aç.
+    if (Platform.OS === 'web') {
+      pickFromGallery(type);
+      return;
+    }
     Alert.alert('Fotoğraf Ekle', 'Kaynak seçin', [
       { text: 'Kamera', onPress: () => pickPhoto(type) },
       { text: 'Galeri', onPress: () => pickFromGallery(type) },
@@ -218,7 +223,7 @@ export default function NewServiceScreen() {
     const materialCost = selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0);
     const laborCost = selectedService.estCost;
     const extraCost = parseFloat(otherCost) || 0;
-    const calculatedQuote = selectedService.price + materialCost * 1.25;
+    const calculatedQuote = selectedService.price + materialCost * 1.25 + extraCost;
     const totalCost = laborCost + materialCost + extraCost;
     const profit = calculatedQuote - totalCost;
 
@@ -490,12 +495,19 @@ export default function NewServiceScreen() {
                 ).toLocaleString('tr-TR')}
               </Text>
             </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Yol / Yemek Masrafı</Text>
+              <Text style={styles.summaryVal}>
+                ₺{(parseFloat(otherCost) || 0).toLocaleString('tr-TR')}
+              </Text>
+            </View>
             <View style={[styles.summaryRow, styles.summaryTotal]}>
               <Text style={styles.summaryTotalLabel}>Hesaplanan Teklif</Text>
               <Text style={styles.summaryTotalVal}>
                 ₺{Math.round(
                   selectedService.price +
-                  selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0) * 1.25
+                  selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0) * 1.25 +
+                  (parseFloat(otherCost) || 0)
                 ).toLocaleString('tr-TR')}
               </Text>
             </View>
