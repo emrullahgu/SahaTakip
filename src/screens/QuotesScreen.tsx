@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { supabase } from '../services/supabase';
+import { quoteFromRow } from '../services/data/mappers';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -39,11 +41,46 @@ const STATUS_COLORS: Record<QuoteStatus, { bg: string; fg: string; border: strin
 
 export default function QuotesScreen() {
   const navigation = useNavigation<NavProp>();
-  const { quotes, toast, deleteQuote } = useAppContext();
+  const { quotes, toast, deleteQuote, addQuote, showToast } = useAppContext();
   const [filter, setFilter] = useState<QuoteStatus | 'Tümü'>('Tümü');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Realtime: AI asistan veya başka bir kullanıcı yeni teklif oluşturduğunda anlık yansıt.
+  useEffect(() => {
+    const channel = supabase
+      .channel('quotes-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'quotes' },
+        async (payload) => {
+          try {
+            const row: any = payload.new;
+            // Lokal listede zaten varsa atla (kendi yazımız da geri gelir)
+            if (quotes.some(q => q.id === row.id)) return;
+
+            // quote_lines'ları birlikte çek (mapper ihtiyaç duyar)
+            const { data: linesData } = await supabase
+              .from('quote_lines')
+              .select('*')
+              .eq('quote_id', row.id);
+
+            const q = quoteFromRow(row, linesData ?? []);
+            addQuote(q);
+
+            const isAi = (row.engineer ?? '').toString().toLowerCase().includes('ai');
+            showToast(
+              isAi ? `🤖 AI yeni teklif oluşturdu: ${row.number}` : `Yeni teklif eklendi: ${row.number}`,
+              'success',
+            );
+          } catch { /* sessiz */ }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(
     () =>

@@ -197,14 +197,20 @@ export default function ServicesScreen() {
                 {selectedOrder.materials.length > 0 && (
                   <View style={styles.matList}>
                     <Text style={styles.notesLabel}>Kullanılan Malzemeler</Text>
-                    {selectedOrder.materials.map((m, i) => (
-                      <View key={i} style={styles.matItem}>
-                        <Text style={styles.matItemName}>• {m.name} (x{m.qty})</Text>
-                        <Text style={styles.matItemPrice}>
-                          ₺{(m.price * m.qty).toLocaleString('tr-TR')}
-                        </Text>
-                      </View>
-                    ))}
+                    {selectedOrder.materials.map((m, i) => {
+                      const disc = m.discountPct ?? 0;
+                      const line = m.price * m.qty * (1 - disc / 100);
+                      return (
+                        <View key={i} style={styles.matItem}>
+                          <Text style={styles.matItemName} numberOfLines={3}>
+                            • {m.name} (x{m.qty}){disc > 0 ? `  · −%${disc}` : ''}
+                          </Text>
+                          <Text style={styles.matItemPrice} numberOfLines={1}>
+                            ₺{Math.round(line).toLocaleString('tr-TR')}
+                          </Text>
+                        </View>
+                      );
+                    })}
                   </View>
                 )}
               </ScrollView>
@@ -354,9 +360,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  matItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  matItemName: { fontSize: typography.xs, color: colors.text.secondary },
-  matItemPrice: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '700' },
+  matItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 3, gap: spacing.sm },
+  matItemName: { flex: 1, flexShrink: 1, fontSize: typography.xs, color: colors.text.secondary },
+  matItemPrice: { flexShrink: 0, fontSize: typography.xs, color: colors.emerald.default, fontWeight: '700', textAlign: 'right' },
   closeBtn: {
     backgroundColor: colors.emerald.default,
     borderRadius: radius.lg,

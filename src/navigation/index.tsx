@@ -100,6 +100,10 @@ import SalesVisitsScreen from '../screens/SalesVisitsScreen';
 import SalesVisitFormScreen from '../screens/SalesVisitFormScreen';
 import AiHubScreen from '../screens/AiHubScreen';
 import AiSettingsScreen from '../screens/AiSettingsScreen';
+import AiAssistantScreen from '../screens/AiAssistantScreen';
+import VisionScannerScreen from '../screens/VisionScannerScreen';
+import VoiceNoteScreen from '../screens/VoiceNoteScreen';
+import AiInsightsScreen from '../screens/AiInsightsScreen';
 import AdminShiftDashboardScreen from '../screens/AdminShiftDashboardScreen';
 import ShiftHistoryScreen from '../screens/ShiftHistoryScreen';
 import ManagerCommandCenterScreen from '../screens/ManagerCommandCenterScreen';
@@ -1420,6 +1424,10 @@ function MainStack() {
       <Stack.Screen name="SalesVisits" component={SalesVisitsScreen} options={{ headerShown: true, title: 'Satış Ziyaretleri', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="SalesVisitForm" component={SalesVisitFormScreen} options={({ route }) => ({ headerShown: true, title: (route.params as any)?.visitId ? 'Ziyaret Düzenle' : 'Yeni Ziyaret', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } })} />
       <Stack.Screen name="AiHub" component={AiHubScreen} options={{ headerShown: true, title: 'AI Asistan', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AiAssistant" component={AiAssistantScreen} options={{ headerShown: true, title: 'AI Asistan (NotebookLM)', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="VisionScanner" component={VisionScannerScreen} options={{ headerShown: true, title: 'AI Vision Tarıyıcı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="VoiceNote" component={VoiceNoteScreen} options={{ headerShown: true, title: 'Ses Notu Asistanı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AiInsights" component={AiInsightsScreen} options={{ headerShown: true, title: 'AI Insights', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AiSettings" component={AiSettingsScreen} options={{ headerShown: true, title: 'AI Ayarları', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="AdminShiftDashboard" component={AdminShiftDashboardScreen} options={{ headerShown: true, title: 'Canlı Mesai', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ShiftHistory" component={ShiftHistoryScreen} options={{ headerShown: true, title: 'Mesai Geçmişi', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

@@ -3,6 +3,8 @@ export interface SelectedMaterial {
   name: string;
   price: number;
   qty: number;
+  // Satır bazında iskonto yüzdesi (0–100). Boş ise 0 kabul edilir.
+  discountPct?: number;
 }
 
 // FAZ 3 — İş Emri akışı
@@ -3861,7 +3863,11 @@ export type RootStackParamList = {
   AssetHistory: undefined;
   SalesVisitForm: { visitId?: string; customerId?: string } | undefined;
   AiHub: undefined;
+  AiAssistant: undefined;
   AiSettings: undefined;
+  VisionScanner: undefined;
+  VoiceNote: undefined;
+  AiInsights: undefined;
   AdminShiftDashboard: undefined;
   ShiftHistory: undefined;
   ManagerCommandCenter: undefined;

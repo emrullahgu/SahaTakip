@@ -43,6 +43,35 @@ const TABS: { key: ManagerTab; label: string; icon: string }[] = [
 const ARCHIVE_YEARS = ['Hepsi', '2026', '2025', '2024', '2023'];
 const ATTENDANCE_DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
+// Tüm mazeret tipleri için renk + kısa etiket eşlemesi
+function attendanceStyleFor(status: string | undefined): {
+  bg: string; border: string; text: string; short: string;
+} {
+  switch (status) {
+    case 'Geldi':
+    case 'Tam':
+      return { bg: colors.emerald.bg, border: colors.emerald.border, text: colors.emerald.default, short: '✓' };
+    case 'Yarım Gün':
+    case 'Yarım':
+      return { bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.35)', text: '#b45309', short: '½' };
+    case 'İzinli':
+      return { bg: colors.amber.bg, border: colors.amber.border, text: colors.amber.default, short: 'İzin' };
+    case 'Raporlu':
+      return { bg: colors.rose.bg, border: colors.rose.border, text: colors.rose.default, short: 'Rap' };
+    case 'Resmi Tatil':
+      return { bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.35)', text: '#7c3aed', short: 'Tatil' };
+    case 'Eğitim':
+      return { bg: colors.indigo.bg, border: colors.indigo.border, text: colors.indigo.default, short: 'Eğit' };
+    case 'Mazeretsiz':
+      return { bg: 'rgba(127, 29, 29, 0.12)', border: 'rgba(127, 29, 29, 0.35)', text: '#7f1d1d', short: 'M' };
+    case 'Gelmedi':
+    case 'Yok':
+      return { bg: colors.bg.secondary, border: colors.border.default, text: colors.text.muted, short: '✗' };
+    default:
+      return { bg: colors.bg.secondary, border: colors.border.default, text: colors.text.faint, short: '–' };
+  }
+}
+
 export default function ManagerScreen() {
   const {
     workOrders,
@@ -489,47 +518,29 @@ export default function ManagerScreen() {
 
                 {/* Attendance */}
                 <View style={styles.attendanceRow}>
-                  {ATTENDANCE_DAYS.map(day => (
-                    <TouchableOpacity
-                      key={day}
-                      style={[
-                        styles.dayBtn,
-                        {
-                          backgroundColor:
-                            emp.attendance[day] === 'Geldi' ? colors.emerald.bg :
-                            emp.attendance[day] === 'İzinli' ? colors.amber.bg :
-                            emp.attendance[day] === 'Raporlu' ? colors.indigo.bg :
-                            colors.rose.bg,
-                          borderColor:
-                            emp.attendance[day] === 'Geldi' ? colors.emerald.border :
-                            emp.attendance[day] === 'İzinli' ? colors.amber.border :
-                            emp.attendance[day] === 'Raporlu' ? colors.indigo.border :
-                            colors.rose.border,
-                        },
-                      ]}
-                      onPress={() => toggleAttendance(emp.id, day, emp.attendance[day])}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.dayLabel}>{day}</Text>
-                      <Text
+                  {ATTENDANCE_DAYS.map(day => {
+                    const st = emp.attendance[day];
+                    const style = attendanceStyleFor(st);
+                    return (
+                      <TouchableOpacity
+                        key={day}
                         style={[
-                          styles.dayStatus,
-                          {
-                            color:
-                              emp.attendance[day] === 'Geldi' ? colors.emerald.default :
-                              emp.attendance[day] === 'İzinli' ? colors.amber.default :
-                              emp.attendance[day] === 'Raporlu' ? colors.indigo.default :
-                              colors.rose.default,
-                          },
+                          styles.dayBtn,
+                          { backgroundColor: style.bg, borderColor: style.border },
                         ]}
-                        numberOfLines={1}
+                        onPress={() => toggleAttendance(emp.id, day, st)}
+                        activeOpacity={0.7}
                       >
-                        {emp.attendance[day] === 'Geldi' ? '✓' :
-                         emp.attendance[day] === 'İzinli' ? 'İzin' :
-                         emp.attendance[day] === 'Raporlu' ? 'Rap' : '✗'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text style={styles.dayLabel}>{day}</Text>
+                        <Text
+                          style={[styles.dayStatus, { color: style.text }]}
+                          numberOfLines={1}
+                        >
+                          {style.short}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
                 {/* Monthly Wage Input */}
@@ -570,7 +581,11 @@ export default function ManagerScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.archiveList}
             renderItem={({ item }) => (
-              <View style={styles.archiveCard}>
+              <TouchableOpacity
+                style={styles.archiveCard}
+                onPress={() => navigation.navigate('WorkOrderDetail', { workOrderId: item.id })}
+                activeOpacity={0.75}
+              >
                 <View style={styles.archiveCardLeft}>
                   <Text style={styles.archiveId}>{item.id}</Text>
                   <Text style={styles.archiveClient} numberOfLines={1}>{item.client}</Text>
@@ -583,7 +598,7 @@ export default function ManagerScreen() {
                   </Text>
                   <StatusBadge status={item.status} small />
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <EmptyState

@@ -2,7 +2,7 @@
   "expo": {
     "name": "SahaTakip",
     "slug": "sahatakip",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "scheme": "sahatakip",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,7 @@
         "backgroundColor": "#020617"
       },
       "package": "com.sahatakip.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -70,7 +70,14 @@
       ],
       "expo-sharing",
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "SahaTakip ses notu kaydetmek için mikrofon iznine ihtiyaç duyuyor."
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

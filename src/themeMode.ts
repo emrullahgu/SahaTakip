@@ -51,6 +51,7 @@ export async function hydrateThemeMode(): Promise<void> {
 }
 
 function tryReload(): boolean {
+  // Web
   try {
     if (typeof window !== 'undefined' && (window as any).location?.reload) {
       (window as any).location.reload();
@@ -59,6 +60,27 @@ function tryReload(): boolean {
   } catch {
     /* sessiz */
   }
+  // Native production — expo-updates her ortamda (dev/prod) çalışır
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Updates = require('expo-updates');
+    if (Updates?.reloadAsync) {
+      // Fire-and-forget; başarısız olursa DevSettings fallback'i denenir
+      Updates.reloadAsync().catch(() => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const RN = require('react-native');
+          RN?.DevSettings?.reload?.();
+        } catch {
+          /* sessiz */
+        }
+      });
+      return true;
+    }
+  } catch {
+    /* expo-updates yoksa devam */
+  }
+  // Native dev (Metro) fallback
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const RN = require('react-native');

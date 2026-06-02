@@ -130,6 +130,16 @@ export default function NewServiceScreen() {
     });
   };
 
+  const updateMaterialDiscount = (id: string, pct: number) => {
+    const safe = Math.max(0, Math.min(100, isFinite(pct) ? pct : 0));
+    setSelectedMaterials(prev =>
+      prev.map(m => (m.id === id ? { ...m, discountPct: safe } : m)),
+    );
+  };
+
+  const lineTotal = (m: SelectedMaterial) =>
+    m.price * m.qty * (1 - (m.discountPct ?? 0) / 100);
+
   const pickPhoto = async (type: 'before' | 'after' | 'form') => {
     try {
       if (Platform.OS !== 'web') {
@@ -205,7 +215,18 @@ export default function NewServiceScreen() {
       if (existing) {
         return prev.map(m => m.id === mat.id ? { ...m, qty: m.qty + 1 } : m);
       }
-      return [...prev, { ...mat, qty: 1 }];
+      // Katalog ürününde varsa varsayılan iskontoyu sat\u0131ra ta\u015f\u0131
+      const defaultDisc = typeof mat.discountRate === 'number' ? mat.discountRate : 0;
+      return [...prev, { id: mat.id, name: mat.name, price: mat.price, qty: 1, discountPct: defaultDisc }];
+    });
+  };
+
+  const decrementMaterial = (id: string) => {
+    setSelectedMaterials(prev => {
+      const existing = prev.find(m => m.id === id);
+      if (!existing) return prev;
+      if (existing.qty <= 1) return prev.filter(m => m.id !== id);
+      return prev.map(m => m.id === id ? { ...m, qty: m.qty - 1 } : m);
     });
   };
 
@@ -220,7 +241,7 @@ export default function NewServiceScreen() {
     }
     // Fotoğraflar artık opsiyonel — saha hızlı kayıt için engel olmaz.
 
-    const materialCost = selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0);
+    const materialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
     const laborCost = selectedService.estCost;
     const extraCost = parseFloat(otherCost) || 0;
     const calculatedQuote = selectedService.price + materialCost * 1.25 + extraCost;
@@ -384,26 +405,49 @@ export default function NewServiceScreen() {
 
         {selectedMaterials.length > 0 ? (
           <View style={styles.selectedMaterials}>
-            {selectedMaterials.map(m => (
-              <View key={m.id} style={styles.matRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.matName} numberOfLines={2}>{m.name}</Text>
-                  <Text style={styles.matPrice}>₺{(m.price * m.qty).toLocaleString('tr-TR')}</Text>
-                </View>
-                <View style={styles.qtyBox}>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, -1)}>
-                    <Ionicons name="remove" size={16} color={colors.text.primary} />
+            {selectedMaterials.map(m => {
+              const disc = m.discountPct ?? 0;
+              const unitNet = m.price * (1 - disc / 100);
+              const line = lineTotal(m);
+              return (
+                <View key={m.id} style={styles.matRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.matName} numberOfLines={2}>{m.name}</Text>
+                    <Text style={styles.matPrice}>
+                      ₺{Math.round(line).toLocaleString('tr-TR')}
+                      {disc > 0 && (
+                        <Text style={styles.matPriceMuted}>
+                          {'  '}(birim ₺{Math.round(unitNet).toLocaleString('tr-TR')} · „kat: ₺{m.price.toLocaleString('tr-TR')})
+                        </Text>
+                      )}
+                    </Text>
+                    <View style={styles.discRow}>
+                      <Text style={styles.discLabel}>İskonto %</Text>
+                      <TextInput
+                        style={styles.discInput}
+                        value={String(disc)}
+                        onChangeText={v => updateMaterialDiscount(m.id, parseFloat(v.replace(',', '.')) || 0)}
+                        keyboardType="decimal-pad"
+                        maxLength={5}
+                        selectTextOnFocus
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.qtyBox}>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, -1)}>
+                      <Ionicons name="remove" size={16} color={colors.text.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.qtyVal}>{m.qty}</Text>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, 1)}>
+                      <Ionicons name="add" size={16} color={colors.text.primary} />
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity onPress={() => removeMaterial(m.id)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
                   </TouchableOpacity>
-                  <Text style={styles.qtyVal}>{m.qty}</Text>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, 1)}>
-                    <Ionicons name="add" size={16} color={colors.text.primary} />
-                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => removeMaterial(m.id)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
-                </TouchableOpacity>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : (
           <Text style={styles.materialHint}>Henüz malzeme eklemediniz. Yukarıdaki butona dokunup arayarak hızlıca seçin.</Text>
@@ -491,7 +535,7 @@ export default function NewServiceScreen() {
               <Text style={styles.summaryLabel}>Malzeme (+%25 marj)</Text>
               <Text style={styles.summaryVal}>
                 ₺{Math.round(
-                  selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0) * 1.25
+                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * 1.25
                 ).toLocaleString('tr-TR')}
               </Text>
             </View>
@@ -506,7 +550,7 @@ export default function NewServiceScreen() {
               <Text style={styles.summaryTotalVal}>
                 ₺{Math.round(
                   selectedService.price +
-                  selectedMaterials.reduce((s, m) => s + m.price * m.qty, 0) * 1.25 +
+                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * 1.25 +
                   (parseFloat(otherCost) || 0)
                 ).toLocaleString('tr-TR')}
               </Text>
@@ -652,23 +696,30 @@ export default function NewServiceScreen() {
             {SERVICE_CATALOG.length === 0 && (
               <Text style={styles.modalItemSub}>Hizmet kataloğu boş. Varsayılan “Saha Servisi” kullanılacak.</Text>
             )}
-            {SERVICE_CATALOG.map(s => (
-              <TouchableOpacity
-                key={s.id}
-                style={styles.modalItem}
-                onPress={() => { setSelectedService(s); setShowServicePicker(false); }}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.modalItemText} numberOfLines={2}>{s.name}</Text>
-                  <Text style={styles.modalItemSub}>
-                    ₺{s.price.toLocaleString('tr-TR')}
-                  </Text>
-                </View>
-                {selectedService.id === s.id && (
-                  <Ionicons name="checkmark" size={16} color={colors.emerald.default} />
-                )}
-              </TouchableOpacity>
-            ))}
+            <ScrollView style={{ maxHeight: '70%' }}>
+              {SERVICE_CATALOG.map(s => (
+                <TouchableOpacity
+                  key={s.id}
+                  style={styles.modalItem}
+                  onPress={() => { setSelectedService(s); setShowServicePicker(false); }}
+                >
+                  <View style={{ flex: 1, flexShrink: 1 }}>
+                    <Text
+                      style={[styles.modalItemText, { color: colors.text.primary }]}
+                      numberOfLines={2}
+                    >
+                      {s.name}
+                    </Text>
+                    <Text style={styles.modalItemSub}>
+                      ₺{s.price.toLocaleString('tr-TR')}
+                    </Text>
+                  </View>
+                  {selectedService.id === s.id && (
+                    <Ionicons name="checkmark" size={16} color={colors.emerald.default} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
             <TouchableOpacity
               style={styles.modalCancel}
               onPress={() => setShowServicePicker(false)}
@@ -780,24 +831,40 @@ export default function NewServiceScreen() {
                   ? `₺${m.price.toLocaleString('tr-TR')}  (${m.listPrice} ${m.currency})`
                   : `₺${m.price.toLocaleString('tr-TR')}`;
                 return (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => addMaterial(m)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={{ flex: 1 }}>
+                  <View style={styles.modalItem}>
+                    <TouchableOpacity
+                      style={{ flex: 1, flexShrink: 1 }}
+                      onPress={() => addMaterial(m)}
+                      activeOpacity={0.75}
+                    >
                       <Text style={styles.modalItemText} numberOfLines={2}>{m.name}</Text>
                       {!!tags && <Text style={styles.modalItemSub} numberOfLines={1}>{tags}</Text>}
                       <Text style={styles.modalItemSub}>{priceLabel}</Text>
-                    </View>
+                    </TouchableOpacity>
                     {inList ? (
-                      <View style={styles.qtyBadge}>
-                        <Text style={styles.qtyBadgeText}>x{inList.qty}</Text>
+                      <View style={styles.qtyStepper}>
+                        <TouchableOpacity
+                          style={styles.qtyStepBtn}
+                          onPress={() => decrementMaterial(m.id)}
+                          hitSlop={8}
+                        >
+                          <Ionicons name="remove" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.qtyStepText}>{inList.qty}</Text>
+                        <TouchableOpacity
+                          style={styles.qtyStepBtn}
+                          onPress={() => addMaterial(m)}
+                          hitSlop={8}
+                        >
+                          <Ionicons name="add" size={18} color="#fff" />
+                        </TouchableOpacity>
                       </View>
                     ) : (
-                      <Ionicons name="add-circle" size={20} color={colors.emerald.default} />
+                      <TouchableOpacity onPress={() => addMaterial(m)} hitSlop={8}>
+                        <Ionicons name="add-circle" size={28} color={colors.emerald.default} />
+                      </TouchableOpacity>
                     )}
-                  </TouchableOpacity>
+                  </View>
                 );
               }}
             />
@@ -924,9 +991,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.primary,
   },
   matName: { flex: 1, fontSize: typography.xs, color: colors.text.secondary, fontWeight: '600' },
-  matPrice: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '700' },
+  matPrice: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '700', marginTop: 2 },
+  matPriceMuted: { fontSize: 10, color: colors.text.muted, fontWeight: '500' },
+  discRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  discLabel: { fontSize: 11, color: colors.text.muted, fontWeight: '600' },
+  discInput: {
+    minWidth: 56,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    color: colors.text.primary,
+    fontSize: typography.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    textAlign: 'center',
+  },
   input: {
     backgroundColor: colors.bg.secondary,
     borderRadius: radius.lg,
@@ -1018,7 +1108,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.primary,
     gap: spacing.sm,
   },
-  modalItemText: { flex: 1, fontSize: typography.sm, color: colors.text.primary, fontWeight: '600' },
+  modalItemText: { fontSize: typography.sm, color: colors.text.primary, fontWeight: '600' },
   modalItemSub: { fontSize: typography.xs, color: colors.emerald.default, marginTop: 2 },
   modalCancel: {
     marginTop: spacing.md,
@@ -1078,6 +1168,30 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   qtyBadgeText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
+  qtyStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.full,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  qtyStepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.emerald.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyStepText: {
+    minWidth: 22,
+    textAlign: 'center',
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: '800',
+  },
   filterLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 4 },
   filterLabel: { color: colors.text.faint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 1 },
   toggleBtn: { paddingHorizontal: 6, paddingVertical: 2 },

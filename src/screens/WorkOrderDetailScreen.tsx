@@ -18,6 +18,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { uploadPhoto } from '../services/photoUpload';
 
 import { colors, brand } from '../theme';
@@ -43,6 +44,19 @@ import { generateAndShareWorkOrderPdf } from '../services/workOrderPdf';
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkOrderDetail'>;
 
 const PRIORITIES: WorkOrderPriority[] = ['Normal', 'Yüksek', 'Acil'];
+
+function formatTrDateTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString('tr-TR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
 
 export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   const { workOrderId } = route.params;
@@ -70,6 +84,9 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   const [signOpen, setSignOpen] = useState(false);
   const [audioRecording, setAudioRecording] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  // Takvim aç/kapat (start/end için tarih veya saat seçici)
+  const [pickerMode, setPickerMode] = useState<null | { field: 'start' | 'end'; step: 'date' | 'time' }>(null);
+  const [pickerValue, setPickerValue] = useState<Date>(new Date());
 
   if (!wo) {
     return (
@@ -176,7 +193,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         'Ses kaydı desteklenmiyor',
         Platform.OS === 'web'
           ? 'Tarayıcı MediaRecorder API\'sini desteklemiyor.'
-          : 'Cihaz tabanlı kayıt için EAS dev-build (expo-av) gerekir. Web üzerinde deneyin.',
+          : 'expo-audio modülü bulunamadı. Yeni bir derleme (build) alın.',
       );
       return;
     }
@@ -429,22 +446,39 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
       {/* SCHEDULE / SLA */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Planlama (SLA)</Text>
-        <Text style={styles.label}>Planlanan Başlangıç (ISO)</Text>
-        <TextInput
-          style={styles.input}
-          value={plannedStart}
-          onChangeText={setPlannedStart}
-          placeholder="2026-05-25T09:00:00"
-          placeholderTextColor={colors.text.muted}
-        />
-        <Text style={styles.label}>Planlanan Bitiş (ISO)</Text>
-        <TextInput
-          style={styles.input}
-          value={plannedEnd}
-          onChangeText={setPlannedEnd}
-          placeholder="2026-05-25T17:00:00"
-          placeholderTextColor={colors.text.muted}
-        />
+
+        <Text style={styles.label}>Planlanan Başlangıç</Text>
+        <TouchableOpacity
+          style={styles.dateBtn}
+          onPress={() => {
+            const d = plannedStart ? new Date(plannedStart) : new Date();
+            setPickerValue(isNaN(d.getTime()) ? new Date() : d);
+            setPickerMode({ field: 'start', step: 'date' });
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="calendar-outline" size={16} color={brand.green} />
+          <Text style={styles.dateBtnText}>
+            {plannedStart ? formatTrDateTime(plannedStart) : 'Tarih & saat seç'}
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={styles.label}>Planlanan Bitiş</Text>
+        <TouchableOpacity
+          style={styles.dateBtn}
+          onPress={() => {
+            const d = plannedEnd ? new Date(plannedEnd) : new Date();
+            setPickerValue(isNaN(d.getTime()) ? new Date() : d);
+            setPickerMode({ field: 'end', step: 'date' });
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="calendar-outline" size={16} color={brand.green} />
+          <Text style={styles.dateBtnText}>
+            {plannedEnd ? formatTrDateTime(plannedEnd) : 'Tarih & saat seç'}
+          </Text>
+        </TouchableOpacity>
+
         <Text style={styles.label}>SLA Saat</Text>
         <TextInput
           style={styles.input}
@@ -457,6 +491,36 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         <TouchableOpacity style={styles.primaryBtn} onPress={saveSchedule}>
           <Text style={styles.primaryBtnText}>Planlamayı Kaydet</Text>
         </TouchableOpacity>
+
+        {pickerMode && (
+          <DateTimePicker
+            value={pickerValue}
+            mode={pickerMode.step}
+            is24Hour
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selected) => {
+              // Android: tek dialog – kapat, sonra saat için aç
+              if (Platform.OS === 'android' && event.type === 'dismissed') {
+                setPickerMode(null);
+                return;
+              }
+              const picked = selected ?? pickerValue;
+              if (pickerMode.step === 'date') {
+                // Tarihi al, sonra saat için tekrar aç
+                setPickerValue(picked);
+                if (Platform.OS === 'android') {
+                  setPickerMode({ field: pickerMode.field, step: 'time' });
+                }
+              } else {
+                // Saat seçildi -> ISO yaz
+                const iso = picked.toISOString();
+                if (pickerMode.field === 'start') setPlannedStart(iso);
+                else setPlannedEnd(iso);
+                setPickerMode(null);
+              }
+            }}
+          />
+        )}
       </View>
 
       {/* ASSIGNMENT */}
@@ -802,6 +866,18 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   primaryBtnText: { color: colors.bg.primary, fontWeight: '700' },
+  dateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.bg.secondary,
+    borderColor: colors.border.primary,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dateBtnText: { color: colors.text.primary, fontSize: 14, fontWeight: '600' },
   outlineBtn: {
     flexDirection: 'row',
     borderColor: brand.green,

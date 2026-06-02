@@ -22,7 +22,11 @@ interface Tile {
 }
 
 const TILES: Tile[] = [
-  { key: 'SmartPozSuggest', title: 'Akıllı POZ Önerisi', desc: 'İş tanımından otomatik kalem öner', icon: 'sparkles-outline', color: '#8b5cf6', poz: 'POZ-DEV-090' },
+  { key: 'AiAssistant', title: 'AI Asistan (Çok Model + RAG)', desc: 'GPT / Claude / Gemini + WhatsApp / Gmail / G.Chat', icon: 'chatbubbles-outline', color: '#22c55e', poz: 'POZ-DEV-100' },
+  { key: 'VisionScanner', title: 'AI Vision Tarayıcı', desc: 'Fatura / kartvizit / etiket / sayaç / plaka okuma', icon: 'scan-outline', color: '#f59e0b', poz: 'POZ-DEV-101' },
+  { key: 'VoiceNote', title: 'Ses Notu Asistanı', desc: 'Konuş → transkript → özet → yapılacaklar', icon: 'mic-outline', color: '#ef4444', poz: 'POZ-DEV-102' },
+  { key: 'AiInsights', title: 'Haftalık AI Insights', desc: 'KPI özeti, trend yorumu, e-posta + Chat', icon: 'analytics-outline', color: '#8b5cf6', poz: 'POZ-DEV-103' },
+  { key: 'SmartPozSuggest', title: 'Akıllı POZ Önerisi', desc: 'İş tanımından otomatik kalem öner', icon: 'sparkles-outline', color: '#a855f7', poz: 'POZ-DEV-090' },
   { key: 'PhotoAnalysis', title: 'Fotoğraf Analizi', desc: 'Hasar / arıza tespiti', icon: 'camera-outline', color: '#ec4899', poz: 'POZ-DEV-091' },
   { key: 'VoiceReport', title: 'Sesli Rapor', desc: 'Transkriptten özet + eylem', icon: 'mic-outline', color: '#0ea5e9', poz: 'POZ-DEV-092' },
   { key: 'RouteOptimizer', title: 'Rota Optimizasyonu', desc: 'En kısa saha turu (TSP)', icon: 'map-outline', color: '#16a34a', poz: 'POZ-DEV-093' },

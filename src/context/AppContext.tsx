@@ -38,6 +38,7 @@ import {
   clearSyncQueue,
 } from '../services/data';
 import { useAuth } from './AuthContext';
+import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotifications';
 
 // ======================================================
 // QUOTE — Hesaplama yardımcıları
@@ -245,13 +246,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // ===== ATTENDANCE / WAGE =====
   const toggleAttendance = (empId: string, day: string, currentStatus: string) => {
-    const statuses = ['Geldi', 'İzinli', 'Raporlu', 'Gelmedi'];
+    // Döngü sırası: Boş → Geldi → Yarım Gün → İzinli → Raporlu → Resmi Tatil → Eğitim → Mazeretsiz → Boş
+    const statuses = ['Geldi', 'Yarım Gün', 'İzinli', 'Raporlu', 'Resmi Tatil', 'Eğitim', 'Mazeretsiz', 'Gelmedi'];
     const nextStatus = statuses[(statuses.indexOf(currentStatus) + 1) % statuses.length];
     setEmployees(prev => {
       const updated = prev.map(emp => {
         if (emp.id !== empId) return emp;
         const updatedAttendance = { ...emp.attendance, [day]: nextStatus };
-        const daysWorked = Object.values(updatedAttendance).filter(v => v === 'Geldi').length;
+        // Çalışılan gün: tam ücretli sayılanlar (Geldi, İzinli, Resmi Tatil, Eğitim) = 1, Yarım Gün = 0.5
+        const fullPaid = Object.values(updatedAttendance).filter(
+          v => v === 'Geldi' || v === 'İzinli' || v === 'Resmi Tatil' || v === 'Eğitim'
+        ).length;
+        const half = Object.values(updatedAttendance).filter(v => v === 'Yarım Gün').length;
+        const daysWorked = fullPaid + half * 0.5;
         return { ...emp, attendance: updatedAttendance, daysWorked };
       });
       const target = updated.find(e => e.id === empId);
@@ -493,6 +500,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const assignWorkOrder = (id: string, employeeId: string, employeeName: string) => {
+    let snapshot: WorkOrder | null = null;
     setWorkOrders(prev =>
       prev.map(w => {
         if (w.id !== id) return w;
@@ -504,15 +512,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           status: w.status === 'Bekliyor' ? 'Atandı' : w.status,
           engineer: w.engineer || employeeName,
         };
+        snapshot = next;
         persistWorkOrder(next);
         return next;
       }),
     );
     auditRepo.log(userId, { action: 'work_order.assign', tableName: 'work_orders', refId: id, meta: { employeeId } });
     showToast(`${employeeName} kişisine atandı.`);
+    const s = snapshot as WorkOrder | null;
+    // Bildirim: atanan personele
+    void sendLocalPush(
+      'Yeni görev atandı',
+      `${s?.client ?? ''} — ${s?.serviceName ?? id}`,
+      { workOrderId: id, kind: 'assign', employeeId },
+    );
+    // Planlanan başlangıç üzerine hatırlatıcı
+    if (s?.plannedStart) {
+      const d = new Date(s.plannedStart);
+      if (!isNaN(d.getTime())) {
+        // 15 dk önce
+        const remindAt = new Date(d.getTime() - 15 * 60 * 1000);
+        void scheduleLocalPushAt(
+          remindAt,
+          'Görev hatırlatması',
+          `${s.client} — ${s.serviceName} 15 dk içinde başlıyor.`,
+          { workOrderId: id, kind: 'reminder' },
+        );
+      }
+    }
   };
 
   const respondAssignment = (id: string, accept: boolean, reason?: string) => {
+    let snapshot: WorkOrder | null = null;
     setWorkOrders(prev =>
       prev.map(w => {
         if (w.id !== id) return w;
@@ -526,6 +557,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               assignedToId: undefined,
               assignedToName: undefined,
             };
+        snapshot = next;
         persistWorkOrder(next);
         return next;
       }),
@@ -537,9 +569,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       meta: { reason },
     });
     showToast(accept ? 'Görev kabul edildi.' : 'Görev reddedildi.', accept ? 'success' : 'error');
+    const s = snapshot as WorkOrder | null;
+    // Bildirim: yöneticiye geri dönüş
+    void sendLocalPush(
+      accept ? 'Görev kabul edildi' : 'Görev reddedildi',
+      `${s?.client ?? ''} — ${s?.serviceName ?? id}${!accept && reason ? ` (${reason})` : ''}`,
+      { workOrderId: id, kind: accept ? 'accept' : 'reject' },
+    );
   };
 
   const transferWorkOrder = (id: string, employeeId: string, employeeName: string) => {
+    let snapshot: WorkOrder | null = null;
     setWorkOrders(prev =>
       prev.map(w => {
         if (w.id !== id) return w;
@@ -550,12 +590,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           assignmentStatus: 'Devredildi',
           engineer: employeeName,
         };
+        snapshot = next;
         persistWorkOrder(next);
         return next;
       }),
     );
     auditRepo.log(userId, { action: 'work_order.transfer', tableName: 'work_orders', refId: id, meta: { employeeId } });
     showToast(`${employeeName} kişisine devredildi.`);
+    const s = snapshot as WorkOrder | null;
+    void sendLocalPush(
+      'Görev devredildi',
+      `${s?.client ?? ''} — ${s?.serviceName ?? id} → ${employeeName}`,
+      { workOrderId: id, kind: 'transfer', employeeId },
+    );
   };
 
   const bulkAssignWorkOrders = (ids: string[], employeeId: string, employeeName: string) => {
@@ -579,6 +626,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       meta: { count: ids.length, employeeId },
     });
     showToast(`${ids.length} görev ${employeeName} kişisine atandı.`);
+    void sendLocalPush(
+      'Toplu atama',
+      `${ids.length} görev ${employeeName} kişisine atandı.`,
+      { kind: 'bulk_assign', employeeId, count: ids.length },
+    );
   };
 
   const setWorkOrderPriority = (id: string, p: WorkOrderPriority) => {
@@ -598,14 +650,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     plannedEnd?: string,
     slaHours?: number,
   ) => {
+    let snapshot: WorkOrder | null = null;
     setWorkOrders(prev =>
       prev.map(w => {
         if (w.id !== id) return w;
         const next: WorkOrder = { ...w, plannedStart, plannedEnd, slaHours };
+        snapshot = next;
         persistWorkOrder(next);
         return next;
       }),
     );
+    // Yeni planlama üzerine hatırlatıcı zamanla (15 dk önce)
+    if (plannedStart) {
+      const d = new Date(plannedStart);
+      if (!isNaN(d.getTime())) {
+        const remindAt = new Date(d.getTime() - 15 * 60 * 1000);
+        const s = snapshot as WorkOrder | null;
+        void scheduleLocalPushAt(
+          remindAt,
+          'Görev hatırlatması',
+          `${s?.client ?? ''} — ${s?.serviceName ?? id} 15 dk içinde başlıyor.`,
+          { workOrderId: id, kind: 'reminder' },
+        );
+      }
+    }
+    showToast('Planlama kaydedildi.');
   };
 
   const startWorkTimer = (id: string, timerUserId?: string, note?: string) => {

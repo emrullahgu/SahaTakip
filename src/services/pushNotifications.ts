@@ -82,3 +82,41 @@ export async function sendLocalPush(
     return null;
   }
 }
+
+/**
+ * Belirli bir tarih için yerel bildirim planla. Geçmiş tarihlerde hemen tetiklenir.
+ * Geri dönen id `cancelScheduledPush` ile iptal edilebilir.
+ */
+export async function scheduleLocalPushAt(
+  date: Date,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): Promise<string | null> {
+  try {
+    configureNotifications();
+    await ensureAndroidChannel();
+    const now = Date.now();
+    const ts = date.getTime();
+    // Geçmiş zaman → hemen göster
+    if (!isFinite(ts) || ts <= now + 1000) {
+      return await sendLocalPush(title, body, data);
+    }
+    const id = await Notifications.scheduleNotificationAsync({
+      content: { title, body, data: data ?? {} },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date } as any,
+    });
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+export async function cancelScheduledPush(id: string | null | undefined): Promise<void> {
+  if (!id) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(id);
+  } catch {
+    /* sessiz */
+  }
+}
