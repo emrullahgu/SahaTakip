@@ -65,16 +65,12 @@ async function applyOp(op: { table: string; action: string; payload: any }) {
         return workOrderToRow(payload);
       case 'employees':
         return employeeToRow(payload);
-      case 'locations':
-        // LocationsRepo kendi rowTo metodunu kullanıyor, payload zaten row formatında gelmiş olabilir
-        return payload;
       default:
         return payload;
     }
   };
 
   if (action === 'delete') {
-    // PK kontrolü: 'locations' için id yoksaRecordedAt ve userId gerekebilir ama genelde uuid id vardır.
     const { error } = await supabase.from(table).delete().eq('id', payload.id);
     if (error) throw new Error(error.message);
     return;
@@ -93,7 +89,6 @@ async function applyOp(op: { table: string; action: string; payload: any }) {
   }
 
   if (action === 'update') {
-    // Kayıt var mı kontrol et veya direkt update et.
     const { error } = await supabase.from(table).update(toRow()).eq('id', payload.id);
     if (error) throw new Error(error.message);
     if (table === 'quotes') {
