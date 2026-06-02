@@ -25,6 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { BRAND } from '../config/brand';
 import type { AuthStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;

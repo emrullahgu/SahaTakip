@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import { BRAND } from '../config/brand';
 import { addNotification } from '../services/notifications';
 import type { AuthStackParamList } from '../types';
 
