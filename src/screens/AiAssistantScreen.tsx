@@ -51,6 +51,7 @@ export default function AiAssistantScreen() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const listRef = useRef<FlatList<UiMsg>>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Notebook state
   const [docs, setDocs] = useState<RagDocument[]>([]);
@@ -229,9 +230,12 @@ Hatalı: ${res.failed}`);
         const useStream = provider === 'openai' || provider === 'auto';
         if (useStream) {
           // Streaming: token token UI'a yansıt
+          const ctrl = new AbortController();
+          abortRef.current = ctrl;
           try {
             const sres = await aiChatStream({
               messages: [sysMsg, ...history],
+              signal: ctrl.signal,
               onToken: (_d, full) => {
                 setMsgs(curr => curr.map(m => m.id === pending.id
                   ? { ...m, text: full, pending: true }
@@ -245,7 +249,9 @@ Hatalı: ${res.failed}`);
               try { await appendMessage(sessionId, 'assistant', sres.content || '', { provider: 'openai', model: sres.model, stream: true }); }
               catch { /* sessiz */ }
             }
-          } catch {
+          } catch (streamErr: any) {
+            const aborted = streamErr?.name === 'AbortError' || /aborted/i.test(String(streamErr?.message ?? ''));
+            if (aborted) throw streamErr; // dış catch yakalar, sessiz iptal
             // Stream başarısızsa non-stream'e düş
             const res = await aiChat({ provider, messages: [sysMsg, ...history] });
             setMsgs(curr => curr.map(m => m.id === pending.id
@@ -287,13 +293,28 @@ Hatalı: ${res.failed}`);
           : m));
       }
     } catch (e: any) {
-      const a = aiErrorAlert(e);
-      setMsgs(curr => curr.map(m => m.id === pending.id
-        ? { ...m, text: `❌ ${a.title}: ${a.message}`, pending: false }
-        : m));
+      const isAbort = e?.name === 'AbortError' || /aborted/i.test(String(e?.message ?? ''));
+      if (isAbort) {
+        setMsgs(curr => curr.map(m => m.id === pending.id
+          ? { ...m, text: (m.text && m.text !== '…' ? m.text + '\n\n— ⏹ iptal edildi —' : '— ⏹ iptal edildi —'), pending: false }
+          : m));
+      } else {
+        const a = aiErrorAlert(e);
+        setMsgs(curr => curr.map(m => m.id === pending.id
+          ? { ...m, text: `❌ ${a.title}: ${a.message}`, pending: false }
+          : m));
+      }
     } finally {
+      abortRef.current = null;
       setBusy(false);
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60);
+    }
+  };
+
+  const cancelStream = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
   };
 
@@ -571,9 +592,15 @@ Hatalı: ${res.failed}`);
             multiline
             editable={!busy}
           />
-          <TouchableOpacity style={[styles.sendBtn, busy && { opacity: 0.5 }]} onPress={send} disabled={busy}>
-            <Ionicons name="send" size={18} color="#fff" />
-          </TouchableOpacity>
+          {busy ? (
+            <TouchableOpacity style={[styles.sendBtn, { backgroundColor: colors.rose.default }]} onPress={cancelStream}>
+              <Ionicons name="stop" size={18} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.sendBtn} onPress={send}>
+              <Ionicons name="send" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
           </>
         )}
