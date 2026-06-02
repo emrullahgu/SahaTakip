@@ -8,7 +8,7 @@
 // ve gerçek verilere dayalı yanıt üretir.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { chat as llmChat, getAiSettings } from './ai';
+import { chat as llmChat, chatWithFallback, getAiSettings } from './ai';
 import { retrieveRelevant, KbDoc } from './aiKnowledgeBase';
 import { POZ_CATALOG } from '../data/pozCatalog';
 import type { WorkOrder, Customer, Quote, Employee } from '../types';
@@ -152,8 +152,8 @@ export async function askCopilot(
   const systemPrompt = `${SYSTEM_PROMPT_BASE}\n\n---\n${liveContext}\n\n---\n## Önceki Mesajlar\n${historyText || '(yok)'}`;
 
   try {
-    const reply = await llmChat(userMessage, settings, systemPrompt);
-    return { reply: reply || '(boş yanıt)', provider: settings.provider, model: settings.model };
+    const out = await chatWithFallback(userMessage, settings, systemPrompt);
+    return { reply: out.reply || '(boş yanıt)', provider: out.usedProvider, model: out.usedModel };
   } catch (e: any) {
     return { reply: `Hata: ${e?.message || 'bilinmeyen'}`, provider: settings.provider };
   }
@@ -186,10 +186,10 @@ export async function scanInboxAndSuggest(
     return 'AI sağlayıcı yapılandırılmamış.';
   }
   const context = summarizeSnapshot(snapshot, inboxDocs);
-  const reply = await llmChat(
+  const out = await chatWithFallback(
     'Aşağıdaki gelen kutusu (e-posta / WhatsApp) özetlerini incele. Cevap bekleyen, randevu talebi içeren ya da iş emrine dönüşmesi gereken mesajları listele. Aksiyon önerileri ver.',
     settings,
     `${SYSTEM_PROMPT_BASE}\n\n---\n${context}`,
   );
-  return reply || '(boş yanıt)';
+  return out.reply || '(boş yanıt)';
 }

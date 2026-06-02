@@ -264,6 +264,55 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
   throw new Error('Bilinmeyen sağlayıcı');
 }
 
+// ---------- Çoklu sağlayıcı otomatik fallback ----------
+// Yapılandırılmış birincil sağlayıcı çalışmazsa (404/429/quota/timeout vb.),
+// mevcut anahtarlara sahip diğer sağlayıcılara sırayla geçer. Yetenek sırasına göre:
+// openai → claude → gemini → groq. Aktif/seçili olan her zaman önce denenir.
+const FALLBACK_ORDER: AiProvider[] = ['openai', 'claude', 'gemini', 'groq'];
+
+export async function chatWithFallback(
+  prompt: string,
+  primary: AiSettings,
+  systemPrompt?: string,
+): Promise<{ reply: string; usedProvider: AiProvider; usedModel?: string; attempts: { provider: AiProvider; error?: string }[] }> {
+  const attempts: { provider: AiProvider; error?: string }[] = [];
+
+  const tryOne = async (s: AiSettings) => {
+    const reply = await chat(prompt, s, systemPrompt);
+    if (!reply || !reply.trim()) throw new Error('Boş yanıt');
+    return reply;
+  };
+
+  // 1) Önce kullanıcının seçili sağlayıcısı
+  if (primary.provider !== 'mock' && primary.apiKey) {
+    try {
+      const reply = await tryOne(primary);
+      attempts.push({ provider: primary.provider });
+      return { reply, usedProvider: primary.provider, usedModel: primary.model || DEFAULT_MODEL[primary.provider], attempts };
+    } catch (e: any) {
+      attempts.push({ provider: primary.provider, error: e?.message || 'hata' });
+    }
+  }
+
+  // 2) Diğer sağlayıcıları sırayla dene (anahtarı olan)
+  for (const p of FALLBACK_ORDER) {
+    if (p === primary.provider) continue;
+    const key = getBuiltinKey(p);
+    if (!key) continue;
+    const s: AiSettings = { provider: p, apiKey: key, model: DEFAULT_MODEL[p] };
+    try {
+      const reply = await tryOne(s);
+      attempts.push({ provider: p });
+      return { reply, usedProvider: p, usedModel: DEFAULT_MODEL[p], attempts };
+    } catch (e: any) {
+      attempts.push({ provider: p, error: e?.message || 'hata' });
+    }
+  }
+
+  const summary = attempts.map(a => `${a.provider}: ${a.error || 'ok'}`).join(' | ');
+  throw new Error(`Tüm AI sağlayıcıları başarısız oldu. ${summary}`);
+}
+
 // ---------- POZ-DEV-090: Smart POZ suggestion ----------
 const TR_LOWER = (s: string) => s.toLocaleLowerCase('tr-TR');
 
