@@ -17,7 +17,7 @@ const HINTS: Record<AiProvider, { defaultModel: string; help: string }> = {
   groq: { defaultModel: 'llama-3.3-70b-versatile', help: 'console.groq.com adresinden ücretsiz API anahtarı alın (hızlı).' },
   openai: { defaultModel: 'gpt-4o-mini', help: 'platform.openai.com adresinden API anahtarı alın.' },
   claude: { defaultModel: 'claude-3-5-sonnet-20241022', help: 'console.anthropic.com adresinden API anahtarı alın.' },
-  gemini: { defaultModel: 'gemini-1.5-flash', help: 'aistudio.google.com adresinden API anahtarı alın.' },
+  gemini: { defaultModel: 'gemini-2.5-flash', help: 'aistudio.google.com adresinden API anahtarı alın.' },
 };
 
 export default function AiSettingsScreen() {

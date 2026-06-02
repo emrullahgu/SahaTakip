@@ -26,7 +26,7 @@ const OVERWRITE = !process.argv.includes('--no-overwrite');
 const aiSettings = {
   provider: 'gemini', // openai | claude | gemini | mock
   apiKey: process.env.GEMINI_KEY || '',
-  model: 'gemini-1.5-flash',
+  model: 'gemini-2.5-flash',
   // Diğer sağlayıcı anahtarları — admin "API Anahtarları" ekranında sağlayıcıyı
   // değiştirince UI bu listeden otomatik yükler.
   keys: {

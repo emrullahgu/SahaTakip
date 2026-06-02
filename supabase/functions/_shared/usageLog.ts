@@ -14,6 +14,8 @@ const PRICE: Record<string, { in: number; out: number }> = {
   'claude-3-5-haiku':   { in: 0.0008,  out: 0.004  },
   'gemini-1.5-pro':     { in: 0.00125, out: 0.005  },
   'gemini-1.5-flash':   { in: 0.000075,out: 0.0003 },
+  'gemini-2.5-flash':   { in: 0.000075,out: 0.0003 },
+  'gemini-2.5-pro':     { in: 0.00125, out: 0.005  },
   'text-embedding-3-small': { in: 0.00002, out: 0 },
   'text-embedding-3-large': { in: 0.00013, out: 0 },
 };

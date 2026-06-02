@@ -12,7 +12,7 @@ const VOICE_KEY = '@SahaTakip:voice_reports';
 const DEFAULT_MODEL: Record<AiProvider, string> = {
   openai: 'gpt-4o-mini',
   claude: 'claude-3-5-sonnet-20241022',
-  gemini: 'gemini-1.5-flash',
+  gemini: 'gemini-2.5-flash',
   groq: 'llama-3.3-70b-versatile',
   mock: 'mock',
 };
