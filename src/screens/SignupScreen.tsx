@@ -126,7 +126,7 @@ export default function SignupScreen() {
               label="E-posta"
               value={email}
               onChangeText={setEmail}
-              placeholder="ornek@SahaTakip.com"
+              placeholder={`ornek@${BRAND.company.website.replace(/^www\./, '')}`}
               keyboardType="email-address"
               autoCapitalize="none"
             />

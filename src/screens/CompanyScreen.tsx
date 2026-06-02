@@ -1,41 +1,48 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
+import { BRAND } from '../config/brand';
 
 const COMPANY_INFO = [
   {
     icon: 'business-outline' as const,
     label: 'Firma',
-    value: 'SahaTakip',
+    value: BRAND.company.legalName,
     color: colors.indigo.default,
   },
   {
     icon: 'mail-outline' as const,
     label: 'E-posta',
-    value: 'info@SahaTakip.com',
+    value: BRAND.company.email,
     color: colors.blue.default,
-    onPress: () => Linking.openURL('mailto:info@SahaTakip.com'),
+    onPress: () => Linking.openURL(`mailto:${BRAND.company.email}`),
   },
   {
     icon: 'call-outline' as const,
     label: 'Telefon',
-    value: '+90 535 714 5288',
+    value: BRAND.company.phone,
     color: colors.emerald.default,
-    onPress: () => Linking.openURL('tel:+905357145288'),
+    onPress: () => Linking.openURL(`tel:${BRAND.company.phoneRaw}`),
   },
   {
     icon: 'location-outline' as const,
     label: 'Adres',
-    value: 'Kemalpaşa OSB Mahallesi, Gazi Bulvarı, No:177, D:19\nİzmir, 35170 Türkiye',
+    value: BRAND.company.address,
     color: colors.rose.default,
   },
   {
     icon: 'globe-outline' as const,
     label: 'Web Sitesi',
-    value: 'www.sahatakip.com',
+    value: BRAND.company.website,
     color: colors.amber.default,
-    onPress: () => Linking.openURL('https://www.sahatakip.com'),
+    onPress: () => Linking.openURL(BRAND.company.websiteUrl),
+  },
+  {
+    icon: 'document-text-outline' as const,
+    label: 'Vergi Dairesi / No',
+    value: `${BRAND.company.taxOffice} · ${BRAND.company.taxNumber}`,
+    color: colors.indigo.default,
   },
 ];
 
@@ -49,10 +56,10 @@ export default function CompanyScreen() {
       {/* Logo / Brand Header */}
       <View style={styles.brandBox}>
         <View style={styles.logoCircle}>
-          <Ionicons name="flash" size={32} color={colors.emerald.default} />
+          <Image source={require('../../assets/logo.png')} style={styles.logoImg} resizeMode="contain" />
         </View>
-        <Text style={styles.brandName}>SahaTakip</Text>
-        <Text style={styles.brandTagline}>Elektrik Saha Mühendisliği & Servis</Text>
+        <Text style={styles.brandName}>{BRAND.company.name}</Text>
+        <Text style={styles.brandTagline}>{BRAND.company.tagline}</Text>
         <View style={styles.activeBadge}>
           <View style={styles.activeDot} />
           <Text style={styles.activeText}>Aktif Servis Firması</Text>
@@ -84,13 +91,7 @@ export default function CompanyScreen() {
 
       {/* Services Section */}
       <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>Sunduğumuz Hizmetler</Text>
-      {[
-        'OG/AG Elektrik Pano Montaj ve Revizyon',
-        'Trafo Bakım ve Test Hizmetleri',
-        'Kompanzasyon Sistemi Kurulum',
-        'Saha Yönetim Yazılımı (SahaTakip)',
-        'Periyodik Elektrik Bakım Kontratları',
-      ].map((s, i) => (
+      {BRAND.services.map((s, i) => (
         <View key={i} style={styles.serviceRow}>
           <Ionicons name="checkmark-circle" size={16} color={colors.emerald.default} />
           <Text style={styles.serviceText}>{s}</Text>
@@ -113,16 +114,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border.primary,
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.emerald.bg,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#ffffff',
     borderWidth: 2,
     borderColor: colors.emerald.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    overflow: 'hidden',
   },
+  logoImg: { width: 78, height: 78 },
   brandName: {
     fontSize: typography.xxl,
     color: colors.text.primary,

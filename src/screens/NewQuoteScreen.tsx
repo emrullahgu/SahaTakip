@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
@@ -32,13 +32,21 @@ import {
 import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recentPozes';
 import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { newUuid } from '../services/data/repository';
+import { upsertMaterial } from '../services/materials';
 import Toast from '../components/Toast';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
+type NewQuoteRoute = RouteProp<RootStackParamList, 'NewQuote'>;
 
 export default function NewQuoteScreen() {
   const navigation = useNavigation<NavProp>();
-  const { customers, addQuote, generateQuoteNumber, toast } = useAppContext();
+  const route = useRoute<NewQuoteRoute>();
+  const editingQuoteId = route.params?.quoteId;
+  const { customers, quotes, addQuote, updateQuote, generateQuoteNumber, toast } = useAppContext();
+  const editingQuote = React.useMemo(
+    () => (editingQuoteId ? quotes.find(q => q.id === editingQuoteId) : undefined),
+    [editingQuoteId, quotes],
+  );
   const { profile, user } = useAuth();
   const engineerName =
     profile?.full_name ||
@@ -46,10 +54,17 @@ export default function NewQuoteScreen() {
     user?.email?.split('@')[0] ||
     'Saha';
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [lines, setLines] = useState<QuoteLine[]>([]);
+  const [customer, setCustomer] = useState<Customer | null>(() => {
+    if (!editingQuote) return null;
+    return (
+      customers.find(
+        c => c.shortName === editingQuote.customerName || c.title === editingQuote.customerTitle,
+      ) ?? null
+    );
+  });
+  const [title, setTitle] = useState(editingQuote?.title ?? '');
+  const [notes, setNotes] = useState(editingQuote?.notes ?? '');
+  const [lines, setLines] = useState<QuoteLine[]>(editingQuote?.lines ?? []);
   const [recents, setRecents] = useState<RecentPoz[]>([]);
   const [showRecents, setShowRecents] = useState(false);
 
@@ -70,6 +85,10 @@ export default function NewQuoteScreen() {
   React.useEffect(() => {
     listRecentPozes().then(setRecents);
   }, []);
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({ title: editingQuote ? 'Teklifi Düzenle' : 'Yeni Teklif' });
+  }, [navigation, editingQuote]);
 
   const totals = useMemo(() => calcQuoteTotals(lines), [lines]);
 
@@ -113,6 +132,25 @@ export default function NewQuoteScreen() {
     }
     if (lines.length === 0) {
       Alert.alert('Eksik bilgi', 'En az bir kalem ekleyiniz.');
+      return;
+    }
+    if (editingQuote) {
+      const updated: Quote = {
+        ...editingQuote,
+        customerName: customer.shortName,
+        customerTitle: customer.title,
+        title,
+        engineer: editingQuote.engineer || engineerName,
+        lines,
+        notes,
+        subtotal: totals.subtotal,
+        vatTotal: totals.vatTotal,
+        grandTotal: totals.grandTotal,
+        revision: (editingQuote.revision ?? 0) + 1,
+      };
+      updateQuote(updated);
+      recordQuoteLines(lines);
+      navigation.goBack();
       return;
     }
     const number = generateQuoteNumber();
@@ -185,6 +223,25 @@ export default function NewQuoteScreen() {
     setProductSearch('');
   };
 
+  const addManualLine = () => {
+    const newLine: QuoteLine = {
+      lineNo: lines.length + 1,
+      pozId: `MANUAL-${newUuid().slice(0, 8)}`,
+      pozName: '',
+      unit: 'Ad',
+      quantity: 1,
+      materialPrice: 0,
+      installPrice: 0,
+      dismantlePrice: 0,
+      withDismantle: false,
+      overheadPct: DEFAULT_OVERHEAD,
+      profitPct: DEFAULT_PROFIT,
+      vatPct: DEFAULT_VAT,
+      discountPct: 0,
+    };
+    setLines(prev => [...prev, newLine]);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {toast && <Toast toast={toast} />}
@@ -224,44 +281,50 @@ export default function NewQuoteScreen() {
 
         {/* === KALEMLER === */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>3. Kalemler ({lines.length})</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
+          <Text style={styles.sectionLabel}>3. Kalemler ({lines.length})</Text>
+          <View style={styles.addLineBtnRow}>
+            <TouchableOpacity
+              style={styles.addLineBtn}
+              onPress={() => navigation.navigate('QuoteTemplates')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="copy-outline" size={14} color={brand.green} />
+              <Text style={styles.addLineBtnText}>Şablon</Text>
+            </TouchableOpacity>
+            {recents.length > 0 && (
               <TouchableOpacity
                 style={styles.addLineBtn}
-                onPress={() => navigation.navigate('QuoteTemplates')}
+                onPress={() => setShowRecents(s => !s)}
                 activeOpacity={0.8}
               >
-                <Ionicons name="copy-outline" size={14} color={brand.green} />
-                <Text style={styles.addLineBtnText}>Şablon</Text>
+                <Ionicons name="time-outline" size={14} color={brand.green} />
+                <Text style={styles.addLineBtnText}>Son ({recents.length})</Text>
               </TouchableOpacity>
-              {recents.length > 0 && (
-                <TouchableOpacity
-                  style={styles.addLineBtn}
-                  onPress={() => setShowRecents(s => !s)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="time-outline" size={14} color={brand.green} />
-                  <Text style={styles.addLineBtnText}>Son ({recents.length})</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={styles.addLineBtn}
-                onPress={() => setShowProductModal(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="cube-outline" size={14} color={brand.green} />
-                <Text style={styles.addLineBtnText}>Ürün</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addLineBtn}
-                onPress={() => setShowPozModal(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="add-circle" size={16} color={brand.green} />
-                <Text style={styles.addLineBtnText}>Poz Ekle</Text>
-              </TouchableOpacity>
-            </View>
+            )}
+            <TouchableOpacity
+              style={styles.addLineBtn}
+              onPress={() => setShowProductModal(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="cube-outline" size={14} color={brand.green} />
+              <Text style={styles.addLineBtnText}>Ürün</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addLineBtn}
+              onPress={() => setShowPozModal(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle" size={16} color={brand.green} />
+              <Text style={styles.addLineBtnText}>Poz Ekle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.addLineBtn, styles.addLineBtnManual]}
+              onPress={addManualLine}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={14} color={colors.amber.default} />
+              <Text style={[styles.addLineBtnText, { color: colors.amber.default }]}>Manuel Kalem</Text>
+            </TouchableOpacity>
           </View>
 
           {showRecents && (
@@ -302,7 +365,9 @@ export default function NewQuoteScreen() {
           {lines.length === 0 ? (
             <View style={styles.emptyLines}>
               <Ionicons name="list-outline" size={32} color={colors.text.faint} />
-              <Text style={styles.emptyLinesText}>Henüz kalem yok. "Poz Ekle" ile başlayın.</Text>
+              <Text style={styles.emptyLinesText}>
+                Henüz kalem yok. Katalogdan eklemek için "Poz Ekle" / "Ürün", elle girmek için "Manuel Kalem" düğmesini kullanın.
+              </Text>
             </View>
           ) : (
             lines.map((line, idx) => (
@@ -359,7 +424,7 @@ export default function NewQuoteScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
           <Ionicons name="save-outline" size={18} color="#fff" />
-          <Text style={styles.saveBtnText}>Teklifi Kaydet</Text>
+          <Text style={styles.saveBtnText}>{editingQuote ? 'Değişiklikleri Kaydet' : 'Teklifi Kaydet'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -374,12 +439,33 @@ export default function NewQuoteScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Müşteri Seç</Text>
-              <TouchableOpacity onPress={() => setShowCustomerModal(false)}>
-                <Ionicons name="close" size={22} color={colors.text.muted} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <TouchableOpacity
+                  style={styles.newCustomerBtn}
+                  onPress={() => {
+                    setShowCustomerModal(false);
+                    navigation.navigate('CustomerForm');
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={styles.newCustomerBtnText}>Yeni Müşteri</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowCustomerModal(false)}>
+                  <Ionicons name="close" size={22} color={colors.text.muted} />
+                </TouchableOpacity>
+              </View>
             </View>
             <FlatList
               data={customers}
+              ListEmptyComponent={() => (
+                <View style={{ padding: spacing.xl, alignItems: 'center' }}>
+                  <Ionicons name="people-outline" size={40} color={colors.text.faint} />
+                  <Text style={{ color: colors.text.muted, marginTop: spacing.sm, fontSize: typography.sm }}>
+                    Henüz müşteri yok. Yukarıdan "Yeni Müşteri" ekleyin.
+                  </Text>
+                </View>
+              )}
               keyExtractor={c => c.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -614,12 +700,40 @@ function LineCard({
   onUpdate: (patch: Partial<QuoteLine>) => void;
   onRemove: () => void;
 }) {
+  const isManualLine = line.pozId.startsWith('MANUAL-');
   const [expanded, setExpanded] = useState(false);
+  const [manualPricing, setManualPricing] = useState(isManualLine);
+  const [editingName, setEditingName] = useState(isManualLine && !line.pozName);
+  const [saving, setSaving] = useState(false);
+  const { toast: ctxToast, showToast } = useAppContext();
   const calc = calcLineTotal(line);
 
   const updateNum = (key: keyof QuoteLine, v: string) => {
     const n = parseFloat(v.replace(',', '.')) || 0;
     onUpdate({ [key]: n } as Partial<QuoteLine>);
+  };
+
+  const handleSaveToCatalog = async () => {
+    if (!line.pozName.trim()) {
+      Alert.alert('Eksik', 'Önce kalem adı giriniz.');
+      return;
+    }
+    try {
+      setSaving(true);
+      await upsertMaterial({
+        id: newUuid(),
+        code: line.pozId.replace(/^(MANUAL|PRD)-/, ''),
+        name: line.pozName.trim(),
+        unit: line.unit,
+        price: line.materialPrice,
+        createdAt: new Date().toISOString(),
+      } as any);
+      showToast(`"${line.pozName}" kataloğa kaydedildi.`);
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Kaydedilemedi.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -631,14 +745,63 @@ function LineCard({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={lineStyles.pozId}>{line.pozId}</Text>
-          <Text style={lineStyles.pozName} numberOfLines={2}>{line.pozName}</Text>
+          {editingName ? (
+            <TextInput
+              style={[lineStyles.pozName, lineStyles.pozNameInput]}
+              value={line.pozName}
+              onChangeText={v => onUpdate({ pozName: v })}
+              onBlur={() => setEditingName(false)}
+              placeholder="Kalem adı giriniz…"
+              placeholderTextColor={colors.text.faint}
+              autoFocus
+              multiline
+            />
+          ) : (
+            <TouchableOpacity onPress={() => setEditingName(true)} activeOpacity={0.7}>
+              <Text style={lineStyles.pozName} numberOfLines={2}>
+                {line.pozName || 'Kalem adı giriniz…'}
+                <Text style={{ color: colors.text.faint, fontSize: 11 }}>  ✎</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity onPress={onRemove} style={lineStyles.removeBtn}>
           <Ionicons name="trash-outline" size={14} color={colors.rose.default} />
         </TouchableOpacity>
       </View>
 
-      {/* MIKTAR */}
+      {/* MANUEL FİYAT TOGGLE + KATALOĞA KAYDET */}
+      <View style={lineStyles.manualBar}>
+        <View style={lineStyles.dismantleLeft}>
+          <Ionicons
+            name={manualPricing ? 'create' : 'lock-closed'}
+            size={14}
+            color={manualPricing ? colors.amber.default : colors.text.faint}
+          />
+          <Text style={lineStyles.dismantleLabel}>
+            {manualPricing ? 'Manuel fiyat (sen belirle)' : 'Katalog fiyatı (kilitli)'}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            style={[lineStyles.saveCatalogBtn, saving && { opacity: 0.5 }]}
+            onPress={handleSaveToCatalog}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cloud-upload-outline" size={12} color={colors.indigo.light} />
+            <Text style={lineStyles.saveCatalogText}>{saving ? '…' : 'Kataloğa'}</Text>
+          </TouchableOpacity>
+          <Switch
+            value={manualPricing}
+            onValueChange={setManualPricing}
+            trackColor={{ false: colors.bg.card, true: colors.amber.default }}
+            thumbColor="#fff"
+          />
+        </View>
+      </View>
+
+      {/* MIKTAR + BİRİM */}
       <View style={lineStyles.qtyRow}>
         <Text style={lineStyles.qtyLabel}>Miktar:</Text>
         <TextInput
@@ -647,7 +810,13 @@ function LineCard({
           onChangeText={v => updateNum('quantity', v)}
           keyboardType="decimal-pad"
         />
-        <Text style={lineStyles.qtyUnit}>{line.unit}</Text>
+        <TextInput
+          style={[lineStyles.qtyInput, { width: 44, marginLeft: 4 }]}
+          value={line.unit}
+          onChangeText={v => onUpdate({ unit: v })}
+          placeholder="Ad"
+          placeholderTextColor={colors.text.faint}
+        />
         <View style={{ flex: 1 }} />
         <Text style={lineStyles.subTotalLabel}>Satır Top:</Text>
         <Text style={lineStyles.subTotalValue}>
@@ -662,19 +831,21 @@ function LineCard({
           value={line.materialPrice}
           onChange={v => updateNum('materialPrice', v)}
           color={colors.text.secondary}
+          disabled={!manualPricing}
         />
         <PriceCol
           label="Montaj B.F."
           value={line.installPrice}
           onChange={v => updateNum('installPrice', v)}
           color={brand.green}
+          disabled={!manualPricing}
         />
         <PriceCol
           label="Demontaj B.F."
           value={line.dismantlePrice}
           onChange={v => updateNum('dismantlePrice', v)}
           color={colors.amber.default}
-          disabled={!line.withDismantle}
+          disabled={!manualPricing || !line.withDismantle}
         />
         <PercentCol
           label="G. Gider %"
@@ -954,6 +1125,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
+  addLineBtnRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
   addLineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -966,6 +1143,10 @@ const styles = StyleSheet.create({
     borderColor: colors.emerald.border,
   },
   addLineBtnText: { color: brand.green, fontSize: typography.xs, fontWeight: '800' },
+  addLineBtnManual: {
+    backgroundColor: colors.amber.bg,
+    borderColor: colors.amber.default,
+  },
   recentItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1095,6 +1276,16 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.primary,
   },
   modalTitle: { fontSize: typography.md, color: colors.text.primary, fontWeight: '800' },
+  newCustomerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.emerald.default,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+  },
+  newCustomerBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
 
   customerItem: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Share, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Share, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -7,10 +7,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext, calcLineTotal } from '../context/AppContext';
-import { RootStackParamList, QuoteStatus } from '../types';
+import { RootStackParamList, QuoteStatus, Quote } from '../types';
 import Toast from '../components/Toast';
 import { generateAndShareQuotePdf } from '../services/pdf';
 import { sendQuoteEmail } from '../services/quoteEmail';
+import { newUuid } from '../services/data/repository';
 
 type DetailRoute = RouteProp<RootStackParamList, 'QuoteDetail'>;
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -24,12 +25,22 @@ const NEXT_STATUS: Record<QuoteStatus, QuoteStatus | null> = {
   'Faturalandırıldı': null,
 };
 
+const ALL_STATUSES: QuoteStatus[] = [
+  'Taslak',
+  'Onay Bekliyor',
+  'Müşteriye Gönderildi',
+  'Kabul Edildi',
+  'Reddedildi',
+  'Faturalandırıldı',
+];
+
 export default function QuoteDetailScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<DetailRoute>();
-  const { quotes, setQuoteStatus, deleteQuote, toast, showToast, acceptQuoteAndCreateWorkOrder, generateQuoteShareToken } = useAppContext();
+  const { quotes, setQuoteStatus, deleteQuote, toast, showToast, acceptQuoteAndCreateWorkOrder, generateQuoteShareToken, addQuote, generateQuoteNumber } = useAppContext();
   const quote = quotes.find(q => q.id === route.params.quoteId);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
 
   if (!quote) {
     return (
@@ -42,6 +53,47 @@ export default function QuoteDetailScreen() {
   }
 
   const nextStatus = NEXT_STATUS[quote.status];
+  const canEdit = true; // Revize/düzenleme her durumda açık; faturalandırılmış teklif düzenlenirse revizyon oluşur.
+
+  const handleCopy = () => {
+    const copy: Quote = {
+      ...quote,
+      id: newUuid(),
+      number: generateQuoteNumber(),
+      status: 'Taslak',
+      date: new Date().toISOString().slice(0, 10),
+      revision: 0,
+      generatedWorkOrderId: undefined,
+      title: `${quote.title} (Kopya)`,
+      lines: quote.lines.map(l => ({ ...l })),
+    };
+    addQuote(copy);
+    showToast('Teklif kopyalandı. Taslak olarak açılıyor.');
+    navigation.replace('QuoteDetail', { quoteId: copy.id });
+  };
+
+  const handleSetStatus = (s: QuoteStatus) => {
+    setQuoteStatus(quote.id, s);
+    setShowStatusModal(false);
+    showToast(`Durum güncellendi: ${s}`);
+  };
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canEdit
+        ? () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NewQuote', { quoteId: quote.id })}
+              style={styles.headerEditBtn}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="create-outline" size={16} color={brand.green} />
+              <Text style={styles.headerEditBtnText}>Revize Et</Text>
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, quote.id, canEdit]);
 
   const handleDelete = () => {
     Alert.alert('Teklifi Sil', 'Bu teklifi silmek istediğinize emin misiniz?', [
@@ -75,6 +127,18 @@ export default function QuoteDetailScreen() {
             <Meta label="Mühendis" value={quote.engineer} />
             <Meta label="Kalem Sayısı" value={String(quote.lines.length)} />
           </View>
+          {canEdit && (
+            <TouchableOpacity
+              style={styles.reviseHeaderBtn}
+              onPress={() => navigation.navigate('NewQuote', { quoteId: quote.id })}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="create-outline" size={16} color="#fff" />
+              <Text style={styles.reviseHeaderBtnText}>
+                Revize Et {quote.revision ? `(rev ${quote.revision})` : ''}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Lines */}
@@ -121,6 +185,38 @@ export default function QuoteDetailScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          {/* Revize Et — her durumda görünür; tüm alanları NewQuote'ta düzenlersin */}
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => navigation.navigate('NewQuote', { quoteId: quote.id })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="create-outline" size={18} color="#fff" />
+            <Text style={styles.editBtnText}>
+              Revize Et {quote.revision ? `(rev ${quote.revision})` : ''}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Kopyala — faturalanan/reddedilen/her teklif yeni taslak olarak kopyalanabilir */}
+          <TouchableOpacity
+            style={styles.copyBtn}
+            onPress={handleCopy}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="copy-outline" size={18} color={brand.green} />
+            <Text style={styles.copyBtnText}>Yeni Taslak Olarak Kopyala</Text>
+          </TouchableOpacity>
+
+          {/* Durum değiştir — herhangi bir aşamaya taşı (geri al / ileri al) */}
+          <TouchableOpacity
+            style={styles.statusBtn}
+            onPress={() => setShowStatusModal(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="swap-horizontal-outline" size={18} color={colors.indigo.light} />
+            <Text style={styles.statusBtnText}>Durumu Değiştir ({quote.status})</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.pdfBtn, pdfLoading && { opacity: 0.6 }]}
             onPress={async () => {
@@ -319,6 +415,54 @@ export default function QuoteDetailScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* DURUM DEĞİŞTİR MODAL */}
+      <Modal
+        visible={showStatusModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStatusModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowStatusModal(false)}
+        >
+          <View style={styles.statusSheet}>
+            <Text style={styles.statusSheetTitle}>Durumu Seç</Text>
+            <Text style={styles.statusSheetSub}>
+              Teklifi istediğin aşamaya taşı (geri al / ileri al).
+            </Text>
+            {ALL_STATUSES.map(s => {
+              const active = s === quote.status;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.statusOption, active && styles.statusOptionActive]}
+                  onPress={() => handleSetStatus(s)}
+                  disabled={active}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={active ? 'radio-button-on' : 'radio-button-off'}
+                    size={18}
+                    color={active ? brand.green : colors.text.muted}
+                  />
+                  <Text style={[styles.statusOptionText, active && { color: brand.green, fontWeight: '800' }]}>
+                    {s}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.statusCancel}
+              onPress={() => setShowStatusModal(false)}
+            >
+              <Text style={styles.statusCancelText}>Vazgeç</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -433,6 +577,41 @@ const styles = StyleSheet.create({
   notes: { fontSize: typography.xs, color: colors.text.secondary, lineHeight: 18 },
 
   actions: { gap: spacing.sm, marginTop: spacing.md },
+  reviseHeaderBtn: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: brand.green,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+  },
+  reviseHeaderBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  headerEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: brand.green,
+    backgroundColor: colors.emerald?.bg ?? 'rgba(16,185,129,0.12)',
+    marginRight: spacing.sm,
+  },
+  headerEditBtnText: { color: brand.green, fontWeight: '800', fontSize: typography.xs },
+  editBtn: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: brand.green,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
   pdfBtn: {
     flexDirection: 'row',
     gap: 8,
@@ -470,6 +649,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteBtnText: { color: colors.rose.default, fontWeight: '700', fontSize: typography.xs },
+  copyBtn: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: colors.emerald.bg,
+    borderWidth: 1,
+    borderColor: brand.green,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  copyBtnText: { color: brand.green, fontWeight: '800', fontSize: typography.sm },
+  statusBtn: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: colors.indigo.bg,
+    borderWidth: 1,
+    borderColor: colors.indigo.light,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusBtnText: { color: colors.indigo.light, fontWeight: '800', fontSize: typography.sm },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  statusSheet: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.bg.primary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: 8,
+  },
+  statusSheetTitle: { color: colors.text.primary, fontSize: typography.lg, fontWeight: '800' },
+  statusSheetSub: { color: colors.text.muted, fontSize: typography.xs, marginBottom: spacing.sm },
+  statusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+  },
+  statusOptionActive: { backgroundColor: colors.emerald.bg, borderColor: brand.green },
+  statusOptionText: { color: colors.text.primary, fontSize: typography.sm },
+  statusCancel: { paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  statusCancelText: { color: colors.text.muted, fontWeight: '700' },
   emailBtn: {
     flexDirection: 'row',
     gap: 6,

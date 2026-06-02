@@ -276,7 +276,7 @@ export default function LoginScreen() {
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="ornek@SahaTakip.com"
+                placeholder={`ornek@${BRAND.company.website.replace(/^www\./, '')}`}
                 placeholderTextColor={colors.text.faint}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -376,7 +376,7 @@ export default function LoginScreen() {
             )}
           </Animated.View>
 
-          <Text style={styles.footer}>SahaTakipMühendislik © 2025</Text>
+          <Text style={styles.footer}>{BRAND.company.name} © {BRAND.company.copyrightYear}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

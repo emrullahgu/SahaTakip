@@ -221,13 +221,28 @@ export default function QuotesScreen() {
           />
         )}
         ListEmptyComponent={
-          <EmptyState
-            icon="document-text-outline"
-            title="Henüz teklif yok"
-            subtitle="Yeni bir teklif oluşturmak için sağ üstteki “Yeni Teklif” butonuna basın."
-            actionLabel="+ İlk Teklifi Oluştur"
-            onAction={() => navigation.navigate('NewQuote')}
-          />
+          quotes.length === 0 ? (
+            <EmptyState
+              icon="document-text-outline"
+              title="Henüz teklif yok"
+              subtitle="Yeni bir teklif oluşturmak için sağ üstteki “Yeni Teklif” butonuna basın."
+              actionLabel="+ İlk Teklifi Oluştur"
+              onAction={() => navigation.navigate('NewQuote')}
+            />
+          ) : (
+            <EmptyState
+              icon="filter-outline"
+              title="Bu filtreyle eşleşen teklif yok"
+              subtitle="Farklı bir durum sekmesi seçin veya arama / tarih filtrelerini temizleyin."
+              actionLabel="Filtreleri Temizle"
+              onAction={() => {
+                setFilter('Tümü');
+                setSearch('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            />
+          )
         }
       />
     </SafeAreaView>
