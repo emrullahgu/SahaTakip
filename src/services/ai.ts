@@ -222,7 +222,9 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
   if (settings.provider === 'gemini') {
     // API anahtarı ve model ismindeki olası boşlukları temizle
     const apiKey = settings.apiKey.trim();
-    const modelName = (settings.model || DEFAULT_MODEL.gemini).trim();
+    const rawModel = (settings.model || DEFAULT_MODEL.gemini).trim();
+    // Eski/geçersiz gemini-1.5-flash modelini otomatik olarak güncel gemini-2.5-flash modeline yükselt
+    const modelName = rawModel === 'gemini-1.5-flash' ? 'gemini-2.5-flash' : rawModel;
 
     // model ismi 'models/' prefix'i içermiyorsa ekle.
     const modelPath = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
