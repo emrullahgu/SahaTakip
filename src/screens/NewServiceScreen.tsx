@@ -26,6 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { createApproval } from '../services/governance';
+import { newUuid } from '../services/data/repository';
 import { uploadPhoto } from '../services/photoUpload';
 import { Customer, SelectedMaterial, ServiceCatalogItem, TabParamList, RootStackParamList } from '../types';
 
@@ -111,7 +112,7 @@ export default function NewServiceScreen() {
       return;
     }
     const c: Customer = {
-      id: `C-${Date.now()}`,
+      id: newUuid(),
       shortName,
       title: newCustomer.title.trim() || shortName,
       phone: newCustomer.phone.trim() || undefined,

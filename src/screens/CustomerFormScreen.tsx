@@ -20,6 +20,7 @@ import { useAppContext } from '../context/AppContext';
 import { useVisit } from '../context/VisitContext';
 import { useHasRole } from '../components/RoleGuard';
 import type { Customer, RootStackParamList } from '../types';
+import { newUuid } from '../services/data/repository';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CustomerForm'>;
 type RouteProps = RouteProp<RootStackParamList, 'CustomerForm'>;
@@ -37,7 +38,7 @@ export default function CustomerFormScreen() {
 
   const [form, setForm] = useState<Customer>(
     existing ?? {
-      id: `C-${Date.now()}`,
+      id: newUuid(),
       shortName: '',
       title: '',
       taxNumber: '',
