@@ -3,7 +3,7 @@
 // Canlı konum yazma + en son konumları getirme + realtime subscribe
 // ====================================================================
 
-import { supabase, isOnlineMode, cacheGet, cacheSet, isUuid } from './repository';
+import { supabase, isOnlineMode, cacheGet, cacheSet, isUuid, enqueueSync, newUuid } from './repository';
 import type { GeoPosition } from '../location';
 
 export interface LocationRow {
@@ -64,10 +64,18 @@ export const locationsRepo = {
       recordedAt: new Date(pos.timestamp).toISOString(),
     };
     if (!isOnlineMode()) {
-      // Offline: yalnızca latest cache'i güncelle (geçmiş offline tutulmaz)
+      // Offline: Latest cache'i güncelle
       const list = (await cacheGet<LocationRow[]>(CACHE_LATEST)) ?? [];
       const filtered = list.filter(x => x.userId !== userId);
       await cacheSet(CACHE_LATEST, [row, ...filtered]);
+
+      // VE geçmişi kaybetmemek için Sync kuyruğuna ekle (POZ-DEV-321 iyileştirmesi)
+      await enqueueSync({
+        id: newUuid(),
+        table: 'locations',
+        action: 'insert',
+        payload: rowTo(row),
+      });
       return;
     }
     const { error } = await supabase.from('locations').insert(rowTo(row));

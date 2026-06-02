@@ -1103,6 +1103,41 @@ const lineStyles = StyleSheet.create({
   breakRow: { flexDirection: 'row', justifyContent: 'space-between' },
   breakLabel: { fontSize: 10, color: colors.text.muted },
   breakValue: { fontSize: 10, color: colors.text.secondary, fontVariant: ['tabular-nums'] },
+  pozNameInput: {
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.secondary,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  manualBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.primary,
+  },
+  saveCatalogBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.indigo.bg,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.indigo.border,
+  },
+  saveCatalogText: {
+    color: colors.indigo.default,
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
 });
 
 const styles = StyleSheet.create({

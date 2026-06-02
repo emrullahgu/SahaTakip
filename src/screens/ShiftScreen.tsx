@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Switch,
+  AppState,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +56,17 @@ export default function ShiftScreen() {
   const insideRef = useRef<Set<string>>(new Set());
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const updateTimer = () => {
+    if (!active) return;
+    const ms = Date.now() - new Date(active.startAt).getTime();
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    setElapsed(
+      `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    );
+  };
+
   useEffect(() => {
     (async () => {
       const [a, gs, flag] = await Promise.all([
@@ -71,21 +84,20 @@ export default function ShiftScreen() {
   useEffect(() => {
     if (!active) {
       if (tickRef.current) clearInterval(tickRef.current);
+      setElapsed('00:00:00');
       return;
     }
-    const tick = () => {
-      const ms = Date.now() - new Date(active.startAt).getTime();
-      const h = Math.floor(ms / 3600000);
-      const m = Math.floor((ms % 3600000) / 60000);
-      const s = Math.floor((ms % 60000) / 1000);
-      setElapsed(
-        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-      );
-    };
-    tick();
-    tickRef.current = setInterval(tick, 1000);
+    updateTimer();
+    tickRef.current = setInterval(updateTimer, 1000);
+
+    // Uygulama arka plandan döndüğünde süreyi eşitle
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') updateTimer();
+    });
+
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
+      sub.remove();
     };
   }, [active]);
 
@@ -98,7 +110,7 @@ export default function ShiftScreen() {
     }
     startLiveTracking(async pos => {
       setLastPos(pos);
-      if (isMockLocation(pos)) setMockWarn(true);
+      setMockWarn(isMockLocation(pos));
       await locationsRepo.write(userId, pos);
 
       // POZ-DEV-017: Geofence enter/exit
@@ -122,7 +134,14 @@ export default function ShiftScreen() {
     setLoading(true);
     const pos = await requestAndGetPosition();
     if (!pos) {
-      Alert.alert('Konum İzni', 'Mesai başlatmak için konum izni gereklidir.');
+      Alert.alert(
+        'Konum İzni',
+        'Mesai başlatmak için konum izni gereklidir. İzin vermediyseniz ayarlardan açabilirsiniz.',
+        [
+          { text: 'Vazgeç', style: 'cancel' },
+          { text: 'Ayarlar', onPress: () => Linking.openSettings() }
+        ]
+      );
       setLoading(false);
       return;
     }
