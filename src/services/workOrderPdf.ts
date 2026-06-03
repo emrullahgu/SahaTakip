@@ -1,5 +1,6 @@
 import type { WorkOrder } from '../types';
 import { BRAND } from '../config/brand';
+import { LOGO_DATA_URI } from '../config/logoBase64';
 import { deliverPdf } from './pdf';
 
 const COMPANY = BRAND.company;
@@ -26,7 +27,9 @@ function buildHtml(wo: WorkOrder): string {
 <meta charset="UTF-8" />
 <title>Servis Formu - ${escapeHtml(wo.id)}</title>
 <style>
+  @page { size: A4; margin: 0; }
   body { font-family: 'Helvetica', Arial, sans-serif; color: #1f2937; margin: 0; padding: 32px; font-size: 11px; }
+  .logo { height: 42px; width: auto; display: block; margin-bottom: 8px; }
   .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px; }
   .company { font-size: 20px; font-weight: 900; color: #1e40af; }
   .doc-type { text-align: right; }
@@ -53,7 +56,7 @@ function buildHtml(wo: WorkOrder): string {
 <body>
   <div class="header">
     <div class="company">
-      ${escapeHtml(COMPANY.name)}<br/>
+      <img class="logo" src="${LOGO_DATA_URI}" alt="${escapeHtml(COMPANY.name)}" />
       <small style="font-size: 10px; color: #22c55e;">${escapeHtml(COMPANY.tagline)}</small>
     </div>
     <div class="doc-type">

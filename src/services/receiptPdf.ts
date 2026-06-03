@@ -4,6 +4,7 @@
 import { Payment } from '../types';
 import { PAYMENT_METHODS, PAYMENT_STATUS_LABEL } from './payments';
 import { BRAND } from '../config/brand';
+import { LOGO_DATA_URI } from '../config/logoBase64';
 import { deliverPdf } from './pdf';
 
 const COMPANY = BRAND.company;
@@ -53,8 +54,10 @@ export function buildReceiptHtml(p: Payment, company?: { title?: string; address
 <meta charset="utf-8" />
 <title>Makbuz ${esc(p.receiptNo)}</title>
 <style>
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; color: #111; margin: 24px; }
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; color: #111; margin: 0; padding: 24px; }
+  .logo { height: 44px; width: auto; display: block; margin-bottom: 10px; }
   h1 { font-size: 22px; margin: 0 0 4px; }
   .muted { color: #555; font-size: 12px; }
   .box { border: 1px solid #ddd; border-radius: 8px; padding: 14px; margin-top: 14px; }
@@ -73,6 +76,7 @@ export function buildReceiptHtml(p: Payment, company?: { title?: string; address
 </head>
 <body>
   <div>
+    <img class="logo" src="${LOGO_DATA_URI}" alt="${esc(co.title)}" />
     <h1>TAHSİLAT MAKBUZU</h1>
     <div class="muted"><strong>${esc(co.title)}</strong></div>
     <div class="muted">${esc(co.address)}</div>

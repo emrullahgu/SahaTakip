@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import type { Quote } from '../types';
 import { calcLineTotal } from '../context/AppContext';
 import { BRAND } from '../config/brand';
+import { LOGO_DATA_URI } from '../config/logoBase64';
 
 const COMPANY = BRAND.company;
 
@@ -83,6 +84,8 @@ export function buildQuoteHtml(quote: Quote): string {
 <meta charset="UTF-8" />
 <title>${escapeHtml(quote.number)} - Teklif</title>
 <style>
+  /* margin:0 → tarayıcı yazdırırken sayfa kenarına tarih/saat/başlık/URL BASMAZ */
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body {
     font-family: 'Helvetica', 'Arial', sans-serif;
@@ -92,6 +95,7 @@ export function buildQuoteHtml(quote: Quote): string {
     font-size: 11px;
     line-height: 1.45;
   }
+  .logo { height: 46px; width: auto; margin-bottom: 8px; }
   .header {
     display: flex;
     justify-content: space-between;
@@ -203,7 +207,7 @@ export function buildQuoteHtml(quote: Quote): string {
 <body>
   <div class="header">
     <div class="company">
-      <div class="name">${escapeHtml(COMPANY.name)}</div>
+      <img class="logo" src="${LOGO_DATA_URI}" alt="${escapeHtml(COMPANY.name)}" />
       <div class="slogan">${escapeHtml(COMPANY.tagline)}</div>
       <div class="info">${escapeHtml(COMPANY.address.replace(/\n/g, ' '))}<br/>${escapeHtml(COMPANY.email)} · ${escapeHtml(COMPANY.phone)} · ${escapeHtml(COMPANY.website)}<br/>${escapeHtml(COMPANY.taxOffice)} · VKN: ${escapeHtml(COMPANY.taxNumber)}</div>
     </div>
@@ -411,8 +415,8 @@ function buildAttendanceHtml(employees: Employee[], yyyyMm: string): string {
 <html lang="tr"><head><meta charset="UTF-8" />
 <title>Puantaj ${yyyyMm}</title>
 <style>
-  @page { size: A4 landscape; margin: 14mm; }
-  body { font-family: Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 0; font-size: 9px; }
+  @page { size: A4 landscape; margin: 0; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 14mm; font-size: 9px; }
   .header { border-bottom: 3px solid #1e40af; padding-bottom: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end;}
   .title { font-size: 18px; font-weight: 900; color: #1e40af;}
   .sub { font-size: 10px; color: #6b7280; }

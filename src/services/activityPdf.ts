@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import type { WorkOrder, Quote } from '../types';
 import { BRAND } from '../config/brand';
+import { LOGO_DATA_URI } from '../config/logoBase64';
 import { deliverPdf } from './pdf';
 
 const COMPANY = BRAND.company;
@@ -41,7 +42,9 @@ export async function generateAndShareActivityPdf(
 <meta charset="UTF-8" />
 <title>Aktivite Raporu ${date}</title>
 <style>
-  body { font-family: 'Helvetica', Arial, sans-serif; padding: 30px; font-size: 11px; color: #333; }
+  @page { size: A4; margin: 0; }
+  body { font-family: 'Helvetica', Arial, sans-serif; margin: 0; padding: 30px; font-size: 11px; color: #333; }
+  .logo { height: 40px; width: auto; display: block; margin-bottom: 8px; }
   h1 { color: #1e40af; margin-bottom: 5px; }
   .date { color: #666; margin-bottom: 20px; font-size: 13px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
@@ -53,6 +56,7 @@ export async function generateAndShareActivityPdf(
 </style>
 </head>
 <body>
+  <img class="logo" src="${LOGO_DATA_URI}" alt="${COMPANY.name}" />
   <h1>SAHA AKTİVİTE RAPORU</h1>
   <div class="date">Tarih: ${date}</div>
 

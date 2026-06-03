@@ -3,6 +3,7 @@
 
 import type { Report } from '../types';
 import { BRAND } from '../config/brand';
+import { LOGO_DATA_URI } from '../config/logoBase64';
 import { deliverPdf } from './pdf';
 
 const COMPANY = BRAND.company;
@@ -48,8 +49,10 @@ function buildHtml(r: Report): string {
 <meta charset="UTF-8" />
 <title>Rapor ${escapeHtml(r.startDate)} - ${escapeHtml(r.endDate)}</title>
 <style>
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  body { font-family: 'Helvetica', Arial, sans-serif; color: #1f2937; padding: 32px 36px; }
+  body { font-family: 'Helvetica', Arial, sans-serif; color: #1f2937; margin: 0; padding: 32px 36px; }
+  .logo { height: 40px; width: auto; display: block; margin-bottom: 10px; }
   h1 { margin: 0 0 4px; }
   .sub { color: #6b7280; margin-bottom: 24px; font-size: 13px; }
   .kpi-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -67,6 +70,7 @@ function buildHtml(r: Report): string {
 </style>
 </head>
 <body>
+  <img class="logo" src="${LOGO_DATA_URI}" alt="${escapeHtml(COMPANY.name)}" />
   <h1>${periodLabel(r.period)} Rapor</h1>
   <div class="sub">${escapeHtml(r.startDate)} → ${escapeHtml(r.endDate)} · Oluşturuldu: ${new Date(
     r.generatedAt,
