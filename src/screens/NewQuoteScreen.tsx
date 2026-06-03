@@ -71,6 +71,7 @@ export default function NewQuoteScreen() {
 
   // Modal state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [showPozModal, setShowPozModal] = useState(false);
   const [pozCategory, setPozCategory] = useState<PozCategory | 'Tümü'>('Tümü');
   const [pozSearch, setPozSearch] = useState('');
@@ -190,6 +191,17 @@ export default function NewQuoteScreen() {
     [pozCategory, pozSearch]
   );
 
+  // Müşteri arama (ad/unvan/vergi no/telefon — Türkçe duyarlı)
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return customers;
+    return customers.filter(c =>
+      [c.shortName, c.title, c.taxNumber, c.phone]
+        .filter(Boolean)
+        .some(v => String(v).toLocaleLowerCase('tr-TR').includes(q)),
+    );
+  }, [customers, customerSearch]);
+
   const filteredProducts = useMemo(() => {
     const q = productSearch.trim().toLocaleLowerCase('tr-TR');
     let base = MATERIAL_CATALOG;
@@ -257,7 +269,10 @@ export default function NewQuoteScreen() {
           <Text style={styles.sectionLabel}>1. Müşteri</Text>
           <TouchableOpacity
             style={styles.pickerBtn}
-            onPress={() => setShowCustomerModal(true)}
+            onPress={() => {
+              setCustomerSearch('');
+              setShowCustomerModal(true);
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="business-outline" size={18} color={brand.green} />
@@ -461,13 +476,32 @@ export default function NewQuoteScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+            <View style={styles.modalSearch}>
+              <Ionicons name="search-outline" size={16} color={colors.text.faint} />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Müşteri adı, unvan, vergi no veya telefon..."
+                placeholderTextColor={colors.text.faint}
+                value={customerSearch}
+                onChangeText={setCustomerSearch}
+                autoCorrect={false}
+              />
+              {customerSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCustomerSearch('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={16} color={colors.text.faint} />
+                </TouchableOpacity>
+              )}
+            </View>
             <FlatList
-              data={customers}
+              data={filteredCustomers}
+              keyboardShouldPersistTaps="handled"
               ListEmptyComponent={() => (
                 <View style={{ padding: spacing.xl, alignItems: 'center' }}>
                   <Ionicons name="people-outline" size={40} color={colors.text.faint} />
                   <Text style={{ color: colors.text.muted, marginTop: spacing.sm, fontSize: typography.sm }}>
-                    Henüz müşteri yok. Yukarıdan "Yeni Müşteri" ekleyin.
+                    {customerSearch.trim()
+                      ? `"${customerSearch.trim()}" için müşteri bulunamadı.`
+                      : 'Henüz müşteri yok. Yukarıdan "Yeni Müşteri" ekleyin.'}
                   </Text>
                 </View>
               )}
