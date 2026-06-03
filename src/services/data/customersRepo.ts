@@ -6,6 +6,7 @@
 import {
   supabase,
   isOnlineMode,
+  isUuid,
   cacheGet,
   cacheSet,
   enqueueSync,
@@ -43,6 +44,12 @@ export const customersRepo: Repository<Customer> = {
   },
 
   async update(id: string, c: Customer): Promise<Customer> {
+    // Non-UUID id'ler (eski/yerel kayıtlar) DB'de yok; yalnızca cache'te güncelle.
+    if (!isUuid(id)) {
+      const cached = (await cacheGet<Customer[]>(CACHE_KEY)) ?? [];
+      await cacheSet(CACHE_KEY, cached.map(x => (x.id === id ? c : x)));
+      return c;
+    }
     if (!isOnlineMode()) {
       await enqueueSync({ id, table: 'customers', action: 'update', payload: c });
       return c;
@@ -53,6 +60,13 @@ export const customersRepo: Repository<Customer> = {
   },
 
   async delete(id: string): Promise<void> {
+    // Non-UUID id'ler Supabase'e hiç yazılmadı (ör. "cust-0312-teklif"); DB'ye gitme,
+    // sadece yerel cache'ten çıkar. Aksi halde Postgres "invalid input syntax for type uuid" verir.
+    if (!isUuid(id)) {
+      const cached = (await cacheGet<Customer[]>(CACHE_KEY)) ?? [];
+      await cacheSet(CACHE_KEY, cached.filter(x => x.id !== id));
+      return;
+    }
     if (!isOnlineMode()) {
       await enqueueSync({ id, table: 'customers', action: 'delete', payload: { id } });
       return;
