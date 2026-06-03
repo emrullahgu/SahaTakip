@@ -1,11 +1,16 @@
-// ProductCatalogScreen — 13K+ ürünü kategorize/marka filtreli arama
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList } from 'react-native';
+// ProductCatalogScreen — 13K+ ürünü kategorize/marka filtreli arama + toplu fiyat/iskonto
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
 import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import {
+  listPricingRules, upsertPricingRule, deletePricingRule,
+  applyPricingRules, countAffected, type BrandPricingRule, type PricingScope,
+} from '../services/productPricing';
 
 export default function ProductCatalogScreen() {
   const [search, setSearch] = useState('');
@@ -13,6 +18,11 @@ export default function ProductCatalogScreen() {
   const [brand, setBrand] = useState<string | null>(null);
   const [showAllCats, setShowAllCats] = useState(false);
   const [showAllBrands, setShowAllBrands] = useState(false);
+  const [rules, setRules] = useState<BrandPricingRule[]>([]);
+  const [showBulk, setShowBulk] = useState(false);
+
+  const loadRules = useCallback(async () => { setRules(await listPricingRules()); }, []);
+  useFocusEffect(useCallback(() => { loadRules(); }, [loadRules]));
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase('tr-TR');
@@ -27,13 +37,20 @@ export default function ProductCatalogScreen() {
         (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
       );
     }
-    return base.slice(0, 500);
-  }, [search, category, brand]);
+    // Toplu fiyat kurallarını yalnızca görünen ≤500 ürüne uygula (ucuz).
+    return applyPricingRules(base.slice(0, 500), rules);
+  }, [search, category, brand, rules]);
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>Ürün Kataloğu</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={s.headerTitle}>Ürün Kataloğu</Text>
+          <TouchableOpacity style={s.bulkBtn} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
+            <Ionicons name="pricetags-outline" size={14} color="#fff" />
+            <Text style={s.bulkBtnText}>Toplu Fiyat{rules.length ? ` (${rules.length})` : ''}</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={s.headerMeta}>
           {MATERIAL_CATALOG.length.toLocaleString('tr-TR')} ürün · {MATERIAL_CATEGORIES.length} kategori · {MATERIAL_BRANDS.length} marka
         </Text>
@@ -117,7 +134,164 @@ export default function ProductCatalogScreen() {
           <Text style={s.empty}>Sonuç bulunamadı.</Text>
         }
       />
+
+      <BulkPricingModal
+        visible={showBulk}
+        onClose={() => setShowBulk(false)}
+        rules={rules}
+        currentBrand={brand}
+        currentCategory={category}
+        onChanged={loadRules}
+      />
     </SafeAreaView>
+  );
+}
+
+// ── Toplu fiyat / iskonto düzenleyici ───────────────────────────────────────
+function BulkPricingModal({
+  visible, onClose, rules, currentBrand, currentCategory, onChanged,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  rules: BrandPricingRule[];
+  currentBrand: string | null;
+  currentCategory: string | null;
+  onChanged: () => void;
+}) {
+  const [scope, setScope] = useState<PricingScope>('brand');
+  const [key, setKey] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [markup, setMarkup] = useState('');
+
+  // Modal açıldığında mevcut filtreye göre kapsamı ön-doldur.
+  React.useEffect(() => {
+    if (!visible) return;
+    if (currentBrand) { setScope('brand'); setKey(currentBrand); }
+    else if (currentCategory) { setScope('category'); setKey(currentCategory); }
+    else { setScope('all'); setKey('*'); }
+    setDiscount(''); setMarkup('');
+  }, [visible, currentBrand, currentCategory]);
+
+  const affected = useMemo(
+    () => (scope === 'all' || key ? countAffected(MATERIAL_CATALOG, scope, key) : 0),
+    [scope, key],
+  );
+
+  const onApply = async () => {
+    if (scope !== 'all' && !key.trim()) { Alert.alert('Eksik', 'Marka/kategori seçin.'); return; }
+    const d = discount.trim() === '' ? undefined : parseFloat(discount.replace(',', '.'));
+    const m = markup.trim() === '' ? undefined : parseFloat(markup.replace(',', '.'));
+    if (d === undefined && m === undefined) { Alert.alert('Eksik', 'İskonto veya zam oranı girin.'); return; }
+    await upsertPricingRule({ scope, key, discountRate: d, markupPct: m });
+    onChanged();
+    Alert.alert('Uygulandı', `${affected.toLocaleString('tr-TR')} ürün güncellendi.`);
+    setDiscount(''); setMarkup('');
+  };
+
+  const onRemove = async (r: BrandPricingRule) => {
+    await deletePricingRule(r.scope, r.key);
+    onChanged();
+  };
+
+  const scopeLabel = (sc: PricingScope) => (sc === 'brand' ? 'Marka' : sc === 'category' ? 'Kategori' : 'Tümü');
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={m.backdrop}>
+        <View style={m.sheet}>
+          <View style={m.sheetHead}>
+            <Text style={m.sheetTitle}>Toplu Fiyat / İskonto</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={colors.text.muted} /></TouchableOpacity>
+          </View>
+
+          <Text style={m.hint}>
+            Efektif fiyat = katalog fiyatı × (1 + zam%) × (1 − iskonto%). Kurallar kaynak veriyi bozmaz, kaldırınca eski fiyat döner.
+          </Text>
+
+          {/* Kapsam */}
+          <Text style={m.label}>Kapsam</Text>
+          <View style={m.scopeRow}>
+            {(['brand', 'category', 'all'] as PricingScope[]).map(sc => (
+              <TouchableOpacity
+                key={sc}
+                style={[m.scopeChip, scope === sc && m.scopeChipActive]}
+                onPress={() => { setScope(sc); if (sc === 'all') setKey('*'); else setKey(''); }}
+              >
+                <Text style={[m.scopeChipText, scope === sc && { color: '#fff' }]}>{scopeLabel(sc)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Marka/kategori seçimi */}
+          {scope !== 'all' && (
+            <>
+              <Text style={m.label}>{scope === 'brand' ? 'Marka' : 'Kategori'} seç</Text>
+              <View style={m.pickWrap}>
+                <FlatList
+                  data={scope === 'brand' ? MATERIAL_BRANDS : MATERIAL_CATEGORIES}
+                  keyExtractor={(x) => x}
+                  horizontal={false}
+                  numColumns={2}
+                  style={{ maxHeight: 140 }}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity style={[m.pickChip, key === item && m.scopeChipActive]} onPress={() => setKey(item)}>
+                      <Text style={[m.pickChipText, key === item && { color: '#fff' }]} numberOfLines={1}>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </>
+          )}
+
+          {/* Oranlar */}
+          <View style={m.inputRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={m.label}>İskonto %</Text>
+              <TextInput style={m.input} value={discount} onChangeText={setDiscount} keyboardType="decimal-pad" placeholder="örn. 25" placeholderTextColor={colors.text.faint} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={m.label}>Zam % (− indirim)</Text>
+              <TextInput style={m.input} value={markup} onChangeText={setMarkup} keyboardType="numbers-and-punctuation" placeholder="örn. 10 / -5" placeholderTextColor={colors.text.faint} />
+            </View>
+          </View>
+
+          <TouchableOpacity style={m.applyBtn} onPress={onApply} activeOpacity={0.85}>
+            <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+            <Text style={m.applyText}>Uygula ({affected.toLocaleString('tr-TR')} ürün)</Text>
+          </TouchableOpacity>
+
+          {/* Aktif kurallar */}
+          {rules.length > 0 && (
+            <>
+              <Text style={[m.label, { marginTop: spacing.md }]}>Aktif Kurallar ({rules.length})</Text>
+              <View style={{ maxHeight: 150 }}>
+                <FlatList
+                  data={rules}
+                  keyExtractor={(r) => `${r.scope}:${r.key}`}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item: r }) => (
+                    <View style={m.ruleRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={m.ruleTitle}>{scopeLabel(r.scope)}{r.scope !== 'all' ? ` · ${r.key}` : ''}</Text>
+                        <Text style={m.ruleMeta}>
+                          {r.discountRate != null ? `İskonto %${r.discountRate}` : ''}
+                          {r.discountRate != null && r.markupPct != null ? ' · ' : ''}
+                          {r.markupPct != null ? `Zam %${r.markupPct}` : ''}
+                        </Text>
+                      </View>
+                      <TouchableOpacity onPress={() => onRemove(r)} style={m.ruleDel}>
+                        <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -134,6 +308,8 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
   headerTitle: { color: colors.text.primary, fontWeight: '800', fontSize: typography.lg },
   headerMeta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
+  bulkBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#f59e0b', paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full },
+  bulkBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.xs },
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginHorizontal: spacing.md, marginBottom: 8,
@@ -190,4 +366,28 @@ const s = StyleSheet.create({
   priceOrig: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
   discount: { color: '#f59e0b', fontSize: 10, fontWeight: '700', marginTop: 2 },
   empty: { color: colors.text.muted, textAlign: 'center', marginTop: spacing.xl },
+});
+
+const m = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.bg.primary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, paddingBottom: spacing.xl, maxHeight: '90%' },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  sheetTitle: { color: colors.text.primary, fontWeight: '800', fontSize: typography.md },
+  hint: { color: colors.text.muted, fontSize: typography.xs, marginBottom: spacing.md, lineHeight: 16 },
+  label: { color: colors.text.faint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 4 },
+  scopeRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
+  scopeChip: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  scopeChipActive: { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' },
+  scopeChipText: { color: colors.text.primary, fontWeight: '700', fontSize: typography.xs },
+  pickWrap: { borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.sm, padding: 6, backgroundColor: colors.bg.secondary },
+  pickChip: { flex: 1, margin: 3, paddingHorizontal: 10, paddingVertical: 7, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.primary },
+  pickChipText: { color: colors.text.primary, fontSize: typography.xs, fontWeight: '600' },
+  inputRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 4 },
+  input: { backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 10, color: colors.text.primary, fontSize: typography.sm },
+  applyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#22c55e', paddingVertical: 13, borderRadius: radius.md, marginTop: spacing.md },
+  applyText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.sm, marginBottom: 6 },
+  ruleTitle: { color: colors.text.primary, fontWeight: '700', fontSize: typography.xs },
+  ruleMeta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
+  ruleDel: { padding: 8, borderRadius: radius.sm, backgroundColor: '#ef444422' },
 });

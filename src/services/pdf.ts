@@ -3,11 +3,61 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import type { Quote } from '../types';
 import { calcLineTotal } from '../context/AppContext';
+import { BRAND } from '../config/brand';
+
+const COMPANY = BRAND.company;
 
 const fmt = (n: number) =>
   n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function buildQuoteHtml(quote: Quote): string {
+/**
+ * Üretilen HTML'i platforma uygun biçimde PDF olarak teslim eder.
+ *  - web: yeni sekmede açar + otomatik yazdırma diyaloğu (kullanıcı "PDF olarak
+ *    kaydet" seçer). Popup engellenirse HTML dosyası olarak indirir.
+ *  - native: dosyaya yazıp paylaşım menüsünü açar.
+ * (Önceden web'de paylaşım desteklenmediği için PDF hiç teslim edilmiyordu.)
+ */
+export async function deliverPdf(
+  html: string,
+  opts: { fileName: string; dialogTitle: string },
+): Promise<{ uri: string }> {
+  if (Platform.OS === 'web') {
+    try {
+      const w = typeof window !== 'undefined' ? window.open('', '_blank') : null;
+      if (w && w.document) {
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { try { w.print(); } catch { /* ignore */ } }, 400);
+        return { uri: 'about:blank' };
+      }
+      // Popup engellendi → HTML dosyası olarak indir (kullanıcı tarayıcıdan yazdırır)
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = opts.fileName.replace(/\.(pdf|html)$/i, '') + '.html';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch { /* ignore */ } }, 0);
+      return { uri: url };
+    } catch (e) {
+      console.warn('[pdf] web teslim başarısız', e);
+      return { uri: '' };
+    }
+  }
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: 'application/pdf',
+      dialogTitle: opts.dialogTitle,
+      UTI: 'com.adobe.pdf',
+    });
+  }
+  return { uri };
+}
+
+export function buildQuoteHtml(quote: Quote): string {
   const lineRows = quote.lines
     .map((line, idx) => {
       const calc = calcLineTotal(line);
@@ -153,9 +203,9 @@ function buildQuoteHtml(quote: Quote): string {
 <body>
   <div class="header">
     <div class="company">
-      <div class="name">SahaTakip</div>
-      <div class="slogan">SAHADA · TAKİPTE · KONTROLDE</div>
-      <div class="info">Mühendislik Hizmetleri · İzmir<br/>info@SahaTakip.com · 0xxx xxx xx xx</div>
+      <div class="name">${escapeHtml(COMPANY.name)}</div>
+      <div class="slogan">${escapeHtml(COMPANY.tagline)}</div>
+      <div class="info">${escapeHtml(COMPANY.address.replace(/\n/g, ' '))}<br/>${escapeHtml(COMPANY.email)} · ${escapeHtml(COMPANY.phone)} · ${escapeHtml(COMPANY.website)}<br/>${escapeHtml(COMPANY.taxOffice)} · VKN: ${escapeHtml(COMPANY.taxNumber)}</div>
     </div>
     <div class="doc-info">
       <div class="label">Teklif No</div>
@@ -210,7 +260,7 @@ function buildQuoteHtml(quote: Quote): string {
 
   <div class="footer">
     <div>Bu teklif sistem tarafından üretilmiştir.</div>
-    <div>SahaTakip · SahaTakip Mühendislik © 2025</div>
+    <div>${escapeHtml(COMPANY.legalName)} © ${COMPANY.copyrightYear}</div>
   </div>
 </body>
 </html>`;
@@ -230,17 +280,10 @@ function escapeHtml(s: string): string {
  */
 export async function generateAndShareQuotePdf(quote: Quote): Promise<{ uri: string }> {
   const html = buildQuoteHtml(quote);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Teklif ${quote.number}`,
-      UTI: 'com.adobe.pdf',
-    });
-  }
-  return { uri };
+  return deliverPdf(html, {
+    fileName: `Teklif-${quote.number}.pdf`,
+    dialogTitle: `Teklif ${quote.number}`,
+  });
 }
 
 /**
@@ -397,7 +440,7 @@ function buildAttendanceHtml(employees: Employee[], yyyyMm: string): string {
   <div class="header">
     <div>
       <div class="title">PUANTAJ &amp; BORDRO RAPORU</div>
-      <div class="sub">SahaTakip Mühendislik · ${escapeHtml(yyyyMm)}</div>
+      <div class="sub">${escapeHtml(COMPANY.name)} · ${escapeHtml(yyyyMm)}</div>
     </div>
     <div class="sub">Hazırlanma: ${new Date().toLocaleDateString('tr-TR')}</div>
   </div>
@@ -462,15 +505,10 @@ export async function generateAndShareAttendancePdf(
   yyyyMm: string
 ): Promise<{ uri: string }> {
   const html = buildAttendanceHtml(employees, yyyyMm);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Puantaj ${yyyyMm}`,
-      UTI: 'com.adobe.pdf',
-    });
-  }
-  return { uri };
+  return deliverPdf(html, {
+    fileName: `Puantaj-${yyyyMm}.pdf`,
+    dialogTitle: `Puantaj ${yyyyMm}`,
+  });
 }
 
 /** Puantajı CSV olarak üret + paylaş (Excel'de açılır) */

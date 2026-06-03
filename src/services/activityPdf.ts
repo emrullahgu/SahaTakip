@@ -1,7 +1,9 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { Platform, Alert } from 'react-native';
+import { Alert } from 'react-native';
 import type { WorkOrder, Quote } from '../types';
+import { BRAND } from '../config/brand';
+import { deliverPdf } from './pdf';
+
+const COMPANY = BRAND.company;
 
 export async function generateAndShareActivityPdf(
   date: string,
@@ -66,16 +68,12 @@ export async function generateAndShareActivityPdf(
     <tbody>${qRows || '<tr><td colspan="6" style="text-align:center">Kayıt yok</td></tr>'}</tbody>
   </table>
 
-  <div class="footer">SahaTakip Mühendislik · Otomatik Sistem Raporu</div>
+  <div class="footer">${COMPANY.legalName} · Otomatik Sistem Raporu</div>
 </body>
 </html>`;
 
   try {
-    const res = await Print.printToFileAsync({ html });
-    // Web shim'inde uri boş döner; print diyaloğu zaten açılır → sharing'i sadece native'de tetikle
-    if (Platform.OS !== 'web' && res?.uri) {
-      await Sharing.shareAsync(res.uri, { mimeType: 'application/pdf', dialogTitle: 'Aktivite Raporu' });
-    }
+    await deliverPdf(html, { fileName: `Aktivite-${date}.pdf`, dialogTitle: 'Aktivite Raporu' });
   } catch (e: any) {
     Alert.alert('Hata', e?.message || 'PDF oluşturulamadı');
   }

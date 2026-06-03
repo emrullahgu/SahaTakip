@@ -7,7 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList } from '../types';
-import { listReadings, listWeeklyReports } from '../services/osos';
+import { listReadings, listWeeklyReports, listAlarms, maybeRunAutoToday } from '../services/osos';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -16,19 +16,29 @@ export default function OsosHubScreen() {
   const { width } = useWindowDimensions();
   const cols = width >= 900 ? 4 : 2;
   const tileWidth = (Math.min(width, 1200) - spacing.lg * 2 - (cols - 1) * spacing.md) / cols;
-  const [c, setC] = useState({ readings: 0, reports: 0, latest: 0 });
+  const [c, setC] = useState({ readings: 0, reports: 0, latest: 0, alarms: 0 });
   const refresh = useCallback(async () => {
-    const [rs, wr] = await Promise.all([listReadings(), listWeeklyReports()]);
+    const [rs, wr, al] = await Promise.all([listReadings(), listWeeklyReports(), listAlarms({ unacknowledgedOnly: true })]);
     const week = Date.now() - 7 * 86400000;
-    setC({ readings: rs.length, reports: wr.length, latest: rs.filter(r => new Date(r.readingAt).getTime() >= week).length });
+    setC({
+      readings: rs.length,
+      reports: wr.length,
+      latest: rs.filter(r => new Date(r.readingAt).getTime() >= week).length,
+      alarms: al.length,
+    });
   }, []);
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+    // POZ-DEV-250: planlı saat geldiyse ve bugün çalışmadıysa otomatik tetikle
+    maybeRunAutoToday().then(res => { if (res) refresh(); }).catch(() => { /* sessiz */ });
+  }, [refresh]);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const TILES = [
-    { key: 'OsosReadings',  label: 'OSOS Okuma',     desc: 'Sayaç kayıtları',     icon: 'speedometer-outline' as const, color: '#0ea5e9', poz: 'POZ-DEV-247' },
-    { key: 'OsosImport',    label: 'Excel Import',   desc: 'Toplu içe aktarma',   icon: 'cloud-upload-outline' as const, color: '#8b5cf6', poz: 'POZ-DEV-248' },
-    { key: 'WeeklyReports', label: 'Haftalık Rapor', desc: 'Periyodik özet',      icon: 'bar-chart-outline' as const,    color: '#22c55e', poz: 'POZ-DEV-249' },
+    { key: 'OsosReadings',   label: 'OSOS Okuma',     desc: 'Sayaç kayıtları',     icon: 'speedometer-outline' as const,    color: '#0ea5e9', poz: 'POZ-DEV-247' },
+    { key: 'OsosImport',     label: 'Excel Import',   desc: 'Toplu içe aktarma',   icon: 'cloud-upload-outline' as const,   color: '#8b5cf6', poz: 'POZ-DEV-248' },
+    { key: 'WeeklyReports',  label: 'Haftalık Rapor', desc: 'Periyodik özet',      icon: 'bar-chart-outline' as const,      color: '#22c55e', poz: 'POZ-DEV-249' },
+    { key: 'OsosAutomation', label: 'Otomasyon',      desc: 'Alarm + günlük dağıtım', icon: 'flash-outline' as const,        color: '#eab308', poz: 'POZ-DEV-250' },
   ];
 
   return (
@@ -45,6 +55,7 @@ export default function OsosHubScreen() {
           <Pill label={`Okuma: ${c.readings}`} color="#0ea5e9" icon="speedometer-outline" />
           <Pill label={`Son 7g: ${c.latest}`} color="#22c55e" icon="time-outline" />
           <Pill label={`Rapor: ${c.reports}`} color="#a855f7" icon="bar-chart-outline" />
+          <Pill label={`Alarm: ${c.alarms}`} color={c.alarms > 0 ? '#ef4444' : '#64748b'} icon="alert-circle-outline" />
         </View>
         <View style={[s.grid, { maxWidth: 1200, alignSelf: 'center', width: '100%' }]}>
           {TILES.map(t => (

@@ -89,6 +89,7 @@ export default function ManagerScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [aiResult, setAiResult] = useState<{ summary: string; insights: string[] } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
 
   // Metrics
   const invoiced = workOrders.filter(w => w.status === 'Faturalandırıldı');
@@ -300,27 +301,42 @@ export default function ManagerScreen() {
             <HubBtn route="TaskAnalytics" label="Görev Analitik" icon="bar-chart-outline" color="#22c55e" />
           </View>
 
-          {/* Kalite & Platform */}
+          {/* Yönetim — günlük yönetici araçları (sade) */}
           <RoleGuard allow={['admin', 'manager']}>
-            <Text style={styles.sectionLabel}>Kalite & Platform (Yönetici)</Text>
+            <Text style={styles.sectionLabel}>Yönetim</Text>
             <View style={styles.quickRow}>
               <HubBtn route="QualityHub" label="Kalite & Yayın" icon="ribbon-outline" color="#6366f1" />
               <HubBtn route="GovernanceHub" label="Yetki & Denetim" icon="shield-checkmark-outline" color="#7c3aed" />
-              <HubBtn route="PlatformHub" label="Platform" icon="server-outline" color="#a855f7" />
-              <HubBtn route="ComplianceHub" label="Kalite & Denetim" icon="shield-checkmark" color="#14b8a6" />
               <HubBtn route="SecHub" label="Güvenlik & KVKK" icon="lock-closed" color="#ef4444" />
-              <HubBtn route="SaasHub" label="SaaS Altyapısı" icon="rocket" color="#3b82f6" />
-              <HubBtn route="DepHub" label="Yayın & Platform" icon="rocket-outline" color="#22c55e" />
-              <HubBtn route="QaHub" label="Kod Kalitesi" icon="construct" color="#a855f7" />
-              <HubBtn route="UatHub" label="Kabul Testleri" icon="checkmark-done-circle" color="#14b8a6" />
-              <HubBtn route="DocHub" label="Dokümantasyon" icon="library" color="#0891b2" />
-              <HubBtn route="GoLiveHub" label="Canlı İzleme" icon="rocket" color="#dc2626" />
-              <HubBtn route="CovHub" label="Kapsam Denetimi" icon="scan-circle" color="#6366f1" />
-              <HubBtn route="ExtHub" label="Dış Entegrasyon" icon="link" color="#7c3aed" />
               <HubBtn route="WebAdmin" label="Web Admin" icon="desktop-outline" color="#6366f1" />
               <HubBtn route="IntegrationsHub" label="Entegrasyon" icon="git-network-outline" color="#0ea5e9" />
               <HubBtn route="ConnectivityHub" label="Veri & Auth" icon="cloud-outline" color="#8b5cf6" />
             </View>
+
+            {/* Geliştirici / Sistem araçları — varsayılan gizli (son kullanıcıyı yormasın) */}
+            <TouchableOpacity
+              style={styles.devToggle}
+              onPress={() => setShowDevTools(v => !v)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="construct-outline" size={15} color={colors.text.muted} />
+              <Text style={styles.devToggleText}>Geliştirici / Sistem Araçları</Text>
+              <Ionicons name={showDevTools ? 'chevron-up' : 'chevron-down'} size={16} color={colors.text.muted} />
+            </TouchableOpacity>
+            {showDevTools && (
+              <View style={styles.quickRow}>
+                <HubBtn route="PlatformHub" label="Platform" icon="server-outline" color="#a855f7" />
+                <HubBtn route="ComplianceHub" label="Kalite & Denetim" icon="shield-checkmark" color="#14b8a6" />
+                <HubBtn route="SaasHub" label="SaaS Altyapısı" icon="rocket" color="#3b82f6" />
+                <HubBtn route="DepHub" label="Yayın & Platform" icon="rocket-outline" color="#22c55e" />
+                <HubBtn route="QaHub" label="Kod Kalitesi" icon="construct" color="#a855f7" />
+                <HubBtn route="UatHub" label="Kabul Testleri" icon="checkmark-done-circle" color="#14b8a6" />
+                <HubBtn route="DocHub" label="Dokümantasyon" icon="library" color="#0891b2" />
+                <HubBtn route="GoLiveHub" label="Canlı İzleme" icon="rocket" color="#dc2626" />
+                <HubBtn route="CovHub" label="Kapsam Denetimi" icon="scan-circle" color="#6366f1" />
+                <HubBtn route="ExtHub" label="Dış Entegrasyon" icon="link" color="#7c3aed" />
+              </View>
+            )}
           </RoleGuard>
           {/* KPI Cards */}
           <View style={styles.kpiGrid}>
@@ -845,6 +861,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
     paddingLeft: 4,
+  },
+  devToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginTop: spacing.sm,
+  },
+  devToggleText: {
+    flex: 1,
+    fontSize: typography.xs,
+    color: colors.text.muted,
+    fontWeight: '700',
   },
   kpiGrid: { gap: spacing.md, marginBottom: spacing.xl },
   kpiCard: {

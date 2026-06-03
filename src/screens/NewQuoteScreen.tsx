@@ -33,6 +33,7 @@ import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recent
 import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { newUuid } from '../services/data/repository';
 import { upsertMaterial } from '../services/materials';
+import { listPricingRules, applyPricingRules, type BrandPricingRule } from '../services/productPricing';
 import Toast from '../components/Toast';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
@@ -81,9 +82,12 @@ export default function NewQuoteScreen() {
   const [productBrand, setProductBrand] = useState<string | null>(null);
   const [showAllProductCats, setShowAllProductCats] = useState(false);
   const [showAllProductBrands, setShowAllProductBrands] = useState(false);
+  // Toplu fiyat/iskonto kuralları — ürün eklerken indirimli fiyatı yansıtmak için.
+  const [productRules, setProductRules] = useState<BrandPricingRule[]>([]);
 
   React.useEffect(() => {
     listRecentPozes().then(setRecents);
+    listPricingRules().then(setProductRules);
   }, []);
 
   React.useLayoutEffect(() => {
@@ -199,8 +203,9 @@ export default function NewQuoteScreen() {
         (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
       );
     }
-    return base.slice(0, 400);
-  }, [productSearch, productCategory, productBrand]);
+    // Toplu fiyat/iskonto kurallarını uygula → eklenecek fiyat indirimli gelir.
+    return applyPricingRules(base.slice(0, 400), productRules);
+  }, [productSearch, productCategory, productBrand, productRules]);
 
   const addProductLine = (p: typeof MATERIAL_CATALOG[number]) => {
     const newLine: QuoteLine = {

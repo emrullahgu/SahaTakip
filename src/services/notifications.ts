@@ -247,6 +247,46 @@ export async function emitEvent(
   return { notification, channels, dispatch };
 }
 
+// ----------- Cross-user uzak bildirim (atama vb. — FARKLI cihaza) -----------
+
+export interface NotifyTarget {
+  userIds?: string[];     // hedef auth user id'leri
+  userNames?: string[];   // profiles.full_name ile eşleştir (employee→user bağı yoksa)
+}
+
+/**
+ * Başka kullanıcı(lar)a uzaktan push + bildirim kaydı gönderir. RLS'i aşmak için
+ * sunucu tarafı `notify-push` Edge Function'ını çağırır (service role ile token
+ * lookup + Expo push + alıcının user_id'sine notifications satırı). Fonksiyon
+ * deploy edilmemişse sessizce başarısız döner; uygulama akışı kesilmez.
+ */
+export async function notifyUsers(
+  target: NotifyTarget,
+  type: NotificationEventType,
+  title: string,
+  message: string,
+  relatedId?: string,
+): Promise<{ ok: boolean; sent?: number; error?: string }> {
+  if (!SUPABASE_CONFIGURED) return { ok: false, error: 'offline' };
+  if (!target.userIds?.length && !target.userNames?.length) return { ok: false, error: 'hedef yok' };
+  try {
+    const { data, error } = await supabase.functions.invoke('notify-push', {
+      body: {
+        userIds: target.userIds,
+        userNames: target.userNames,
+        type,
+        title,
+        body: message,
+        relatedId: relatedId ?? null,
+      },
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, sent: (data as any)?.sent };
+  } catch (e: unknown) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 // Convenience emitters
 export const Notify = {
   workOrderCreated: (client: string, service: string, workOrderId: string) =>
@@ -256,13 +296,24 @@ export const Notify = {
       `${client} — ${service}`,
       { relatedId: workOrderId },
     ),
-  workOrderAssigned: (assignee: string, client: string, workOrderId: string) =>
-    emitEvent(
+  workOrderAssigned: (assignee: string, client: string, workOrderId: string, assigneeUserId?: string) => {
+    // Atanan kişiye FARKLI cihazından haber ver (uzak push). user_id biliniyorsa
+    // onunla, yoksa ada göre eşleştir. (Best-effort; deploy yoksa sessiz geçer.)
+    void notifyUsers(
+      assigneeUserId ? { userIds: [assigneeUserId] } : { userNames: [assignee] },
+      'work_order_assigned',
+      'Size İş Atandı',
+      `${client}`,
+      workOrderId,
+    ).catch(() => { /* sessiz */ });
+    // Yöneticinin kendi bildirim merkezi/local push'u için olay kaydı.
+    return emitEvent(
       'work_order_assigned',
       'İş Atandı',
       `${assignee} → ${client}`,
       { relatedId: workOrderId },
-    ),
+    );
+  },
   workOrderStarted: (client: string, workOrderId: string) =>
     emitEvent('work_order_started', 'İş Başladı', client, { relatedId: workOrderId }),
   workOrderCompleted: (client: string, workOrderId: string) =>

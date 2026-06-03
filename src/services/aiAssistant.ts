@@ -144,17 +144,33 @@ async function seedPoz(): Promise<AiPozSuggestion[]> {
 export async function listPozSuggestions() { return seedPoz(); }
 export async function suggestPoz(description: string): Promise<AiPozSuggestion> {
   const list = await load<AiPozSuggestion>(K.poz);
-  const codes = ['26.110.1001', '26.220.1051', '26.310.2010', '26.450.5001'];
-  const names = ['Trafo Bakım', 'PV Panel Temizlik', 'AMR Sayaç', 'OG Hat Kesim'];
-  const i = Math.floor(Math.random() * codes.length);
+  // GERÇEK 1119 kalemlik POZ kataloğundan eşleştir (anahtar kelime + LLM zenginleştirme).
+  // Önceki sürüm rastgele sahte kodlar üretiyordu.
+  let pozCode = '';
+  let pozName = '';
+  let unitPrice = 0;
+  let confidence = 0.5;
+  try {
+    const { suggestPozFromDescription } = await import('./ai');
+    const matches = await suggestPozFromDescription(description);
+    if (matches.length) {
+      const top = matches[0];
+      pozCode = top.pozId;
+      pozName = top.name;
+      unitPrice = top.unitPrice;
+      confidence = Math.min(0.99, Math.max(0.4, top.score / 100));
+    }
+  } catch { /* katalog erişilemezse boş bırak */ }
   const s: AiPozSuggestion = {
-    id: uid(), description, pozCode: codes[i], pozName: names[i],
-    confidence: 0.6 + Math.random() * 0.35,
-    unitPrice: 500 + Math.floor(Math.random() * 4500),
+    id: uid(), description,
+    pozCode: pozCode || '—',
+    pozName: pozName || 'Eşleşen poz bulunamadı — açıklamayı detaylandırın',
+    confidence,
+    unitPrice,
     createdAt: now(),
   };
   list.unshift(s); await save(K.poz, list);
-  await logUsage('poz_suggest', 'openai', 50, 80, true);
+  await logUsage('poz_suggest', 'gemini', 50, 80, !!pozCode);
   return s;
 }
 export async function acceptPoz(id: string, accepted: boolean) {

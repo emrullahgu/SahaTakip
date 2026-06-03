@@ -18,7 +18,7 @@
   # Localhost veya Netlify preview'dan kayıt olunsa bile mail bu adresi taşır.
   # Netlify UI → Site settings → Environment variables üzerinden de override
   # edebilirsiniz (örn. özel domain bağlandığında).
-  EXPO_PUBLIC_SITE_URL = "https://sahatakip.netlify.app"
+  EXPO_PUBLIC_SITE_URL = "https://sahatakipeg.netlify.app"
   # app.json / eas.json mobil derleme yapılandırması içindir; web build'in parçası değildir.
   SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
   # netlify.toml de hariç tutuluyor: build env değerleri burada tanımlı olduğu için

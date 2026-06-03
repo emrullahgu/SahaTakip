@@ -54,15 +54,20 @@ export async function drainSyncQueue(): Promise<{ ok: number; failed: number }> 
 async function applyOp(op: { table: string; action: string; payload: any }) {
   const { table, action, payload } = op;
 
+  // Offline biriken kayıtlar dren edilirken created_by set edilmeli; aksi halde
+  // RLS owner-write politikası reddedip kaydı düşürür (kalıcı veri kaybı).
+  let userId: string | undefined;
+  try { const { data } = await supabase.auth.getUser(); userId = data?.user?.id ?? undefined; } catch { /* ignore */ }
+
   // ROW BUILDER — payload'u DB satırına çevir
   const toRow = (): any => {
     switch (table) {
       case 'quotes':
-        return quoteToRow(payload);
+        return quoteToRow(payload, userId);
       case 'customers':
-        return customerToRow(payload);
+        return customerToRow(payload, userId);
       case 'work_orders':
-        return workOrderToRow(payload);
+        return workOrderToRow(payload, userId);
       case 'employees':
         return employeeToRow(payload);
       default:

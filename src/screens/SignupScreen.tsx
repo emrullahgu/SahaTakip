@@ -79,7 +79,7 @@ export default function SignupScreen() {
     }
     notify(
       'Kayıt alındı',
-      'Hesabınız oluşturuldu.\n\n1) E-posta kutunuza gelen doğrulama bağlantısına tıklayın.\n2) Hesabınızın yetkili (admin) tarafından onaylanması beklenmektedir.\n3) Onay verildikten sonra giriş yapabilirsiniz.',
+      'Hesabınız oluşturuldu.\n\nHesabınızın yetkili (admin) tarafından onaylanması beklenmektedir. Onay verildikten sonra giriş yapabilirsiniz. (E-posta doğrulaması gerekmez.)',
       () => navigation.goBack(),
     );
   };
@@ -109,7 +109,7 @@ export default function SignupScreen() {
             <Ionicons name="information-circle" size={20} color={brand.blueLight} />
             <Text style={styles.infoBannerText}>
               Hesap oluşturduktan sonra <Text style={styles.infoBannerBold}>yetkili (admin) onayı</Text>{' '}
-              beklemeniz gerekmektedir. E-posta doğrulaması ve admin onayı tamamlanana kadar giriş yapılamaz.
+              beklemeniz gerekmektedir. Onay tamamlanana kadar giriş yapılamaz. (E-posta doğrulaması gerekmez.)
             </Text>
           </View>
 

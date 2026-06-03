@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, TaskPriority, TaskStatus } from '../types';
 import { useAppContext } from '../context/AppContext';
+import CustomerPicker from '../components/CustomerPicker';
 import {
   getTask, saveTask,
   TASK_STATUS_LABEL, TASK_STATUS_COLOR, TASK_STATUS_ORDER,
@@ -97,16 +98,7 @@ export default function TaskFormScreen() {
           </View>
         </Section>
         <Section title="Müşteri (ops.)">
-          <View style={s.chips}>
-            <TouchableOpacity style={[s.chip, !customerId && s.chipActive]} onPress={() => setCustomerId(undefined)}>
-              <Text style={[s.chipText, !customerId && { color: '#fff' }]}>Yok</Text>
-            </TouchableOpacity>
-            {customers.slice(0, 8).map(c => (
-              <TouchableOpacity key={c.id} style={[s.chip, customerId === c.id && s.chipActive]} onPress={() => setCustomerId(c.id)}>
-                <Text style={[s.chipText, customerId === c.id && { color: '#fff' }]}>{c.shortName}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <CustomerPicker customers={customers} selectedId={customerId} onSelect={c => setCustomerId(c?.id)} />
         </Section>
         <Section title="Son Tarih (YYYY-MM-DD)">
           <TextInput style={s.input} value={dueDate} onChangeText={setDueDate} placeholder="2026-12-31" placeholderTextColor={colors.text.faint} />

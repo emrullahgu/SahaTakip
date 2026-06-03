@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { RootStackParamList, GesQuoteInput, GesType } from '../types';
 import { useAppContext } from '../context/AppContext';
+import CustomerPicker from '../components/CustomerPicker';
 import { calcGesQuote, getGesQuote, saveGesQuote, GES_TYPE_LABEL } from '../services/gesProposals';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -76,13 +77,11 @@ export default function GesProposalFormScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Section title="Müşteri">
           <TextInput style={s.input} value={customerName} onChangeText={setCustomerName} placeholder="Müşteri adı" placeholderTextColor={colors.text.faint} />
-          <View style={s.chips}>
-            {customers.slice(0, 8).map(c => (
-              <TouchableOpacity key={c.id} style={[s.chip, customerId === c.id && s.chipActive]} onPress={() => { setCustomerId(c.id); setCustomerName(c.shortName); }}>
-                <Text style={[s.chipText, customerId === c.id && { color: '#fff' }]}>{c.shortName}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <CustomerPicker
+            customers={customers}
+            selectedId={customerId}
+            onSelect={c => { setCustomerId(c?.id); if (c) setCustomerName(c.shortName); }}
+          />
         </Section>
 
         <Section title="GES Tipi">
