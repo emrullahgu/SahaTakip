@@ -21,6 +21,7 @@ import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
 import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { a11yButton, a11yInput, HIT_SLOP_8 } from '../utils/a11y';
 import type { Customer, RootStackParamList } from '../types';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Customers'>;
@@ -58,9 +59,12 @@ export default function CustomersScreen() {
             onChangeText={setQuery}
             placeholder="Ara: ünvan, şehir, telefon..."
             placeholderTextColor={colors.text.faint}
+            returnKeyType="search"
+            autoCorrect={false}
+            {...a11yInput('Müşteri ara', query)}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
+            <TouchableOpacity onPress={() => setQuery('')} hitSlop={HIT_SLOP_8} {...a11yButton('Aramayı temizle')}>
               <Ionicons name="close-circle" size={16} color={colors.text.faint} />
             </TouchableOpacity>
           )}
@@ -70,6 +74,7 @@ export default function CustomersScreen() {
             style={styles.addBtn}
             onPress={() => navigation.navigate('CustomerForm')}
             activeOpacity={0.85}
+            {...a11yButton('Yeni müşteri ekle')}
           >
             <Ionicons name="add" size={20} color="#fff" />
           </TouchableOpacity>
