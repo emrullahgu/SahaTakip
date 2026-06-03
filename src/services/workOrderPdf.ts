@@ -126,11 +126,12 @@ function buildHtml(wo: WorkOrder): string {
 }
 
 function escapeHtml(s: string): string {
-  return String(s)
+  return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 export async function generateAndShareWorkOrderPdf(wo: WorkOrder): Promise<{ uri: string }> {

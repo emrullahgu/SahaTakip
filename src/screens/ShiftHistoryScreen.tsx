@@ -17,8 +17,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import { deliverPdf, PDF_BRAND_CSS, pdfBrandHeader } from '../services/pdf';
+import { BRAND } from '../config/brand';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { shiftsRepo } from '../services/data/shiftsRepo';
@@ -260,14 +260,10 @@ function ShiftHistoryInner() {
   tr:nth-child(even) td { background: #fafbfc; }
   .footer { margin-top: 22px; font-size: 9px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px; }
   .empty { padding: 30px; text-align: center; color: #6b7280; }
+  ${PDF_BRAND_CSS}
+  tbody tr { page-break-inside: avoid; }
 </style></head><body>
-  <div class="header">
-    <div>
-      <div class="title">MESAİ GEÇMİŞİ</div>
-      <div class="sub">SahaTakip Mühendislik · ${escapeHtml(monthLabel)}</div>
-    </div>
-    <div class="sub">Hazırlanma: ${escapeHtml(new Date().toLocaleString('tr-TR'))}</div>
-  </div>
+  ${pdfBrandHeader('MESAİ GEÇMİŞİ', monthLabel)}
 
   <div class="stats">
     <div class="stat"><div class="l">Toplam Vardiya</div><div class="v">${stats.total}</div></div>
@@ -303,7 +299,7 @@ function ShiftHistoryInner() {
     <tbody>${empSummary}</tbody>
   </table>` : ''}
 
-  <div class="footer">SahaTakip · Bu rapor sistem tarafından üretilmiştir.</div>
+  <div class="footer">${escapeHtml(BRAND.company.legalName)} · Bu rapor sistem tarafından üretilmiştir.</div>
 </body></html>`;
   }, [rows, stats, monthLabel]);
 
@@ -315,14 +311,7 @@ function ShiftHistoryInner() {
     setExporting(true);
     try {
       const html = buildPdfHtml();
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `Mesai Geçmişi ${monthLabel}`,
-          UTI: 'com.adobe.pdf',
-        });
-      }
+      await deliverPdf(html, { fileName: `Mesai-Gecmisi-${monthLabel}.pdf`, dialogTitle: `Mesai Geçmişi ${monthLabel}` });
     } catch (e: any) {
       Alert.alert('Hata', e?.message ?? 'PDF oluşturulamadı.');
     } finally {

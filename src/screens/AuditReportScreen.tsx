@@ -4,8 +4,8 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, ScrollView, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import * as Print from 'expo-print';
-import { shareAsync } from 'expo-sharing';
+import { deliverPdf, PDF_BRAND_CSS, pdfBrandHeader, escapePdfHtml as esc } from '../services/pdf';
+import { BRAND } from '../config/brand';
 import { colors, spacing, radius, typography } from '../theme';
 import type { AuditReport, RootStackParamList } from '../types';
 import { listReports } from '../services/quality';
@@ -17,22 +17,22 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const pctColor = (p: number) => p >= 85 ? '#22c55e' : p >= 70 ? '#eab308' : p >= 50 ? '#f59e0b' : '#ef4444';
 
-const buildHtml = (r: AuditReport) => `
-<html><head><meta charset="utf-8"/><title>Denetim Raporu - ${r.auditTitle}</title><style>
-body { font-family: -apple-system, sans-serif; padding: 24px; color: #0f172a; }
-h1 { color: #14b8a6; margin: 0; }
-.header { border-bottom: 3px solid #14b8a6; padding-bottom: 12px; margin-bottom: 16px; }
+const buildHtml = (r: AuditReport) => `<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8"/><title>Denetim Raporu - ${esc(r.auditTitle)}</title><style>
+body { font-family: Helvetica, Arial, sans-serif; padding: 26px 28px; margin: 0; color: #0f172a; font-size: 11px; }
+@page { size: A4; margin: 0; }
 .kpi { display: inline-block; padding: 12px 20px; background: ${pctColor(r.percent)}; color: #fff; border-radius: 12px; font-size: 28px; font-weight: 800; }
 .section { margin: 12px 0; padding: 10px 12px; background: #f1f5f9; border-left: 4px solid ${pctColor(r.percent)}; border-radius: 6px; }
 .bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 4px; }
 .fill { height: 8px; background: ${pctColor(r.percent)}; }
+h3 { color: #1e40af; font-size: 13px; margin: 20px 0 8px; }
 li { margin: 4px 0; }
 .meta { color: #64748b; font-size: 12px; }
+.footer { margin-top: 28px; font-size: 9px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px; }
+${PDF_BRAND_CSS}
+.section { page-break-inside: avoid; }
 </style></head><body>
-<div class="header">
-  <h1>Denetim Raporu</h1>
-  <p class="meta">${r.auditTitle} · Denetçi: ${r.auditor} · ${new Date(r.performedAt).toLocaleDateString('tr-TR')}</p>
-</div>
+${pdfBrandHeader('DENETİM RAPORU', `${r.auditTitle} · Denetçi: ${r.auditor} · ${new Date(r.performedAt).toLocaleDateString('tr-TR')}`)}
 <div style="margin: 20px 0;">
   <span class="kpi">${r.percent}%</span>
   <span style="margin-left: 16px; font-size: 18px;"><strong>${r.totalScore}</strong> / ${r.maxScore} puan</span>
@@ -41,15 +41,15 @@ li { margin: 4px 0; }
 ${r.sections.map(s => `
   <div class="section">
     <div style="display: flex; justify-content: space-between;">
-      <strong>${s.name}</strong>
+      <strong>${esc(s.name)}</strong>
       <span>${s.score} / ${s.maxScore}</span>
     </div>
-    <div class="bar"><div class="fill" style="width: ${(s.score / s.maxScore) * 100}%"></div></div>
+    <div class="bar"><div class="fill" style="width: ${s.maxScore ? (s.score / s.maxScore) * 100 : 0}%"></div></div>
   </div>
 `).join('')}
 <h3>Bulgular</h3>
-<ul>${r.findings.map(f => `<li>${f}</li>`).join('')}</ul>
-<p class="meta" style="margin-top: 30px;">SahaTakip Kalite & Denetim Modülü</p>
+${r.findings.length ? `<ul>${r.findings.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : '<p class="meta">Bulgu kaydı yok.</p>'}
+<div class="footer">${esc(BRAND.company.legalName)} · Kalite &amp; Denetim Modülü</div>
 </body></html>`;
 
 export default function AuditReportScreen() {
@@ -62,8 +62,7 @@ export default function AuditReportScreen() {
 
   const exportPdf = async (r: AuditReport) => {
     try {
-      const { uri } = await Print.printToFileAsync({ html: buildHtml(r) });
-      await shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Denetim Raporu PDF' });
+      await deliverPdf(buildHtml(r), { fileName: `Denetim-${r.auditTitle || r.id}.pdf`, dialogTitle: 'Denetim Raporu PDF' });
     } catch (e: any) {
       Alert.alert('Hata', e?.message || 'PDF oluşturulamadı.');
     }
