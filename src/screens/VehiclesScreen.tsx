@@ -17,6 +17,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { a11yButton, a11yInput } from '../utils/a11y';
 import {
   listVehicles,
   deleteVehicle,
@@ -80,6 +81,7 @@ export default function VehiclesScreen() {
         <TouchableOpacity
           style={styles.newBtn}
           onPress={() => navigation.navigate('VehicleForm')}
+          {...a11yButton('Yeni araç ekle')}
         >
           <Ionicons name="add" size={16} color="#fff" />
           <Text style={styles.newBtnText}>Yeni</Text>
@@ -94,6 +96,9 @@ export default function VehiclesScreen() {
           style={styles.search}
           placeholder="Plaka, marka, sürücü"
           placeholderTextColor={colors.text.faint}
+          returnKeyType="search"
+          autoCorrect={false}
+          {...a11yInput('Araç ara', search)}
         />
       </View>
 

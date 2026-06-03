@@ -17,6 +17,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { a11yButton, a11yInput } from '../utils/a11y';
 import {
   listMaterials,
   deleteMaterial,
@@ -89,12 +90,13 @@ export default function MaterialsScreen() {
       <View style={styles.toolbar}>
         <Text style={styles.title}>Malzemeler ({items.length})</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>
-          <TouchableOpacity style={styles.iconBtn} onPress={scanLookup}>
+          <TouchableOpacity style={styles.iconBtn} onPress={scanLookup} {...a11yButton('Barkod tara')}>
             <Ionicons name="scan-outline" size={18} color={brand.green} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.newBtn}
             onPress={() => navigation.navigate('MaterialForm')}
+            {...a11yButton('Yeni malzeme ekle')}
           >
             <Ionicons name="add" size={16} color="#fff" />
             <Text style={styles.newBtnText}>Yeni</Text>
@@ -110,6 +112,9 @@ export default function MaterialsScreen() {
           style={styles.search}
           placeholder="Ad, kod veya barkod ara"
           placeholderTextColor={colors.text.faint}
+          returnKeyType="search"
+          autoCorrect={false}
+          {...a11yInput('Malzeme ara', search)}
         />
       </View>
 
