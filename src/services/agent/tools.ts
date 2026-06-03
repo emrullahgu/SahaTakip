@@ -51,6 +51,29 @@ const slimQuote = (q: Quote) =>
 const slimEmp = (e: Employee) =>
   slim(e, ['id', 'name', 'role', 'monthlyWage', 'dailyRate', 'daysWorked']);
 
+// ---- POZ katalog eşleştirme (toplu teklif için TR anahtar-kelime skoru) ----
+const TR_LC = (s: string) => s.toLocaleLowerCase('tr-TR');
+function scorePozAgainst(query: string, p: PozItem): number {
+  const q = TR_LC(query);
+  const tokens = q.split(/[\s,;./()\-x×*]+/).filter(t => t.length >= 2);
+  if (!tokens.length) return 0;
+  const hay = TR_LC(`${p.name} ${(p as any).description || ''} ${(p as any).category || ''} ${p.id}`);
+  let hits = 0;
+  for (const t of tokens) {
+    if (hay.includes(t)) hits += 1;
+    else if (t.length >= 4 && hay.includes(t.slice(0, 4))) hits += 0.5;
+  }
+  return hits / tokens.length;
+}
+function bestPozMatch(query: string): { item: PozItem; score: number } | null {
+  let best: { item: PozItem; score: number } | null = null;
+  for (const p of POZ_CATALOG) {
+    const s = scorePozAgainst(query, p);
+    if (s > 0 && (!best || s > best.score)) best = { item: p, score: s };
+  }
+  return best && best.score >= 0.25 ? best : null;
+}
+
 // =================================================================
 // TOOL DEFINITIONS
 // =================================================================
@@ -646,6 +669,70 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           grandTotal: h.qt.grandTotal,
           matchScore: h.score,
         })),
+      };
+    },
+  },
+
+  match_poz_bulk: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'match_poz_bulk',
+        description:
+          'Fiyatsız malzeme/hizmet açıklamaları LİSTESİNİ tek seferde POZ kataloğuyla (1100+ kalem) eşleştirir; her biri için en uygun pozId + malzeme/montaj birim fiyatını döner. ÇOK KALEMLİ teklif hazırlarken (kullanıcı uzun bir liste verip "fiyatları sen bul" dediğinde) her kalemi search_poz ile tek tek aratmak yerine BUNU kullan — sonra create_quote_draft\'a doğrudan aktar.',
+        parameters: {
+          type: 'object',
+          required: ['items'],
+          properties: {
+            items: {
+              type: 'array',
+              description: 'Eşleştirilecek kalemler.',
+              items: {
+                type: 'object',
+                required: ['description'],
+                properties: {
+                  description: { type: 'string', description: 'Malzeme/hizmet açıklaması (ör. "1000 kVA 34,5/0,4 kV hermetik yağlı trafo").' },
+                  quantity: { type: 'number', description: 'Miktar (varsayılan 1).' },
+                  unit: { type: 'string', description: 'Birim (Adet/Takım/m vb.).' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    handler: async (args) => {
+      const items = Array.isArray(args.items) ? args.items : [];
+      const out = items.map((it: any, i: number) => {
+        const desc = String(it.description ?? '');
+        const m = bestPozMatch(desc);
+        return {
+          line: i + 1,
+          description: desc,
+          quantity: Number(it.quantity ?? 1),
+          unit: String(it.unit ?? m?.item.unit ?? 'Adet'),
+          matched: m
+            ? {
+                pozId: m.item.id,
+                pozName: m.item.name,
+                materialPrice: m.item.materialPrice,
+                installPrice: m.item.installPrice,
+                confidence: Math.round(m.score * 100),
+              }
+            : null,
+        };
+      });
+      const matched = out.filter((o: any) => o.matched).length;
+      return {
+        ok: true,
+        total: items.length,
+        matched,
+        unmatched: items.length - matched,
+        items: out,
+        hint:
+          'Eşleşenleri create_quote_draft.lines içinde {pozId, quantity} olarak ver (fiyat otomatik dolar). ' +
+          'Eşleşmeyen (matched=null) kalemler için makul bir tahminle {pozId:"MANUAL-1", pozName, quantity, unit, materialPrice, installPrice} kullan ' +
+          've notes alanına "fiyat tahmini" yaz. Düşük confidence (<%40) olanları da kullanıcıya belirt.',
       };
     },
   },
