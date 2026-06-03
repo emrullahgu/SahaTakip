@@ -33,32 +33,13 @@ type WorkOrdersNavProp = CompositeNavigationProp<
 const FILTERS = ['Tümü', 'Bekliyor', 'Tamamlandı', 'Gecikti'];
 
 // Mock work orders assigned to field worker
-const ASSIGNED_ORDERS = [
-  {
-    id: 'IE-2026-001',
-    title: 'TEST',
-    location: 'ANA PANO',
-    device: 'Deye • Inverter • SUN-6-K-12KW',
-    date: '21 May 2026',
-    status: 'Gecikti',
-  },
-  {
-    id: 'IE-2026-002',
-    title: 'TEST',
-    location: 'ANA PANO',
-    device: 'Deye • Inverter • SUN-6-K-12KW',
-    date: '20 May 2026',
-    status: 'Tamamlandı',
-  },
-];
-
 export default function WorkOrdersScreen() {
   const navigation = useNavigation<WorkOrdersNavProp>();
   const { toast, workOrders, deleteWorkOrder } = useAppContext();
   const [activeFilter, setActiveFilter] = useState('Tümü');
   const [searchText, setSearchText] = useState('');
 
-  // Gerçek iş emirleri varsa onları göster, yoksa demo verisi.
+  // Yalnızca gerçek iş emirleri gösterilir (canlı veri). Veri yoksa boş durum.
   const realOrders = workOrders.map(w => ({
     id: w.id,
     title: w.serviceName,
@@ -69,7 +50,7 @@ export default function WorkOrdersScreen() {
     priority: w.priority,
     breached: isSlaBreached(w),
   }));
-  const source = realOrders.length > 0 ? realOrders : ASSIGNED_ORDERS.map(o => ({ ...o, priority: undefined, breached: false }));
+  const source = realOrders;
 
   const filtered = source.filter(o => {
     const matchFilter =
