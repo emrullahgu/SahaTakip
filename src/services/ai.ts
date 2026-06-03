@@ -562,6 +562,7 @@ function mockAnalyze(context?: string): DamageAnalysis {
     estimatedCost: cost,
     confidence: 72,
     analyzedAt: new Date().toISOString(),
+    source: 'demo',
   };
 }
 
@@ -604,6 +605,7 @@ export async function analyzePhoto(imageUri: string, context?: string): Promise<
       confidence: typeof obj.confidence === 'number' ? obj.confidence : 70,
       imageUri,
       analyzedAt: new Date().toISOString(),
+      source: 'ai',
     };
   } catch {
     return { ...mockAnalyze(context), imageUri };

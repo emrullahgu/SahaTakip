@@ -289,6 +289,15 @@ describe('AI Service', () => {
       expect(res.estimatedCost).toBe(9000);
       expect(res.confidence).toBe(88);
       expect(res.imageUri).toBe('file:///pano.jpg');
+      expect(res.source).toBe('ai'); // gerçek model sonucu
+    });
+
+    it('analyzePhoto AI yapılandırılmamışsa demo sonuç döner (source=demo)', async () => {
+      await setAiSettings({ provider: 'mock' }); // anahtarsız mod
+      const res = await analyzePhoto('file:///pano.jpg', 'panoda yanık izi var');
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(res.source).toBe('demo');
+      expect(res.severity).toBe('critical'); // 'yanık' anahtar kelimesi
     });
   });
 
