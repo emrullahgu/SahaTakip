@@ -252,6 +252,8 @@ export async function emitEvent(
 export interface NotifyTarget {
   userIds?: string[];     // hedef auth user id'leri
   userNames?: string[];   // profiles.full_name ile eşleştir (employee→user bağı yoksa)
+  all?: boolean;          // TÜM kullanıcılara yayın (her iş herkese bildirim)
+  excludeUserId?: string; // işlemi yapan kişiyi hariç tut (kendi işine bildirim gitmesin)
 }
 
 /**
@@ -268,12 +270,14 @@ export async function notifyUsers(
   relatedId?: string,
 ): Promise<{ ok: boolean; sent?: number; error?: string }> {
   if (!SUPABASE_CONFIGURED) return { ok: false, error: 'offline' };
-  if (!target.userIds?.length && !target.userNames?.length) return { ok: false, error: 'hedef yok' };
+  if (!target.userIds?.length && !target.userNames?.length && !target.all) return { ok: false, error: 'hedef yok' };
   try {
     const { data, error } = await supabase.functions.invoke('notify-push', {
       body: {
         userIds: target.userIds,
         userNames: target.userNames,
+        all: target.all ?? false,
+        excludeUserId: target.excludeUserId ?? null,
         type,
         title,
         body: message,
@@ -287,15 +291,32 @@ export async function notifyUsers(
   }
 }
 
+/**
+ * "Yapılan her iş herkese bildirim olarak gitsin" — TÜM ekibe (tüm kullanıcılara)
+ * uzaktan push + in-app bildirim yayınlar. İşlemi yapan kişi (current user) hariç
+ * tutulur ki kendi yaptığı işe bildirim almasın. Best-effort: notify-push deploy
+ * edilmemişse sessizce geçer, uygulama akışı kesilmez.
+ */
+export async function notifyEveryone(
+  type: NotificationEventType,
+  title: string,
+  message: string,
+  relatedId?: string,
+): Promise<{ ok: boolean; sent?: number; error?: string }> {
+  let excludeUserId: string | undefined;
+  try { excludeUserId = (await getCurrentUser())?.id; } catch { /* ignore */ }
+  return notifyUsers({ all: true, excludeUserId }, type, title, message, relatedId);
+}
+
 // Convenience emitters
+// Her emitter: (1) emitEvent → işlemi yapanın bildirim merkezi + local push,
+// (2) notifyEveryone → TÜM ekibe uzak push + in-app kayıt (yapan kişi hariç).
+// Böylece "yapılan her iş herkese bildirim olarak gider".
 export const Notify = {
-  workOrderCreated: (client: string, service: string, workOrderId: string) =>
-    emitEvent(
-      'work_order_created',
-      'Yeni İş Emri',
-      `${client} — ${service}`,
-      { relatedId: workOrderId },
-    ),
+  workOrderCreated: (client: string, service: string, workOrderId: string) => {
+    void notifyEveryone('work_order_created', 'Yeni İş Emri', `${client} — ${service}`, workOrderId).catch(() => {});
+    return emitEvent('work_order_created', 'Yeni İş Emri', `${client} — ${service}`, { relatedId: workOrderId });
+  },
   workOrderAssigned: (assignee: string, client: string, workOrderId: string, assigneeUserId?: string) => {
     // Atanan kişiye FARKLI cihazından haber ver (uzak push). user_id biliniyorsa
     // onunla, yoksa ada göre eşleştir. (Best-effort; deploy yoksa sessiz geçer.)
@@ -306,6 +327,8 @@ export const Notify = {
       `${client}`,
       workOrderId,
     ).catch(() => { /* sessiz */ });
+    // Tüm ekibe de bilgi ver (kim kime atandı görünür).
+    void notifyEveryone('work_order_assigned', 'İş Atandı', `${assignee} → ${client}`, workOrderId).catch(() => {});
     // Yöneticinin kendi bildirim merkezi/local push'u için olay kaydı.
     return emitEvent(
       'work_order_assigned',
@@ -314,26 +337,36 @@ export const Notify = {
       { relatedId: workOrderId },
     );
   },
-  workOrderStarted: (client: string, workOrderId: string) =>
-    emitEvent('work_order_started', 'İş Başladı', client, { relatedId: workOrderId }),
-  workOrderCompleted: (client: string, workOrderId: string) =>
-    emitEvent('work_order_completed', 'İş Tamamlandı', client, { relatedId: workOrderId }),
-  slaBreach: (client: string, hoursOverdue: number, workOrderId: string) =>
-    emitEvent(
-      'sla_breach',
-      'SLA İhlali',
-      `${client} — ${hoursOverdue.toFixed(1)} sa gecikme`,
-      { relatedId: workOrderId },
-    ),
-  quoteSent: (client: string, quoteId: string) =>
-    emitEvent('quote_sent', 'Teklif Gönderildi', client, { relatedId: quoteId }),
-  quoteAccepted: (client: string, quoteId: string) =>
-    emitEvent('quote_accepted', 'Teklif Onaylandı', client, { relatedId: quoteId }),
-  paymentReceived: (client: string, amount: number, paymentId: string) =>
-    emitEvent(
-      'payment_received',
-      'Tahsilat Alındı',
-      `${client} — ${amount.toLocaleString('tr-TR')} ₺`,
-      { relatedId: paymentId },
-    ),
+  workOrderStarted: (client: string, workOrderId: string) => {
+    void notifyEveryone('work_order_started', 'İş Başladı', client, workOrderId).catch(() => {});
+    return emitEvent('work_order_started', 'İş Başladı', client, { relatedId: workOrderId });
+  },
+  workOrderCompleted: (client: string, workOrderId: string) => {
+    void notifyEveryone('work_order_completed', 'İş Tamamlandı', client, workOrderId).catch(() => {});
+    return emitEvent('work_order_completed', 'İş Tamamlandı', client, { relatedId: workOrderId });
+  },
+  slaBreach: (client: string, hoursOverdue: number, workOrderId: string) => {
+    void notifyEveryone('sla_breach', 'SLA İhlali', `${client} — ${hoursOverdue.toFixed(1)} sa gecikme`, workOrderId).catch(() => {});
+    return emitEvent('sla_breach', 'SLA İhlali', `${client} — ${hoursOverdue.toFixed(1)} sa gecikme`, { relatedId: workOrderId });
+  },
+  quoteCreated: (client: string, title: string, quoteId: string) => {
+    void notifyEveryone('custom', 'Yeni Teklif', `${client} — ${title}`, quoteId).catch(() => {});
+    return emitEvent('custom', 'Yeni Teklif', `${client} — ${title}`, { relatedId: quoteId });
+  },
+  quoteSent: (client: string, quoteId: string) => {
+    void notifyEveryone('quote_sent', 'Teklif Gönderildi', client, quoteId).catch(() => {});
+    return emitEvent('quote_sent', 'Teklif Gönderildi', client, { relatedId: quoteId });
+  },
+  quoteAccepted: (client: string, quoteId: string) => {
+    void notifyEveryone('quote_accepted', 'Teklif Onaylandı', client, quoteId).catch(() => {});
+    return emitEvent('quote_accepted', 'Teklif Onaylandı', client, { relatedId: quoteId });
+  },
+  customerCreated: (name: string, customerId: string) => {
+    void notifyEveryone('custom', 'Yeni Müşteri', name, customerId).catch(() => {});
+    return emitEvent('custom', 'Yeni Müşteri', name, { relatedId: customerId });
+  },
+  paymentReceived: (client: string, amount: number, paymentId: string) => {
+    void notifyEveryone('payment_received', 'Tahsilat Alındı', `${client} — ${amount.toLocaleString('tr-TR')} ₺`, paymentId).catch(() => {});
+    return emitEvent('payment_received', 'Tahsilat Alındı', `${client} — ${amount.toLocaleString('tr-TR')} ₺`, { relatedId: paymentId });
+  },
 };

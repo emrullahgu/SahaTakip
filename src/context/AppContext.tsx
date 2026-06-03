@@ -242,6 +242,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         showToast('⚠️ Bulutta kayıt başarısız: ' + (e?.message || 'bilinmeyen hata'));
       });
     auditRepo.log(userId, { action: 'work_order.create', tableName: 'work_orders', refId: order.id });
+    void Notify.workOrderCreated(order.client, order.serviceName, order.id);
     showToast('Rapor gönderildi! Yönetici onay havuzuna eklendi.');
   };
 
@@ -301,6 +302,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       showToast('⚠️ Teklif kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
     });
     auditRepo.log(userId, { action: 'quote.create', tableName: 'quotes', refId: q.id });
+    void Notify.quoteCreated(q.customerName, q.title, q.id);
     showToast(`Teklif ${q.number} kaydedildi.`);
   };
 
@@ -431,6 +433,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       showToast('⚠️ Müşteri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
     });
     auditRepo.log(userId, { action: 'customer.create', tableName: 'customers', refId: c.id });
+    void Notify.customerCreated(c.shortName, c.id);
     showToast(`${c.shortName} eklendi.`);
   };
 
@@ -496,6 +499,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }),
     );
     auditRepo.log(userId, { action: 'work_order.status', tableName: 'work_orders', refId: id, meta: { status } });
+    // Tüm ekibe durum bildirimi (her iş herkese bildirim olarak gider).
+    if (status === 'Başladı') void Notify.workOrderStarted(current.client, id);
+    else if (status === 'Tamamlandı') void Notify.workOrderCompleted(current.client, id);
     showToast(`Durum: ${status}`);
     return true;
   };

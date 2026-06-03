@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   let payload: any;
   try { payload = await req.json(); } catch { return json({ ok: false, error: 'Geçersiz JSON' }, 400); }
 
-  const { userIds = [], userNames = [], type = 'custom', title, body, relatedId = null } = payload ?? {};
+  const { userIds = [], userNames = [], all = false, excludeUserId = null, type = 'custom', title, body, relatedId = null } = payload ?? {};
   if (!title || !body) return json({ ok: false, error: 'title ve body zorunlu' }, 400);
 
   // 1) Hedef user id setini topla
@@ -83,6 +83,13 @@ Deno.serve(async (req) => {
       .in('full_name', userNames);
     for (const p of profs ?? []) targetIds.add(p.id);
   }
+  // all=true → TÜM kullanıcılara yayın (her iş herkese bildirim). İşlemi yapan
+  // kişiyi (excludeUserId) hariç tutabilir — kendi yaptığı işe bildirim gitmesin.
+  if (all === true) {
+    const { data: everyone } = await supabase.from('profiles').select('id');
+    for (const p of everyone ?? []) targetIds.add(p.id);
+  }
+  if (excludeUserId) targetIds.delete(excludeUserId);
   const ids = Array.from(targetIds);
   if (!ids.length) return json({ ok: true, sent: 0, targets: 0, note: 'Eşleşen kullanıcı yok' });
 
