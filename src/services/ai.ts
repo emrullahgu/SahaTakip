@@ -970,3 +970,50 @@ export async function chatWithTools(
   const content = await chat(lastUser?.content ?? '', s, sysParts.join('\n'));
   return { content, toolCalls: [], finishReason: 'stop' };
 }
+
+/** Geçici (retry edilebilir) sağlayıcı hatası mı? (503/429/overload/timeout) */
+function isTransientAiError(err: any): boolean {
+  const m = String(err?.message ?? err);
+  return /\b(429|500|502|503|504)\b|high demand|overload|rate.?limit|timeout|temporar|ECONNRESET|unavailable/i.test(m);
+}
+
+/**
+ * Dayanıklı tool-calling: seçili sağlayıcı geçici hata (ör. Gemini 503) verirse
+ * önce kısa bekleyip 1 kez tekrar dener; yine olmazsa anahtarı olan diğer
+ * tool-destekli sağlayıcıya (gemini→openai→claude→groq) otomatik geçer.
+ * Agent döngüsü tek bir Gemini yoğunluğunda kesilmesin diye kullanılır.
+ */
+export async function chatWithToolsFallback(
+  messages: ChatMessage[],
+  tools: ToolSchema[],
+  primary?: AiSettings,
+): Promise<ChatWithToolsResult> {
+  const p = primary ?? (await getAiSettings());
+  const candidates: AiSettings[] = [];
+  if (p.provider !== 'mock' && p.apiKey) candidates.push(p);
+  for (const prov of ['gemini', 'openai', 'claude', 'groq'] as AiProvider[]) {
+    if (prov === p.provider) continue;
+    const key = getBuiltinKey(prov);
+    if (key) candidates.push({ provider: prov, apiKey: key, model: DEFAULT_MODEL[prov] });
+  }
+  if (!candidates.length) {
+    throw new Error('AI provider yapılandırılmamış (Agent için OpenAI/Groq/Gemini/Claude gerekli).');
+  }
+  let lastErr: any;
+  for (const s of candidates) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await chatWithTools(messages, tools, s);
+      } catch (e: any) {
+        lastErr = e;
+        // Aynı sağlayıcıyı geçici hatada bir kez daha dene (kısa backoff).
+        if (attempt === 0 && isTransientAiError(e)) {
+          await new Promise(r => setTimeout(r, 800));
+          continue;
+        }
+        break; // kalıcı hata → sonraki sağlayıcıya geç
+      }
+    }
+  }
+  throw lastErr ?? new Error('Tüm AI sağlayıcıları başarısız oldu.');
+}

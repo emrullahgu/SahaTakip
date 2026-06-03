@@ -8,7 +8,7 @@
 // LLM'e "iptal edildi" cevabı döner ve döngü devam eder.
 // ---------------------------------------------------------------
 
-import { chatWithTools, type ChatMessage } from '../ai';
+import { chatWithToolsFallback, type ChatMessage } from '../ai';
 import { AGENT_TOOLS, getAllToolSchemas, type AgentContext } from './tools';
 import type { AiSettings } from '../../types';
 
@@ -87,7 +87,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
 
     let resp;
     try {
-      resp = await chatWithTools(messages, tools, opts.settings);
+      resp = await chatWithToolsFallback(messages, tools, opts.settings);
     } catch (e: any) {
       onEvent({ type: 'error', error: 'LLM çağrısı başarısız: ' + (e?.message || String(e)) });
       return;

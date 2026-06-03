@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAiSettings, setAiSettings, chat, chatWithFallback, suggestPozFromDescription,
   chatVision, analyzePhoto, guessImageMime, isVisionCapable,
-  chatWithTools, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
+  chatWithTools, chatWithToolsFallback, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
   toClaudeTools, toClaudeMessages, parseClaudeToolResponse,
   type ChatMessage, type ToolSchema,
 } from '../ai';
@@ -390,6 +390,36 @@ describe('AI Service', () => {
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(body.tools[0].name).toBe('finish');
       expect(body.system).toBe('Sistem');
+    });
+  });
+
+  describe('chatWithToolsFallback — dayanıklılık', () => {
+    const msgs: ChatMessage[] = [{ role: 'user', content: 'görevi bitir' }];
+
+    it('geçici hatada (503) aynı sağlayıcıyı retry eder', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 503, text: () => Promise.resolve('This model is currently experiencing high demand') })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ choices: [{ message: { content: 'tamam', tool_calls: [] }, finish_reason: 'stop' }] }) });
+      const r = await chatWithToolsFallback(msgs, [], { provider: 'openai', apiKey: 'k', model: 'gpt-4o-mini' });
+      expect(r.content).toBe('tamam');
+      expect(mockFetch).toHaveBeenCalledTimes(2); // 503 → retry → 200
+    });
+
+    it('kalıcı hatada anahtarı olan diğer sağlayıcıya geçer', async () => {
+      process.env.EXPO_PUBLIC_CLAUDE_KEY = 'claude-test-key';
+      try {
+        mockFetch
+          // primary openai → kalıcı 401 (retry edilmez)
+          .mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve('invalid api key') })
+          // fallback claude → 200
+          .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ content: [{ type: 'text', text: 'claude cevap' }], stop_reason: 'end_turn' }) });
+        const r = await chatWithToolsFallback(msgs, [], { provider: 'openai', apiKey: 'k', model: 'gpt-4o-mini' });
+        expect(r.content).toBe('claude cevap');
+        const claudeCall = mockFetch.mock.calls.find(c => String(c[0]).includes('anthropic'));
+        expect(claudeCall).toBeTruthy();
+      } finally {
+        delete process.env.EXPO_PUBLIC_CLAUDE_KEY;
+      }
     });
   });
 });
