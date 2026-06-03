@@ -186,10 +186,13 @@ async function seedQuotes(): Promise<AiQuoteDraft[]> {
 export async function listQuoteDrafts() { return seedQuotes(); }
 export async function generateQuoteDraft(customerName: string, surveyText: string): Promise<AiQuoteDraft> {
   const list = await load<AiQuoteDraft>(K.quotes);
-  const items = [
-    { pozCode: '26.110.1001', pozName: 'Trafo Bakım', qty: 1 + Math.floor(Math.random() * 3), unitPrice: 4500 },
-    { pozCode: '26.220.1051', pozName: 'PV Panel Temizlik', qty: 50 + Math.floor(Math.random() * 100), unitPrice: 28 },
-  ];
+  // Sahte hardcoded kalemler yerine GERÇEK POZ kataloğundan eşleştir.
+  let items: { pozCode: string; pozName: string; qty: number; unitPrice: number }[] = [];
+  try {
+    const { suggestPozFromDescription } = await import('./ai');
+    const matches = await suggestPozFromDescription(surveyText);
+    items = matches.slice(0, 5).map(m => ({ pozCode: m.pozId, pozName: m.name, qty: 1, unitPrice: m.unitPrice }));
+  } catch { /* katalog erişilemezse boş taslak */ }
   const total = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
   const d: AiQuoteDraft = { id: uid(), customerName, surveyText, items, totalAmount: total, createdAt: now(), status: 'draft' };
   list.unshift(d); await save(K.quotes, list);
