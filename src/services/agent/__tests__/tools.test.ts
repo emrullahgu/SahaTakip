@@ -1,5 +1,6 @@
 // tools.test.ts — Agent araçları (match_poz_bulk toplu fiyat eşleştirme)
 import { AGENT_TOOLS } from '../tools';
+import { POZ_CATALOG } from '../../../data/pozCatalog';
 
 const ctx: any = { app: {}, currentUserName: 'Test', confirm: async () => true, log: () => {} };
 
@@ -83,5 +84,42 @@ describe('set_quote_status — geçersiz durum DB\'ye yazılmaz (Teklifler ekran
     const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'Müşteriye Gönderildi' }, c);
     expect(res.ok).toBe(true);
     expect(written).toBe('Müşteriye Gönderildi');
+  });
+});
+
+describe('create_quote_draft — fiyat uydurma YASAK (yalnız katalogtan)', () => {
+  it('katalog dışı kaleme ajan fiyat verse bile 0 yazılır + manualPriceLines\'da işaretlenir', async () => {
+    let saved: any = null;
+    const c: any = { ...ctx, currentUserName: 'T', app: { addQuote: (q: any) => { saved = q; } } };
+    const res = await AGENT_TOOLS['create_quote_draft'].handler(
+      {
+        customerName: 'X', title: 'Test',
+        lines: [
+          // Ajan uydurma fiyat geçiriyor — sistem yok saymalı:
+          { pozId: 'MANUAL-1', pozName: 'Özel Trafo', quantity: 2, unit: 'Ad', materialPrice: 999999, installPrice: 5000 },
+        ],
+      },
+      c,
+    );
+    expect(res.ok).toBe(true);
+    expect(res.manualPriceLines).toHaveLength(1);
+    expect(saved.lines[0].materialPrice).toBe(0);
+    expect(saved.lines[0].installPrice).toBe(0);
+    expect(saved.grandTotal).toBe(0); // uydurma fiyat toplamı şişiremez
+    expect(String(saved.lines[0].notes)).toMatch(/girilmeli/);
+    expect(String(saved.notes)).toMatch(/uydurma yapılmadı/);
+  });
+
+  it('katalogdaki kalem gerçek katalog fiyatıyla fiyatlanır', async () => {
+    const realPoz = POZ_CATALOG.find(p => (p.materialPrice || 0) > 0)!;
+    let saved: any = null;
+    const c: any = { ...ctx, currentUserName: 'T', app: { addQuote: (q: any) => { saved = q; } } };
+    const res = await AGENT_TOOLS['create_quote_draft'].handler(
+      { customerName: 'X', title: 'T', lines: [{ pozId: realPoz.id, quantity: 1 }] },
+      c,
+    );
+    expect(res.ok).toBe(true);
+    expect(res.manualPriceLines).toHaveLength(0);
+    expect(saved.lines[0].materialPrice).toBe(realPoz.materialPrice);
   });
 });

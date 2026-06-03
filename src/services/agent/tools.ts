@@ -817,11 +817,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         needsReview,
         items: out,
         hint:
-          'matched!=null olanları create_quote_draft.lines içinde {pozId, quantity} olarak ver (fiyat otomatik ve GÜVENİLİR dolar). ' +
-          'needsManualPrice=true olanları ASLA suggestion fiyatıyla otomatik fiyatlandırma — bunlar yanlış olabilir. ' +
-          'Bu kalemleri {pozId:"MANUAL-n", pozName, quantity, unit, materialPrice:0, installPrice:0} ile EKLE (fiyatı 0/boş bırak) ' +
-          've notes alanına "şu kalemlerin birim fiyatı girilmeli: ..." yaz; create_quote_draft sonrası kullanıcıya bu kalemleri ' +
-          'AÇIKÇA listele ki fiyatları kendisi girsin. Birim uyuşmazlığı (kg↔adet vb.) olanları özellikle vurgula.',
+          'matched!=null olanları create_quote_draft.lines içinde {pozId, quantity} olarak ver (fiyat katalogdan GÜVENİLİR dolar). ' +
+          'needsManualPrice=true olanları {pozId:"MANUAL-n", pozName, quantity, unit} ile EKLE — fiyat verme, sistem 0 yazıp ' +
+          '"fiyat girilmeli" işaretler (ASLA fiyat uydurma; suggestion fiyatı yanlış olabilir). create_quote_draft sonrası ' +
+          'fiyatı 0 kalan kalemleri kullanıcıya AÇIKÇA listele ki kendisi girsin. Birim uyuşmazlığı (kg↔adet) olanları vurgula.',
       };
     },
   },
@@ -832,7 +831,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       function: {
         name: 'create_quote_draft',
         description:
-          'Bir teklif taslağı oluşturur. Lines için POZ id\'leri ile miktar ver; fiyatlar POZ katalogundan otomatik alınır. Status="Taslak" olarak kaydedilir.',
+          'Bir teklif taslağı oluşturur. Birim fiyatlar YALNIZCA POZ kataloğundan alınır — ASLA fiyat uydurma. ' +
+          'Katalogda olan kalem için {pozId, quantity} ver (fiyat otomatik dolar). Katalogda OLMAYAN kalem için ' +
+          '{pozId:"MANUAL-n", pozName, quantity, unit} ver: fiyatı 0 yazılır ve "fiyat girilmeli" işaretlenir. ' +
+          'Status="Taslak" olarak kaydedilir.',
         parameters: {
           type: 'object',
           required: ['customerName', 'title', 'lines'],
@@ -843,19 +845,16 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
             notes: { type: 'string' },
             lines: {
               type: 'array',
-              description: 'Teklif kalemleri',
+              description: 'Teklif kalemleri. Fiyat alanı YOK — fiyat katalogdan gelir veya 0 kalır (uydurma yasak).',
               items: {
                 type: 'object',
                 required: ['pozId', 'quantity'],
                 properties: {
-                  pozId: { type: 'string', description: 'POZ kataloğundaki id' },
+                  pozId: { type: 'string', description: 'Katalogdaki POZ id (fiyat buradan); katalog dışıysa "MANUAL-n" (fiyat 0 kalır)' },
                   quantity: { type: 'number' },
                   withDismantle: { type: 'boolean' },
-                  // Override (opsiyonel)
-                  pozName: { type: 'string' },
+                  pozName: { type: 'string', description: 'Katalog dışı (MANUAL-*) kalemler için isim' },
                   unit: { type: 'string' },
-                  materialPrice: { type: 'number' },
-                  installPrice: { type: 'number' },
                   discountPct: { type: 'number' },
                   notes: { type: 'string' },
                 },
@@ -870,15 +869,24 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       const inLines = Array.isArray(args.lines) ? args.lines : [];
       if (!inLines.length) return { ok: false, error: 'En az 1 kalem gerekli' };
 
+      // FİYAT UYDURMA YASAK: birim fiyat YALNIZCA POZ kataloğundan gelir.
+      // Katalogda olmayan (MANUAL-* veya bulunamayan) kalemde ajanın verdiği
+      // materialPrice/installPrice YOK SAYILIR (0 yazılır) ve "fiyat girilmeli"
+      // olarak işaretlenir. Böylece ajan teklife asla uydurma fiyat koyamaz.
+      const manualPriceLines: { lineNo: number; pozName: string }[] = [];
       const lines: QuoteLine[] = inLines.map((l: any, i: number) => {
         const poz = POZ_CATALOG.find(p => p.id === l.pozId);
-        const materialPrice = Number(l.materialPrice ?? poz?.materialPrice ?? 0);
-        const installPrice = Number(l.installPrice ?? poz?.installPrice ?? 0);
-        const dismantlePrice = Number(poz?.dismantlePrice ?? 0);
+        const inCatalog = !!poz;
+        const materialPrice = inCatalog ? Number(poz!.materialPrice ?? 0) : 0;
+        const installPrice = inCatalog ? Number(poz!.installPrice ?? 0) : 0;
+        const dismantlePrice = inCatalog ? Number(poz!.dismantlePrice ?? 0) : 0;
+        const pozName = String(l.pozName ?? poz?.name ?? l.pozId);
+        if (!inCatalog) manualPriceLines.push({ lineNo: i + 1, pozName });
+        const baseNote = l.notes ? String(l.notes) : '';
         return {
           lineNo: i + 1,
           pozId: String(l.pozId),
-          pozName: String(l.pozName ?? poz?.name ?? l.pozId),
+          pozName,
           unit: String(l.unit ?? poz?.unit ?? 'Adet'),
           quantity: Number(l.quantity ?? 1),
           materialPrice,
@@ -889,11 +897,19 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           profitPct: poz?.defaultProfit ?? 15,
           vatPct: poz?.vatRate ?? 20,
           discountPct: Number(l.discountPct ?? 0),
-          notes: l.notes ? String(l.notes) : undefined,
+          notes: inCatalog
+            ? (baseNote || undefined)
+            : ('⚠ Birim fiyat girilmeli (katalogda yok)' + (baseNote ? ' · ' + baseNote : '')),
         };
       });
 
       const totals = calcQuoteTotals(lines);
+      // Katalog dışı kalemler varsa teklif notuna uyarı düş (şeffaflık).
+      const manualWarn = manualPriceLines.length
+        ? `⚠ ${manualPriceLines.length} kalemin birim fiyatı katalogda yok ve 0 bırakıldı (uydurma yapılmadı). ` +
+          `Lütfen şu kalemlerin fiyatını girin: ` +
+          manualPriceLines.map(m => `#${m.lineNo} ${m.pozName}`).join('; ') + '.'
+        : '';
       // id = UUID (DB primary key, uuid kolonu) → quotesRepo gerçekten DB'ye yazar.
       // Önceden id='QT-...' (UUID değil) olduğu için teklif yalnızca yerelde kalıyordu.
       const id = newUuid();
@@ -907,7 +923,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         engineer: String(args.engineer ?? ctx.currentUserName ?? 'AI Ajan'),
         lines,
         status: 'Taslak',
-        notes: args.notes ? String(args.notes) : undefined,
+        notes: [args.notes ? String(args.notes) : '', manualWarn].filter(Boolean).join('\n') || undefined,
         subtotal: totals.subtotal,
         vatTotal: totals.vatTotal,
         grandTotal: totals.grandTotal,
@@ -918,8 +934,14 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         id,
         number,
         lineCount: lines.length,
+        pricedFromCatalog: lines.length - manualPriceLines.length,
+        manualPriceLines, // fiyatı 0 bırakılan (katalog dışı) kalemler — kullanıcıya bildir
         grandTotal: totals.grandTotal,
-        message: 'Taslak teklif oluşturuldu. Teklifler ekranından açıp düzenleyebilirsiniz.',
+        message:
+          'Taslak teklif oluşturuldu (fiyatlar yalnızca katalogdan, uydurma yok). ' +
+          (manualPriceLines.length
+            ? `DİKKAT: ${manualPriceLines.length} kalemin fiyatı katalogda yok, 0 bırakıldı — bunları kullanıcıya AÇIKÇA listele ve fiyatlarını girmesini iste.`
+            : 'Tüm kalemler kataloğdan fiyatlandı.'),
       };
     },
   },
