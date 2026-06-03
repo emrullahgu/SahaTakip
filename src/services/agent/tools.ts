@@ -83,25 +83,59 @@ function normalizeQuoteStatus(raw: unknown): QuoteStatus | null {
   if ((VALID_QUOTE_STATUSES as string[]).includes(s)) return s as QuoteStatus;
   return QUOTE_STATUS_SYNONYMS[TR_LC(s)] ?? null;
 }
-function scorePozAgainst(query: string, p: PozItem): number {
+// Eşleştirmede sahte örtüşme yaratan jenerik/ticari dolgu kelimeleri — skorlamada
+// yok sayılır. Yoksa "...sarf malzemesi dahil" gibi açıklamalar katalogtaki
+// "Hırdavat ve Sarf Malzeme" kalemine yanlış eşleşip fiyatı patlatıyor.
+const MATCH_STOPWORDS = new Set([
+  've', 'ile', 'için', 'veya', 'vb', 'dahil', 'dahildir', 'adet', 'adedi', 'takım', 'set',
+  'sarf', 'malzeme', 'malzemesi', 'malzemeleri', 'hırdavat', 'montaj', 'montajı', 'demontaj',
+  'temini', 'temin', 'yapılması', 'yapılacak', 'edilmesi', 'konulması', 'kullanılacak',
+  'tip', 'tipi', 'tipli', 'marka', 'mevcut', 'yeni', 'beton', 'mm', 'mm2', 'kapak',
+  'olup', 'olan', 'arası', 'işler', 'tüm', 'bir', 'kabul', 'şartlarına', 'uygun',
+]);
+
+// Birim sınıfı — kg(ağırlık) ↔ adet(parça) gibi uyuşmazlık fiyatı 100x şişirir,
+// bu yüzden eşleşme güveni düşürülür / manuel fiyata bırakılır.
+type UnitClass = 'weight' | 'length' | 'area' | 'volume' | 'piece' | 'other';
+function unitClass(u: string | undefined | null): UnitClass {
+  const s = TR_LC(String(u ?? '').trim()).replace(/\.$/, '');
+  if (!s) return 'other';
+  if (['kg', 'kğ', 'ton', 'gr', 'gram'].includes(s)) return 'weight';
+  if (['m', 'mt', 'metre', 'm.', 'km'].includes(s)) return 'length';
+  if (['m2', 'm²', 'metrekare'].includes(s)) return 'area';
+  if (['m3', 'm³', 'metreküp'].includes(s)) return 'volume';
+  if (['ad', 'adet', 'ad.', 'tk', 'takım', 'set', 'çift', 'kalem'].includes(s)) return 'piece';
+  return 'other';
+}
+function unitsConflict(a: string | undefined, b: string | undefined): boolean {
+  const ca = unitClass(a), cb = unitClass(b);
+  if (ca === 'other' || cb === 'other' || ca === cb) return false;
+  // ağırlık/uzunluk/alan/hacim ↔ parça (ya da birbirleri) ölçüsel olarak uyumsuzdur
+  return true;
+}
+
+function scorePozAgainst(query: string, p: PozItem): { score: number; hits: number } {
   const q = TR_LC(query);
-  const tokens = q.split(/[\s,;./()\-x×*]+/).filter(t => t.length >= 2);
-  if (!tokens.length) return 0;
+  const all = q.split(/[\s,;:./()\[\]\-x×*]+/).filter(t => t.length >= 2);
+  // Anlamlı (dolgu olmayan) token'lar — eşleşme yalnız bunlara dayanır
+  const tokens = all.filter(t => !MATCH_STOPWORDS.has(t) && !/^\d+$/.test(t));
+  if (!tokens.length) return { score: 0, hits: 0 };
   const hay = TR_LC(`${p.name} ${(p as any).description || ''} ${(p as any).category || ''} ${p.id}`);
   let hits = 0;
   for (const t of tokens) {
     if (hay.includes(t)) hits += 1;
-    else if (t.length >= 4 && hay.includes(t.slice(0, 4))) hits += 0.5;
+    else if (t.length >= 5 && hay.includes(t.slice(0, 5))) hits += 0.5;
   }
-  return hits / tokens.length;
+  return { score: hits / tokens.length, hits };
 }
-function bestPozMatch(query: string): { item: PozItem; score: number } | null {
-  let best: { item: PozItem; score: number } | null = null;
+function bestPozMatch(query: string): { item: PozItem; score: number; hits: number } | null {
+  let best: { item: PozItem; score: number; hits: number } | null = null;
   for (const p of POZ_CATALOG) {
-    const s = scorePozAgainst(query, p);
-    if (s > 0 && (!best || s > best.score)) best = { item: p, score: s };
+    const { score, hits } = scorePozAgainst(query, p);
+    if (score > 0 && (!best || score > best.score)) best = { item: p, score, hits };
   }
-  return best && best.score >= 0.25 ? best : null;
+  // En az 2 anlamlı token örtüşmesi VE %35 oran iste — tek jenerik kelimeyle eşleşmeyi engelle
+  return best && best.hits >= 2 && best.score >= 0.35 ? best : null;
 }
 
 // =================================================================
@@ -733,36 +767,61 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     handler: async (args) => {
       const items = Array.isArray(args.items) ? args.items : [];
+      // Yalnız YÜKSEK güvenli (≥%50) ve birim-uyumlu eşleşmeleri otomatik fiyatla.
+      // Aksi halde fiyat sessizce kataloga oturup yanlış olabilir (ör. kg miktarını
+      // adet fiyatıyla çarpmak → milyonlarca TL şişme). Bunları "manuel fiyat gerekli"
+      // olarak işaretle; ajan kullanıcıya sorar veya boş bırakır.
+      const AUTO_PRICE_MIN = 0.5;
+      let needsReview = 0;
       const out = items.map((it: any, i: number) => {
         const desc = String(it.description ?? '');
+        const reqUnit = it.unit != null ? String(it.unit) : undefined;
         const m = bestPozMatch(desc);
+        const conflict = m ? unitsConflict(reqUnit, m.item.unit) : false;
+        const confident = !!m && m.score >= AUTO_PRICE_MIN && !conflict;
+        if (!confident) needsReview += 1;
         return {
           line: i + 1,
           description: desc,
           quantity: Number(it.quantity ?? 1),
-          unit: String(it.unit ?? m?.item.unit ?? 'Adet'),
-          matched: m
+          unit: String(reqUnit ?? m?.item.unit ?? 'Adet'),
+          // Sadece güvenli eşleşmeler fiyatlandırılır:
+          matched: confident
+            ? {
+                pozId: m!.item.id,
+                pozName: m!.item.name,
+                materialPrice: m!.item.materialPrice,
+                installPrice: m!.item.installPrice,
+                confidence: Math.round(m!.score * 100),
+              }
+            : null,
+          // Güvensiz/birim-uyumsuz en iyi tahmin (fiyatı OTOMATİK kullanma):
+          suggestion: m && !confident
             ? {
                 pozId: m.item.id,
                 pozName: m.item.name,
-                materialPrice: m.item.materialPrice,
-                installPrice: m.item.installPrice,
                 confidence: Math.round(m.score * 100),
+                reason: conflict
+                  ? `Birim uyuşmazlığı (istenen "${reqUnit}" ↔ katalog "${m.item.unit}") — fiyat güvenilmez`
+                  : 'Düşük güven — manuel kontrol gerekir',
               }
             : null,
+          needsManualPrice: !confident,
         };
       });
-      const matched = out.filter((o: any) => o.matched).length;
+      const matched = items.length - needsReview;
       return {
         ok: true,
         total: items.length,
         matched,
-        unmatched: items.length - matched,
+        needsReview,
         items: out,
         hint:
-          'Eşleşenleri create_quote_draft.lines içinde {pozId, quantity} olarak ver (fiyat otomatik dolar). ' +
-          'Eşleşmeyen (matched=null) kalemler için makul bir tahminle {pozId:"MANUAL-1", pozName, quantity, unit, materialPrice, installPrice} kullan ' +
-          've notes alanına "fiyat tahmini" yaz. Düşük confidence (<%40) olanları da kullanıcıya belirt.',
+          'matched!=null olanları create_quote_draft.lines içinde {pozId, quantity} olarak ver (fiyat otomatik ve GÜVENİLİR dolar). ' +
+          'needsManualPrice=true olanları ASLA suggestion fiyatıyla otomatik fiyatlandırma — bunlar yanlış olabilir. ' +
+          'Bu kalemleri {pozId:"MANUAL-n", pozName, quantity, unit, materialPrice:0, installPrice:0} ile EKLE (fiyatı 0/boş bırak) ' +
+          've notes alanına "şu kalemlerin birim fiyatı girilmeli: ..." yaz; create_quote_draft sonrası kullanıcıya bu kalemleri ' +
+          'AÇIKÇA listele ki fiyatları kendisi girsin. Birim uyuşmazlığı (kg↔adet vb.) olanları özellikle vurgula.',
       };
     },
   },

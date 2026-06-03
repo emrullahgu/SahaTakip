@@ -25,7 +25,7 @@ describe('match_poz_bulk — toplu POZ/fiyat eşleştirme', () => {
     // alakasız kalem eşleşmemeli (null)
     expect(res.items[1].matched).toBeNull();
     // özet sayaçlar tutarlı
-    expect(res.matched + res.unmatched).toBe(2);
+    expect(res.matched + res.needsReview).toBe(2);
   });
 
   it('boş liste için güvenli döner', async () => {
@@ -33,6 +33,29 @@ describe('match_poz_bulk — toplu POZ/fiyat eşleştirme', () => {
     expect(res.ok).toBe(true);
     expect(res.total).toBe(0);
     expect(res.items).toEqual([]);
+  });
+
+  it('birim uyuşmazlığında (kg ↔ adet) otomatik fiyatlandırmaz → manuel fiyat işaretler', async () => {
+    // Aynı kalem "Adet" iken eşleşir; "kğ" verilince fiyat güvenilmez olur (kg miktarı
+    // adet fiyatıyla çarpılırsa toplam patlar) → matched=null, needsManualPrice=true.
+    const res = await AGENT_TOOLS['match_poz_bulk'].handler(
+      { items: [{ description: 'Ölüm Tehlike Levhası', quantity: 2785, unit: 'kğ' }] },
+      ctx,
+    );
+    const o = res.items[0];
+    expect(o.matched).toBeNull();
+    expect(o.needsManualPrice).toBe(true);
+    expect(o.suggestion).toBeTruthy();
+    expect(String(o.suggestion.reason)).toMatch(/[Bb]irim/);
+  });
+
+  it('jenerik dolgu kelimeleri tek başına eşleşme üretmez', async () => {
+    // "sarf malzemesi dahil" gibi yalnız dolgu kelimeleri → eşleşme yok
+    const res = await AGENT_TOOLS['match_poz_bulk'].handler(
+      { items: [{ description: 'sarf malzemesi dahil montaj', quantity: 1000, unit: 'kğ' }] },
+      ctx,
+    );
+    expect(res.items[0].matched).toBeNull();
   });
 });
 
