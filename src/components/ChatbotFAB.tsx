@@ -1,6 +1,6 @@
 // ChatbotFAB — POZ-DEV-320 Sahada anlık yardım (Copilot LLM + kural tabanlı fallback)
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -8,10 +8,28 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { askCopilot, type CopilotMessage } from '../services/aiCopilot';
+import { runAgent } from '../services/agent/loop';
 import type { RootStackParamList } from '../types';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string }
+
+/** Başarılı yazma-aksiyonlarını sohbet için tek satır özetler. */
+function summarizeAction(name: string, result: any): string {
+  if (!result || result.error) return '';
+  switch (name) {
+    case 'create_quote_draft':
+      return `✅ Teklif ${result.number ?? result.id} oluşturuldu — ${result.lineCount ?? 0} kalem · ₺${Number(result.grandTotal ?? 0).toLocaleString('tr-TR')}`;
+    case 'create_customer':
+      return result.customer ? `✅ Müşteri eklendi: ${result.customer.shortName ?? result.customer.short_name ?? ''}` : '';
+    case 'create_work_order':
+      return result.work_order ? `✅ İş emri oluşturuldu: ${result.work_order.number ?? ''}` : '';
+    case 'update_work_order_status':
+      return result.ok ? '✅ İş emri durumu güncellendi.' : '';
+    case 'delete_work_order': return '🗑️ İş emri silindi.';
+    case 'delete_customer': return '🗑️ Müşteri silindi.';
+    default: return '';
+  }
+}
 
 const KNOWLEDGE: { trigger: RegExp; reply: string }[] = [
   { trigger: /müşter|customer/i, reply: 'Müşteri eklemek için: Müşteriler → + butonu. Mevcut müşteriyi düzenlemek için karta dokunun.' },
@@ -32,13 +50,13 @@ function getReply(text: string): string {
 export default function ChatbotFAB() {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: 'bot', text: 'Merhaba! Ben SahaTakip asistanıyım (Copilot AI). Size nasıl yardımcı olabilirim?', ts: new Date().toISOString() },
+    { role: 'bot', text: 'Merhaba! Ben SahaTakip Ajanıyım. Gerçekten işlem yapabilirim: teklif/iş emri/müşteri oluşturma, sorgulama. Örn: «DİNÇER için POZ-RD3-0408\'den 5 adet teklif hazırla» — oluşturmadan önce onayınızı isterim.', ts: new Date().toISOString() },
   ]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
-  const { workOrders, customers, quotes, employees } = useAppContext();
+  const app = useAppContext();
   const { profile, user } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -55,27 +73,63 @@ export default function ChatbotFAB() {
     if (open) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [open, msgs.length]);
 
+  /** Yıkıcı (yazma) işlemler için çapraz-platform onay diyaloğu. */
+  const confirmAction = (toolName: string, args: any): Promise<boolean> => {
+    const labels: Record<string, string> = {
+      create_quote_draft: `Teklif oluşturulsun mu?${args?.customerName ? ` (${args.customerName})` : ''}`,
+      create_customer: `Yeni müşteri eklensin mi?${args?.short_name ? ` (${args.short_name})` : ''}`,
+      create_work_order: 'İş emri oluşturulsun mu?',
+      delete_work_order: 'İş emri silinsin mi?',
+      delete_customer: 'Müşteri silinsin mi?',
+      update_work_order_status: `İş emri durumu "${args?.status ?? ''}" yapılsın mı?`,
+    };
+    const msg = labels[toolName] || `"${toolName}" işlemi onaylıyor musunuz?`;
+    return new Promise(resolve => {
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        resolve(typeof window !== 'undefined' ? window.confirm(msg) : true);
+      } else {
+        Alert.alert('Onay', msg, [
+          { text: 'Vazgeç', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Onayla', onPress: () => resolve(true) },
+        ]);
+      }
+    });
+  };
+
   const onSend = async () => {
     const t = input.trim();
     if (!t || busy) return;
-    const userMsg: Msg = { role: 'user', text: t, ts: new Date().toISOString() };
-    setMsgs(m => [...m, userMsg]);
+    setMsgs(m => [...m, { role: 'user', text: t, ts: new Date().toISOString() }]);
     setInput('');
     setBusy(true);
+    let finalText = '';
+    const actions: string[] = [];
     try {
-      const history: CopilotMessage[] = msgs.slice(-6).map(m => ({
-        id: m.ts, role: m.role === 'user' ? 'user' : 'assistant',
-        content: m.text, createdAt: m.ts,
-      }));
-      const { reply, provider } = await askCopilot(
-        t,
-        { workOrders, customers, quotes, employees, currentUserName: userName },
-        history,
-      );
-      const text = provider === 'mock' ? getReply(t) : (reply || getReply(t));
+      // GERÇEK tool-calling agent — find/search/create tool'larını gerçekten çalıştırır.
+      await runAgent({
+        goal: t,
+        ctx: { app, currentUserName: userName, confirm: confirmAction, log: () => {} },
+        maxIterations: 10,
+        onEvent: e => {
+          if (e.type === 'thought' && e.content) finalText = e.content;
+          else if (e.type === 'final') finalText = e.content || finalText;
+          else if (e.type === 'tool_result' && e.ok) {
+            const s = summarizeAction(e.name, e.result);
+            if (s) actions.push(s);
+          } else if (e.type === 'tool_denied') {
+            actions.push('↩️ İşlem iptal edildi.');
+          } else if (e.type === 'error') {
+            finalText = '⚠️ ' + e.error;
+          }
+        },
+      });
+      const text = [finalText, actions.length ? actions.join('\n') : ''].filter(Boolean).join('\n\n') || 'Tamamlandı.';
       setMsgs(m => [...m, { role: 'bot', text, ts: new Date().toISOString() }]);
-    } catch {
-      setMsgs(m => [...m, { role: 'bot', text: getReply(t), ts: new Date().toISOString() }]);
+    } catch (e: any) {
+      // AI sağlayıcı yapılandırılmamışsa kural tabanlı yardıma düş (yalan söyleme).
+      const msg = /yapılandırıl/i.test(e?.message || '') ? getReply(t) : (getReply(t));
+      setMsgs(m => [...m, { role: 'bot', text: msg, ts: new Date().toISOString() }]);
     } finally {
       setBusy(false);
     }
