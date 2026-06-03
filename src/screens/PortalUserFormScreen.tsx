@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import type { RootStackParamList } from '../types';
 import { getPortalUser, savePortalUser } from '../services/customerExperience';
+import { email as emailValidator, phoneTR } from '../utils/validators';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'PortalUserForm'>;
@@ -42,6 +43,8 @@ export default function PortalUserFormScreen() {
 
   const save = async () => {
     if (!fullName.trim() || !email.trim()) { Alert.alert('Eksik', 'Ad ve e-posta zorunlu.'); return; }
+    const fieldError = emailValidator(email) || phoneTR(phone);
+    if (fieldError) { Alert.alert('Geçersiz bilgi', fieldError); return; }
     await savePortalUser({ id: userId, fullName: fullName.trim(), email: email.trim(), phone: phone.trim() || undefined, customerId: customerId.trim() || 'unknown', canViewQuotes, canViewWorkOrders, canViewReports, canApproveQuotes });
     navigation.goBack();
   };
