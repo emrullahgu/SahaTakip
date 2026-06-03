@@ -21,6 +21,7 @@ import { useVisit } from '../context/VisitContext';
 import { useHasRole } from '../components/RoleGuard';
 import type { Customer, RootStackParamList } from '../types';
 import { newUuid } from '../services/data/repository';
+import { vergiNo, phoneTR, email as emailValidator } from '../utils/validators';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CustomerForm'>;
 type RouteProps = RouteProp<RootStackParamList, 'CustomerForm'>;
@@ -57,6 +58,12 @@ export default function CustomerFormScreen() {
   const handleSave = () => {
     if (!form.shortName.trim() || !form.title.trim()) {
       Alert.alert('Eksik bilgi', 'Kısa ad ve resmi ünvan zorunludur.');
+      return;
+    }
+    // Alan doğrulamaları (boş alanlar opsiyonel — validator boşta null döner)
+    const fieldError = phoneTR(form.phone) || emailValidator(form.email) || vergiNo(form.taxNumber);
+    if (fieldError) {
+      Alert.alert('Geçersiz bilgi', fieldError);
       return;
     }
     // Mükerrer kontrolü
