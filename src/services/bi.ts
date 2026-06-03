@@ -1,4 +1,4 @@
-﻿// bi.ts â€” BI & Karar Destek (gerÃ§ek Supabase verisinden agregasyon)
+// bi.ts — BI & Karar Destek (gerçek Supabase verisinden agregasyon)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import type {
@@ -26,7 +26,7 @@ function uid(p: string): string { return p + '_' + Date.now().toString(36) + '_'
 async function loadList<T>(k: string): Promise<T[]> {
   try { const raw = await AsyncStorage.getItem(k); return raw ? (JSON.parse(raw) as T[]) : []; } catch { return []; }
 }
-async function saveList<T>(k: string, list: T[]): Promise<void> { try { await AsyncStorage.setItem(k, JSON.stringify(list)); } catch { /* cache yazÄ±lamadÄ± */ } }
+async function saveList<T>(k: string, list: T[]): Promise<void> { try { await AsyncStorage.setItem(k, JSON.stringify(list)); } catch { /* cache yazılamadı */ } }
 
 function currentPeriod(): string { return new Date().toISOString().slice(0, 7); }
 function periodStart(period: string): string { return period + '-01T00:00:00.000Z'; }
@@ -38,7 +38,7 @@ function safeNum(v: any): number { const n = Number(v); return Number.isFinite(n
 
 // KPI category dictionaries
 export const KPI_CATEGORY_LABEL: Record<KpiCard['category'], string> = {
-  finance: 'Finans', operations: 'Operasyon', sales: 'SatÄ±ÅŸ', fleet: 'Filo', hr: 'Ä°K', customer: 'MÃ¼ÅŸteri',
+  finance: 'Finans', operations: 'Operasyon', sales: 'Satış', fleet: 'Filo', hr: 'İK', customer: 'Müşteri',
 };
 export const KPI_CATEGORY_COLOR: Record<KpiCard['category'], string> = {
   finance: '#22c55e', operations: '#0ea5e9', sales: '#a855f7', fleet: '#f59e0b', hr: '#ec4899', customer: '#06b6d4',
@@ -66,20 +66,21 @@ export async function listKpiCards(): Promise<KpiCard[]> {
     const revenue = payRows.filter(p => p.status === 'received').reduce((a, b) => a + safeNum(b.amount), 0);
     const expense = expRows.reduce((a, b) => a + safeNum(b.amount), 0);
     const quoteTotal = qRows.reduce((a, b) => a + safeNum(b.grand_total), 0);
-    const quoteWon = qRows.filter(q => q.status === 'Kabul Edildi' || q.status === 'FaturalandÄ±rÄ±ldÄ±').length;
+    const quoteWon = qRows.filter(q => q.status === 'Kabul Edildi' || q.status === 'Faturalandırıldı').length;
     const quoteConv = qRows.length ? Math.round(quoteWon / qRows.length * 100) : 0;
-    const woCompleted = woRows.filter(w => w.status === 'TamamlandÄ±' || w.status === 'FaturalandÄ±rÄ±ldÄ±').length;
-    const woOpen = woRows.filter(w => w.status === 'Servis AÃ§Ä±ldÄ±' || w.status === 'Devam Ediyor').length;
+    const woCompleted = woRows.filter(w => w.status === 'Tamamlandı' || w.status === 'Faturalandırıldı').length;
+    // Açık = terminal olmayan tüm durumlar (geçersiz status adlarına bağımlı kalmadan).
+    const woOpen = woRows.filter(w => w.status !== 'Tamamlandı' && w.status !== 'Faturalandırıldı' && w.status !== 'İptal').length;
     const now = new Date().toISOString();
     const cards: KpiCard[] = [
-      { id: 'kpi_revenue', label: 'AylÄ±k Ciro', value: revenue, unit: 'â‚º', direction: 'up_is_good', category: 'finance', updatedAt: now },
-      { id: 'kpi_expense', label: 'AylÄ±k Gider', value: expense, unit: 'â‚º', direction: 'down_is_good', category: 'finance', updatedAt: now },
-      { id: 'kpi_profit', label: 'Net Marj', value: revenue - expense, unit: 'â‚º', direction: 'up_is_good', category: 'finance', updatedAt: now },
-      { id: 'kpi_quote_total', label: 'Teklif Hacmi', value: quoteTotal, unit: 'â‚º', direction: 'up_is_good', category: 'sales', updatedAt: now },
-      { id: 'kpi_quote_conv', label: 'Teklif DÃ¶nÃ¼ÅŸÃ¼m', value: quoteConv, unit: '%', target: 60, direction: 'up_is_good', category: 'sales', updatedAt: now },
-      { id: 'kpi_wo_done', label: 'Tamamlanan Ä°ÅŸ Emri', value: woCompleted, direction: 'up_is_good', category: 'operations', updatedAt: now },
-      { id: 'kpi_wo_open', label: 'AÃ§Ä±k Ä°ÅŸ Emri', value: woOpen, direction: 'down_is_good', category: 'operations', updatedAt: now },
-      { id: 'kpi_customers', label: 'Toplam MÃ¼ÅŸteri', value: customers.count || 0, direction: 'up_is_good', category: 'customer', updatedAt: now },
+      { id: 'kpi_revenue', label: 'Aylık Ciro', value: revenue, unit: '₺', direction: 'up_is_good', category: 'finance', updatedAt: now },
+      { id: 'kpi_expense', label: 'Aylık Gider', value: expense, unit: '₺', direction: 'down_is_good', category: 'finance', updatedAt: now },
+      { id: 'kpi_profit', label: 'Net Marj', value: revenue - expense, unit: '₺', direction: 'up_is_good', category: 'finance', updatedAt: now },
+      { id: 'kpi_quote_total', label: 'Teklif Hacmi', value: quoteTotal, unit: '₺', direction: 'up_is_good', category: 'sales', updatedAt: now },
+      { id: 'kpi_quote_conv', label: 'Teklif Dönüşüm', value: quoteConv, unit: '%', target: 60, direction: 'up_is_good', category: 'sales', updatedAt: now },
+      { id: 'kpi_wo_done', label: 'Tamamlanan İş Emri', value: woCompleted, direction: 'up_is_good', category: 'operations', updatedAt: now },
+      { id: 'kpi_wo_open', label: 'Açık İş Emri', value: woOpen, direction: 'down_is_good', category: 'operations', updatedAt: now },
+      { id: 'kpi_customers', label: 'Toplam Müşteri', value: customers.count || 0, direction: 'up_is_good', category: 'customer', updatedAt: now },
       { id: 'kpi_employees', label: 'Aktif Personel', value: employees.count || 0, direction: 'up_is_good', category: 'hr', updatedAt: now },
     ];
     await saveList(KEYS.kpi, cards);
@@ -90,7 +91,7 @@ export async function listKpiCards(): Promise<KpiCard[]> {
 }
 export async function resetKpis(): Promise<void> { await AsyncStorage.removeItem(KEYS.kpi); }
 
-// Department KPIs (engineer alanÄ± ÅŸu an departman temsilcisi)
+// Department KPIs (engineer alanı şu an departman temsilcisi)
 export async function listDepartmentKpis(): Promise<DepartmentKpiSnapshot[]> {
   if (!SUPABASE_CONFIGURED) return loadList<DepartmentKpiSnapshot>(KEYS.dept);
   try {
@@ -107,7 +108,7 @@ export async function listDepartmentKpis(): Promise<DepartmentKpiSnapshot[]> {
     const exps = (expRes.data || []) as any[];
     const byDept = new Map<string, any[]>();
     for (const w of wos) {
-      const key = (w.engineer || 'AtanmamÄ±ÅŸ').toString().trim() || 'AtanmamÄ±ÅŸ';
+      const key = (w.engineer || 'Atanmamış').toString().trim() || 'Atanmamış';
       if (!byDept.has(key)) byDept.set(key, []);
       byDept.get(key)!.push(w);
     }
@@ -121,7 +122,7 @@ export async function listDepartmentKpis(): Promise<DepartmentKpiSnapshot[]> {
     for (const [name, jobs] of byDept) {
       const revenue = jobs.reduce((a, j) => a + (payByWo.get(j.id) || 0), 0);
       const cost = jobs.reduce((a, j) => a + (expByWo.get(j.id) || 0), 0);
-      const completed = jobs.filter(j => j.status === 'TamamlandÄ±' || j.status === 'FaturalandÄ±rÄ±ldÄ±').length;
+      const completed = jobs.filter(j => j.status === 'Tamamlandı' || j.status === 'Faturalandırıldı').length;
       const slaPct = jobs.length ? Math.round(completed / jobs.length * 100) : 0;
       rows.push({
         id: 'dept_' + (i++),
@@ -158,14 +159,14 @@ export async function listStaffPerformance(): Promise<StaffPerformanceRecord[]> 
     const wos = (data || []) as any[];
     const byUser = new Map<string, any[]>();
     for (const w of wos) {
-      const key = (w.engineer || 'AtanmamÄ±ÅŸ').toString();
+      const key = (w.engineer || 'Atanmamış').toString();
       if (!byUser.has(key)) byUser.set(key, []);
       byUser.get(key)!.push(w);
     }
     const rows: StaffPerformanceRecord[] = [];
     let i = 0;
     for (const [name, jobs] of byUser) {
-      const completed = jobs.filter(j => j.status === 'TamamlandÄ±' || j.status === 'FaturalandÄ±rÄ±ldÄ±');
+      const completed = jobs.filter(j => j.status === 'Tamamlandı' || j.status === 'Faturalandırıldı');
       const hrs = completed
         .filter(j => j.started_at && j.finished_at)
         .map(j => (new Date(j.finished_at).getTime() - new Date(j.started_at).getTime()) / 3600000);
@@ -290,8 +291,8 @@ export async function resetStockConsumption(): Promise<void> { await AsyncStorag
 // Quote outcomes
 export const WIN_REASON_LABEL: Record<NonNullable<QuoteOutcomeRow['reason']>, string> = {
   price: 'Fiyat', delivery: 'Teslimat', reference: 'Referans', tech: 'Teknik', service: 'Servis',
-  price_high: 'Fiyat YÃ¼ksek', delivery_long: 'Teslimat Uzun', no_capacity: 'Kapasite',
-  competitor: 'Rakip', no_budget: 'BÃ¼tÃ§e', other: 'DiÄŸer',
+  price_high: 'Fiyat Yüksek', delivery_long: 'Teslimat Uzun', no_capacity: 'Kapasite',
+  competitor: 'Rakip', no_budget: 'Bütçe', other: 'Diğer',
 };
 
 export async function listQuoteOutcomes(): Promise<QuoteOutcomeRow[]> {
@@ -299,7 +300,7 @@ export async function listQuoteOutcomes(): Promise<QuoteOutcomeRow[]> {
   try {
     const { data } = await supabase.from('quotes')
       .select('id,customer_id,status,grand_total,updated_at,created_at')
-      .in('status', ['Kabul Edildi', 'Reddedildi', 'FaturalandÄ±rÄ±ldÄ±'])
+      .in('status', ['Kabul Edildi', 'Reddedildi', 'Faturalandırıldı'])
       .order('updated_at', { ascending: false })
       .limit(500);
     const rows: QuoteOutcomeRow[] = ((data || []) as any[]).map((q: any) => ({
@@ -405,7 +406,7 @@ export async function listSlaResults(): Promise<SlaResultRow[]> {
 }
 export async function resetSlaResults(): Promise<void> { await AsyncStorage.removeItem(KEYS.sla); }
 
-// Region heat (mÃ¼ÅŸteri ÅŸehirleri + work order baÅŸlangÄ±Ã§ koordinatlarÄ±)
+// Region heat (müşteri şehirleri + work order başlangıç koordinatları)
 export async function listRegionHeat(): Promise<RegionHeatPoint[]> {
   if (!SUPABASE_CONFIGURED) return loadList<RegionHeatPoint>(KEYS.heat);
   try {
@@ -460,13 +461,13 @@ export async function listBudgetVsActual(): Promise<BudgetVsActualRow[]> {
     const { data } = await supabase.from('expenses')
       .select('category,amount,date').gte('date', pStart).lt('date', pEnd);
     const byCat = new Map<string, number>();
-    for (const e of (data || [])) byCat.set(e.category || 'DiÄŸer', (byCat.get(e.category || 'DiÄŸer') || 0) + safeNum(e.amount));
+    for (const e of (data || [])) byCat.set(e.category || 'Diğer', (byCat.get(e.category || 'Diğer') || 0) + safeNum(e.amount));
     const prevStart = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
     const { data: prev } = await supabase.from('expenses')
       .select('category,amount,date').gte('date', prevStart).lt('date', pStart);
     const prevByCat = new Map<string, number>();
     for (const e of (prev || [])) {
-      const k = e.category || 'DiÄŸer';
+      const k = e.category || 'Diğer';
       prevByCat.set(k, (prevByCat.get(k) || 0) + safeNum(e.amount));
     }
     const rows: BudgetVsActualRow[] = [];
@@ -507,15 +508,15 @@ export async function generateExecutiveSummary(): Promise<ExecutiveSummary> {
   const worstDept = [...dept].sort((a, b) => a.margin - b.margin)[0];
   const top = [...customers].sort((a, b) => b.margin - a.margin).slice(0, 3).map(c => c.customerName).join(', ');
   const highlights = [
-    `AylÄ±k toplam ciro ${totalRevenue.toLocaleString('tr-TR')} â‚º`,
-    bestDept ? `En kÃ¢rlÄ± departman: ${bestDept.departmentName} (â‚º${bestDept.margin.toLocaleString('tr-TR')})` : '',
-    `SLA baÅŸarÄ± oranÄ±: %${slaSuccess}`,
-    top ? `En kÃ¢rlÄ± 3 mÃ¼ÅŸteri: ${top}` : '',
+    `Aylık toplam ciro ${totalRevenue.toLocaleString('tr-TR')} ₺`,
+    bestDept ? `En kârlı departman: ${bestDept.departmentName} (₺${bestDept.margin.toLocaleString('tr-TR')})` : '',
+    `SLA başarı oranı: %${slaSuccess}`,
+    top ? `En kârlı 3 müşteri: ${top}` : '',
   ].filter(Boolean);
   const warnings = [
-    worstDept && worstDept.margin < 0 ? `${worstDept.departmentName} departmanÄ± zararda` : '',
-    slaSuccess < 85 && slas.length > 0 ? `SLA baÅŸarÄ±sÄ± kritik dÃ¼zeyde (%${slaSuccess})` : '',
-    customers.filter(c => c.margin < 0).length > 0 ? `${customers.filter(c => c.margin < 0).length} mÃ¼ÅŸteride negatif marj` : '',
+    worstDept && worstDept.margin < 0 ? `${worstDept.departmentName} departmanı zararda` : '',
+    slaSuccess < 85 && slas.length > 0 ? `SLA başarısı kritik düzeyde (%${slaSuccess})` : '',
+    customers.filter(c => c.margin < 0).length > 0 ? `${customers.filter(c => c.margin < 0).length} müşteride negatif marj` : '',
   ].filter(Boolean) as string[];
   const summary: ExecutiveSummary = {
     id: uid('exs'), period: new Date().toISOString().slice(0, 7),
