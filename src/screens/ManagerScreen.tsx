@@ -21,7 +21,6 @@ import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import SearchFilterBar, { FilterChip } from '../components/SearchFilterBar';
-import MiniBarChart from '../components/MiniBarChart';
 import RoleGuard from '../components/RoleGuard';
 import { SkeletonBlock } from '../components/LoadingSkeleton';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
@@ -365,18 +364,19 @@ export default function ManagerScreen() {
             </View>
           </View>
 
-          {/* Year Performance Bars */}
+          {/* Kâr Marjı — gerçek (canlı veriden hesaplanır) */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>3 Yıllık Performans (Kâr Marjı %)</Text>
-            <MiniBarChart
-              data={[
-                { label: '2024', value: 52 },
-                { label: '2025', value: 61 },
-                { label: '2026 (Aktif)', value: Math.round(margin) },
-              ]}
-              formatValue={v => `%${v}`}
-              barColor={colors.emerald.default}
-            />
+            <Text style={styles.sectionTitle}>Kâr Marjı</Text>
+            <View style={styles.marginCard}>
+              <Text style={[styles.marginValue, { color: margin >= 0 ? colors.emerald.default : colors.rose.default }]}>
+                %{margin.toFixed(1)}
+              </Text>
+              <Text style={styles.marginSub}>
+                {totalRevenue > 0
+                  ? `₺${Math.round(totalProfit).toLocaleString('tr-TR')} kâr · ₺${Math.round(totalRevenue).toLocaleString('tr-TR')} ciro`
+                  : 'Henüz faturalandırılmış iş yok'}
+              </Text>
+            </View>
           </View>
 
           {/* AI Analysis */}
@@ -876,6 +876,16 @@ const styles = StyleSheet.create({
     color: colors.text.muted,
     fontWeight: '700',
   },
+  marginCard: {
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  marginValue: { fontSize: 34, fontWeight: '900' },
+  marginSub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4, textAlign: 'center' },
   kpiGrid: { gap: spacing.md, marginBottom: spacing.xl },
   kpiCard: {
     backgroundColor: colors.bg.secondary,

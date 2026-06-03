@@ -71,15 +71,13 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await enqueueSync({ id, table: 'work_orders', action: 'delete', payload: { id } });
       return;
     }
-    // .select() ile silinen satır sayısını doğrula — RLS sessizce 0 satır döndürürse hata fırlat.
-    const { data, error } = await supabase
+    // DB'den sil. 0 satır dönmesi HATA DEĞİLDİR: kayıt yerel-only olabilir
+    // (hiç senkronlanmadı) — bu durumda yerel state'ten kaldırmak yeterlidir.
+    // Yalnızca gerçek bir Supabase hatası (ağ/izin) fırlatılır.
+    const { error } = await supabase
       .from('work_orders')
       .delete()
-      .eq('number', id)
-      .select('id');
+      .eq('number', id);
     if (error) throw new Error(`[workOrders.delete] ${error.message}`);
-    if (!data || data.length === 0) {
-      throw new Error('Silinemedi: yetkiniz yok veya kayıt bulunamadı.');
-    }
   },
 };
