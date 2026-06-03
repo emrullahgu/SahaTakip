@@ -59,7 +59,7 @@ function AnomaliesScreenInner() {
           <SumCard label="Düşük" value={stats.low} color={ANOMALY_SEVERITY_COLOR.low} />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+        <View style={styles.chipsScroll}>
           {KINDS.map(k => {
             const active = filter === k;
             return (
@@ -70,7 +70,7 @@ function AnomaliesScreenInner() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         {filtered.length === 0 ? (
           <View style={styles.empty}>
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   sumCard: { flex: 1, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, alignItems: 'center' },
   sumValue: { fontSize: typography.lg, fontWeight: '800' },
   sumLabel: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
-  chipsScroll: { marginBottom: spacing.sm },
+  chipsScroll: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.sm },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.secondary, marginRight: 6 },
   chipActive: { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' },
   chipText: { color: colors.text.muted, fontSize: 11, fontWeight: '700' },

@@ -47,7 +47,7 @@ export default function OrdListScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow} style={{ maxHeight: 50 }}>
+      <View style={s.filterRow}>
         {FILTERS.map(f => (
           <TouchableOpacity
             key={f}
@@ -60,7 +60,7 @@ export default function OrdListScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       <FlatList
         {...FLATLIST_DEFAULTS}
@@ -126,7 +126,7 @@ const s = StyleSheet.create({
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg.secondary, borderRadius: radius.sm, paddingHorizontal: spacing.sm, gap: 6, borderWidth: 1, borderColor: colors.border.primary },
   searchInput: { flex: 1, color: colors.text.primary, paddingVertical: 8, fontSize: typography.sm },
   newBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f97316', alignItems: 'center', justifyContent: 'center' },
-  filterRow: { paddingHorizontal: spacing.md, gap: 8, paddingBottom: spacing.sm },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, gap: 8, paddingBottom: spacing.sm },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary },
   chipT: { color: colors.text.primary, fontSize: typography.xs, fontWeight: '700' },
   list: { padding: spacing.md, paddingTop: 0, gap: spacing.sm },

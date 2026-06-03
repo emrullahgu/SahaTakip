@@ -34,7 +34,7 @@ export default function AssetListScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
+      <View style={s.chips}>
         <TouchableOpacity onPress={() => setFilter('all')} style={[s.chip, filter === 'all' && s.chipOn]}>
           <Text style={[s.chipT, filter === 'all' && s.chipTOn]}>Tümü ({items.length})</Text>
         </TouchableOpacity>
@@ -44,7 +44,7 @@ export default function AssetListScreen() {
             <Text style={[s.chipT, filter === t && { color: '#fff' }]}>{EQ_TYPE_LABEL[t]}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       <FlatList
         data={filtered}
@@ -122,7 +122,7 @@ export default function AssetListScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
-  chips: { padding: spacing.sm, gap: 6 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.sm, gap: 6 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, marginRight: 4 },
   chipOn: { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' },
   chipT: { color: colors.text.muted, fontSize: typography.xs, fontWeight: '700' },

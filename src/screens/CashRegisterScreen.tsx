@@ -141,7 +141,7 @@ function CashRegisterInner() {
         <Text style={styles.title}>Personel Kasa Takibi</Text>
 
         <Text style={styles.section}>Personel</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <View style={styles.chips}>
           {employees.map(e => {
             const active = e.id === selected;
             const sum = summaries.find(s => s.employeeId === e.id);
@@ -160,7 +160,7 @@ function CashRegisterInner() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         {selectedSummary ? (
           <View style={styles.balanceCard}>
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary, fontWeight: '800', fontSize: typography.sm,
     marginTop: spacing.lg, marginBottom: spacing.sm,
   },
-  chips: { gap: 8, paddingVertical: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 4 },
   empChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
