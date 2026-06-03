@@ -187,13 +187,8 @@ export default function QuotesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filter Chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterRow}
-      >
+      {/* Filter Chips — dar ekranda alt alta sarar (yatay kaydırma yerine) */}
+      <View style={styles.filterRow}>
         {STATUS_FILTERS.map(f => (
           <TouchableOpacity
             key={f}
@@ -204,7 +199,7 @@ export default function QuotesScreen() {
             <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>{f}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
 
       {/* List */}
       <FlatList
@@ -370,6 +365,7 @@ const styles = StyleSheet.create({
 
   dateRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
@@ -396,8 +392,7 @@ const styles = StyleSheet.create({
   },
   tplBtnText: { color: '#fff', fontWeight: '700', fontSize: typography.xs },
 
-  filterScroll: { maxHeight: 44, marginTop: spacing.sm },
-  filterRow: { paddingHorizontal: spacing.lg, gap: 6 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, marginTop: spacing.sm, gap: 6 },
   chip: {
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
