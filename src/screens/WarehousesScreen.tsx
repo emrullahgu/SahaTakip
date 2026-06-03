@@ -22,6 +22,7 @@ import {
 } from '../services/warehouses';
 import { Warehouse, WarehouseKind, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Warehouses'>;
@@ -104,9 +105,8 @@ export default function WarehousesScreen() {
         renderItem={({ item }) => {
           const meta = KIND_META[item.kind as WarehouseKind];
           return (
-            <TouchableOpacity
+            <PressableScale
               style={styles.card}
-              activeOpacity={0.85}
               onPress={() =>
                 navigation.navigate('WarehouseDetail', { warehouseId: item.id })
               }
@@ -136,7 +136,7 @@ export default function WarehousesScreen() {
               >
                 <Ionicons name="create-outline" size={16} color={colors.text.muted} />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </PressableScale>
           );
         }}
         ListEmptyComponent={

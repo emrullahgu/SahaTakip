@@ -1,6 +1,7 @@
 // RegionsScreen — POZ-DEV-354
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import PressableScale from '../components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -33,7 +34,7 @@ export default function RegionsScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
         ListEmptyComponent={<Text style={s.empty}>Henüz bölge yok.</Text>}
         renderItem={({ item }) => (
-          <TouchableOpacity style={s.card} onPress={() => nav.navigate('RegionForm', { regionId: item.id })}>
+          <PressableScale style={s.card} onPress={() => nav.navigate('RegionForm', { regionId: item.id })}>
             <View style={s.iconWrap}><Ionicons name="map-outline" size={22} color="#06b6d4" /></View>
             <View style={{ flex: 1 }}>
               <Text style={s.t}>{item.name}</Text>
@@ -42,7 +43,7 @@ export default function RegionsScreen() {
             <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10}>
               <Ionicons name="trash-outline" size={20} color="#ef4444" />
             </TouchableOpacity>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       />
       <TouchableOpacity style={s.fab} onPress={() => nav.navigate('RegionForm')}>

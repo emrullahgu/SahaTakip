@@ -12,10 +12,13 @@ interface Props {
   disabled?: boolean;
   scaleTo?: number;
   hitSlop?: number;
+  /** Yatay flex satırında (örn. yanında butonlar olan) kullanılan touchable'lar
+   *  için dış Pressable'a flex:1 verir; aksi halde içerik daralır. */
+  fill?: boolean;
 }
 
 export default function PressableScale({
-  children, onPress, onLongPress, style, disabled, scaleTo = 0.97, hitSlop,
+  children, onPress, onLongPress, style, disabled, scaleTo = 0.97, hitSlop, fill,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const animate = (to: number) =>
@@ -29,7 +32,10 @@ export default function PressableScale({
       onPressOut={() => animate(1)}
       disabled={disabled}
       hitSlop={hitSlop}
-      style={({ pressed }) => ({ opacity: disabled ? 0.5 : pressed ? 0.95 : 1 })}
+      style={({ pressed }) => [
+        { opacity: disabled ? 0.5 : pressed ? 0.95 : 1 },
+        fill ? { flex: 1 } : null,
+      ]}
     >
       <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
     </Pressable>

@@ -25,6 +25,7 @@ import {
   RootStackParamList,
 } from '../types';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Stock'>;
@@ -143,7 +144,7 @@ export default function StockScreen() {
                   <Text style={styles.warnTitle}>Düşük Stok Uyarısı ({lows.length})</Text>
                 </View>
                 {lows.map(row => (
-                  <TouchableOpacity
+                  <PressableScale
                     key={row.material.id}
                     style={[styles.row, { borderColor: colors.rose.border }]}
                     onPress={() =>
@@ -159,7 +160,7 @@ export default function StockScreen() {
                     <Text style={[styles.qty, { color: colors.rose.default }]}>
                       {row.totalQty} {row.material.unit}
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </>
             )}

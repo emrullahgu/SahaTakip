@@ -1,6 +1,7 @@
 // TenantsScreen — Faz 40
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import PressableScale from '../components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -29,7 +30,7 @@ export default function TenantsScreen() {
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6, paddingBottom: 100 }}
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => select(item.id)} onLongPress={() => remove(item.id)} style={[s.card, item.isCurrent && { borderColor: '#22c55e', borderWidth: 2 }]}>
+          <PressableScale onPress={() => select(item.id)} onLongPress={() => remove(item.id)} style={[s.card, item.isCurrent && { borderColor: '#22c55e', borderWidth: 2 }]}>
             <View style={s.row}>
               <Ionicons name="business-outline" size={20} color={PLAN_COLOR[item.plan]} />
               <View style={{ flex: 1 }}>
@@ -52,7 +53,7 @@ export default function TenantsScreen() {
                 <Text style={s.tT}>Ayarlar</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       />
       <TouchableOpacity style={s.fab} onPress={() => nav.navigate('TenantForm', {})}>

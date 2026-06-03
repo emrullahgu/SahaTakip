@@ -12,6 +12,7 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { listInspections, deleteInspection, INSPECTION_TYPE_LABEL } from '../services/inspections';
 import { Inspection, InspectionType, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Inspections'>;
@@ -87,7 +88,7 @@ export default function InspectionsScreen() {
           />
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <PressableScale
             style={styles.card}
             onPress={() => nav.navigate('InspectionForm', { inspectionId: item.id })}
             onLongPress={() => onDelete(item.id)}
@@ -109,7 +110,7 @@ export default function InspectionsScreen() {
                 {item.status === 'completed' ? 'Bitti' : 'Taslak'}
               </Text>
             </View>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       />
     </SafeAreaView>

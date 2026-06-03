@@ -25,6 +25,7 @@ import {
 } from '../services/payments';
 import { Payment, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { useHasRole } from '../components/RoleGuard';
 
@@ -181,11 +182,10 @@ function PaymentsScreenInner() {
         renderItem={({ item: p }) => {
           const m = PAYMENT_METHODS.find(x => x.value === p.method);
           return (
-            <TouchableOpacity
+            <PressableScale
               style={styles.card}
               onPress={() => navigation.navigate('PaymentDetail', { paymentId: p.id })}
               onLongPress={() => onLongPress(p)}
-              activeOpacity={0.85}
             >
               <View
                 style={[
@@ -215,7 +215,7 @@ function PaymentsScreenInner() {
                   {PAYMENT_STATUS_LABEL[p.status as keyof typeof PAYMENT_STATUS_LABEL]}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         }}
       />

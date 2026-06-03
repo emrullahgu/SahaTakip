@@ -13,6 +13,7 @@ import {
   TASK_PRIORITY_LABEL, TASK_PRIORITY_COLOR,
 } from '../services/tasks';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
@@ -74,7 +75,7 @@ export default function TasksScreen() {
         }
         renderItem={({ item: t }) => (
           <View style={s.card}>
-            <TouchableOpacity style={{ flex: 1 }} onPress={() => nav.navigate('TaskDetail', { taskId: t.id })} onLongPress={() => nav.navigate('TaskForm', { taskId: t.id })}>
+            <PressableScale fill style={{ flex: 1 }} onPress={() => nav.navigate('TaskDetail', { taskId: t.id })} onLongPress={() => nav.navigate('TaskForm', { taskId: t.id })}>
               <View style={s.cardHead}>
                 <Text style={s.cardTitle}>{t.title}</Text>
                 <View style={[s.badge, { backgroundColor: TASK_PRIORITY_COLOR[t.priority as keyof typeof TASK_PRIORITY_COLOR] + '33', borderColor: TASK_PRIORITY_COLOR[t.priority as keyof typeof TASK_PRIORITY_COLOR] }]}>
@@ -86,7 +87,7 @@ export default function TasksScreen() {
                 {t.dueDate && <Text style={[s.metaText, t.dueDate < new Date().toISOString().slice(0, 10) && t.status !== 'done' && { color: '#ef4444' }]}>📅 {t.dueDate}</Text>}
                 {t.assignedTo && <Text style={s.metaText}>👤 {t.assignedTo}</Text>}
               </View>
-            </TouchableOpacity>
+            </PressableScale>
             <View style={s.actions}>
               <TouchableOpacity style={[s.statusBtn, { backgroundColor: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] + '33', borderColor: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] }]} onPress={() => cycleStatus(t)}>
                 <Text style={[s.statusBtnText, { color: TASK_STATUS_COLOR[t.status as keyof typeof TASK_STATUS_COLOR] }]}>{TASK_STATUS_LABEL[t.status as keyof typeof TASK_STATUS_LABEL]}</Text>

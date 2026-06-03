@@ -21,6 +21,7 @@ import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
+import PressableScale from '../components/PressableScale';
 import { TabParamList, RootStackParamList } from '../types';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
@@ -153,8 +154,7 @@ export default function WorkOrdersScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <PressableScale
               onPress={() =>
                 realOrders.find(r => r.id === item.id) &&
                 navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
@@ -223,7 +223,7 @@ export default function WorkOrdersScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           )}
           ListEmptyComponent={
             <EmptyState

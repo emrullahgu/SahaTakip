@@ -1,6 +1,7 @@
 // DepartmentsScreen — POZ-DEV-352
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import PressableScale from '../components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -33,7 +34,7 @@ export default function DepartmentsScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
         ListEmptyComponent={<Text style={s.empty}>Henüz departman yok.</Text>}
         renderItem={({ item }) => (
-          <TouchableOpacity style={s.card} onPress={() => nav.navigate('DepartmentForm', { departmentId: item.id })}>
+          <PressableScale style={s.card} onPress={() => nav.navigate('DepartmentForm', { departmentId: item.id })}>
             <View style={s.iconWrap}><Ionicons name="business-outline" size={22} color="#0ea5e9" /></View>
             <View style={{ flex: 1 }}>
               <Text style={s.t}>{item.name}</Text>
@@ -42,7 +43,7 @@ export default function DepartmentsScreen() {
             <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10}>
               <Ionicons name="trash-outline" size={20} color="#ef4444" />
             </TouchableOpacity>
-          </TouchableOpacity>
+          </PressableScale>
         )}
       />
       <TouchableOpacity style={s.fab} onPress={() => nav.navigate('DepartmentForm')}>

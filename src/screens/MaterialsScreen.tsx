@@ -26,6 +26,7 @@ import { totalQtyOfMaterial } from '../services/stock';
 import { Material, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Materials'>;
@@ -121,9 +122,8 @@ export default function MaterialsScreen() {
           const total = totals[item.id] ?? 0;
           const low = item.minStock && total < item.minStock;
           return (
-            <TouchableOpacity
+            <PressableScale
               style={styles.card}
-              activeOpacity={0.85}
               onPress={() =>
                 navigation.navigate('MaterialForm', { materialId: item.id })
               }
@@ -163,7 +163,7 @@ export default function MaterialsScreen() {
                   { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: `"${item.name}" silinsin mi?`, confirmTitle: 'Malzeme Sil', onPress: async () => { await deleteMaterial(item.id); load(); } },
                 ]}
               />
-            </TouchableOpacity>
+            </PressableScale>
           );
         }}
         ListEmptyComponent={

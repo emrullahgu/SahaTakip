@@ -26,6 +26,7 @@ import {
 import { Vehicle, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Vehicles'>;
@@ -113,9 +114,8 @@ export default function VehiclesScreen() {
         renderItem={({ item }) => {
           const vAlerts = alerts.filter(a => a.vehicle.id === item.id);
           return (
-            <TouchableOpacity
+            <PressableScale
               style={styles.card}
-              activeOpacity={0.85}
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id })}
               onLongPress={() => onDelete(item)}
             >
@@ -151,7 +151,7 @@ export default function VehiclesScreen() {
                   ]}
                 />
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         }}
         ListEmptyComponent={
