@@ -18,6 +18,7 @@ import { useTheme } from '../themeMode';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
+import FadeInView from '../components/FadeInView';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import { RootStackParamList, TabParamList } from '../types';
@@ -102,25 +103,28 @@ export default function HomeScreen() {
         </View>
 
         {/* Stats Banner */}
-        <View style={styles.statsBanner}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.amber.default }]}>{pending}</Text>
-            <Text style={styles.statLabel}>Bekleyen</Text>
+        <FadeInView delay={40}>
+          <View style={styles.statsBanner}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: colors.amber.default }]}>{pending}</Text>
+              <Text style={styles.statLabel}>Bekleyen</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: colors.emerald.default }]}>{completed}</Text>
+              <Text style={styles.statLabel}>Tamamlanan</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: colors.text.primary }]}>{workOrders.length}</Text>
+              <Text style={styles.statLabel}>Toplam</Text>
+            </View>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.emerald.default }]}>{completed}</Text>
-            <Text style={styles.statLabel}>Tamamlanan</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.text.primary }]}>{workOrders.length}</Text>
-            <Text style={styles.statLabel}>Toplam</Text>
-          </View>
-        </View>
+        </FadeInView>
 
         {/* Quick Actions Grid */}
         <Text style={styles.sectionLabel}>Hızlı Erişim</Text>
+        <FadeInView delay={120}>
         <View style={styles.grid}>
           <TouchableOpacity
             style={styles.gridItem}
@@ -358,6 +362,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
+        </FadeInView>
 
         {/* Quick Report CTA */}
         <View style={styles.cta}>
