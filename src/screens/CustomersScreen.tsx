@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
+import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import type { Customer, RootStackParamList } from '../types';
 
@@ -84,10 +85,9 @@ export default function CustomersScreen() {
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <PressableScale
             style={styles.card}
             onPress={() => navigation.navigate('CustomerForm', { customerId: item.id })}
-            activeOpacity={0.85}
           >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{item.shortName[0]?.toUpperCase() ?? '?'}</Text>
@@ -131,7 +131,7 @@ export default function CustomersScreen() {
                 ]}
               />
             )}
-          </TouchableOpacity>
+          </PressableScale>
         )}
         ListEmptyComponent={
           <EmptyState

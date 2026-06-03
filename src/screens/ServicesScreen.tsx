@@ -18,6 +18,7 @@ import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import { WorkOrder } from '../types';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
@@ -83,10 +84,9 @@ export default function ServicesScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <TouchableOpacity
+            <PressableScale
               style={styles.card}
               onPress={() => setSelectedOrder(item)}
-              activeOpacity={0.85}
             >
               <View style={styles.cardLeft}>
                 <View style={styles.cardIcon}>
@@ -104,7 +104,7 @@ export default function ServicesScreen() {
                 <Text style={styles.cardAmount}>₺{item.quoteAmount.toLocaleString('tr-TR')}</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.text.faint} />
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           )}
           ListEmptyComponent={
             <EmptyState

@@ -19,6 +19,7 @@ import { useAppContext } from '../context/AppContext';
 import { Quote, QuoteStatus, RootStackParamList } from '../types';
 import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
+import PressableScale from '../components/PressableScale';
 import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { supabase } from '../services/supabase';
@@ -255,7 +256,7 @@ function QuoteCard({
 }) {
   const sc = STATUS_COLORS[quote.status];
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+    <PressableScale style={styles.card} onPress={onPress}>
       <View style={styles.cardTop}>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardNumber}>{quote.number}</Text>
@@ -308,7 +309,7 @@ function QuoteCard({
           ]}
         />
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
