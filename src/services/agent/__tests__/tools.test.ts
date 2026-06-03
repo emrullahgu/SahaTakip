@@ -35,3 +35,30 @@ describe('match_poz_bulk — toplu POZ/fiyat eşleştirme', () => {
     expect(res.items).toEqual([]);
   });
 });
+
+describe('set_quote_status — geçersiz durum DB\'ye yazılmaz (Teklifler ekranı çökmesini önler)', () => {
+  it('bilinen sinonimi geçerli QuoteStatus\'a eşler', async () => {
+    let written: any = null;
+    const c: any = { ...ctx, app: { setQuoteStatus: (_id: string, s: string) => { written = s; } } };
+    const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'Onaylandı' }, c);
+    expect(res.ok).toBe(true);
+    expect(written).toBe('Kabul Edildi'); // "Onaylandı" -> geçerli statü
+  });
+
+  it('tamamen geçersiz durumu reddeder, setQuoteStatus çağırmaz', async () => {
+    let called = false;
+    const c: any = { ...ctx, app: { setQuoteStatus: () => { called = true; } } };
+    const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'zzz-yok' }, c);
+    expect(res.ok).toBe(false);
+    expect(called).toBe(false);
+    expect(String(res.error)).toMatch(/Geçerli değerler/);
+  });
+
+  it('geçerli durumu olduğu gibi geçirir', async () => {
+    let written: any = null;
+    const c: any = { ...ctx, app: { setQuoteStatus: (_id: string, s: string) => { written = s; } } };
+    const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'Müşteriye Gönderildi' }, c);
+    expect(res.ok).toBe(true);
+    expect(written).toBe('Müşteriye Gönderildi');
+  });
+});

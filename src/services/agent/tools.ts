@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------
 
 import type { ToolSchema } from '../ai';
-import type { WorkOrder, Customer, Quote, QuoteLine, Employee, MaterialCatalogItem } from '../../types';
+import type { WorkOrder, Customer, Quote, QuoteLine, Employee, MaterialCatalogItem, QuoteStatus } from '../../types';
 import type { AppContextType } from '../../context/AppContext';
 import { calcQuoteTotals } from '../../context/AppContext';
 import { MATERIAL_CATALOG } from '../../data/initialData';
@@ -53,6 +53,36 @@ const slimEmp = (e: Employee) =>
 
 // ---- POZ katalog eşleştirme (toplu teklif için TR anahtar-kelime skoru) ----
 const TR_LC = (s: string) => s.toLocaleLowerCase('tr-TR');
+
+// Geçerli teklif durumları (QuoteStatus ile birebir). Ajan yanlış etiket
+// gönderirse normalizeQuoteStatus ile eşlenir; eşlenemezse reddedilir —
+// böylece DB'ye geçersiz status yazılıp Teklifler ekranı çökmez.
+const VALID_QUOTE_STATUSES: QuoteStatus[] = [
+  'Taslak', 'Onay Bekliyor', 'Müşteriye Gönderildi', 'Kabul Edildi', 'Reddedildi', 'Faturalandırıldı',
+];
+const QUOTE_STATUS_SYNONYMS: Record<string, QuoteStatus> = {
+  'gönderildi': 'Müşteriye Gönderildi',
+  'gonderildi': 'Müşteriye Gönderildi',
+  'müşteriye gönderildi': 'Müşteriye Gönderildi',
+  'onaylandı': 'Kabul Edildi',
+  'onaylandi': 'Kabul Edildi',
+  'kabul': 'Kabul Edildi',
+  'kabul edildi': 'Kabul Edildi',
+  'onay bekliyor': 'Onay Bekliyor',
+  'beklemede': 'Onay Bekliyor',
+  'reddedildi': 'Reddedildi',
+  'red': 'Reddedildi',
+  'iptal': 'Reddedildi',
+  'süresi doldu': 'Reddedildi',
+  'taslak': 'Taslak',
+  'faturalandırıldı': 'Faturalandırıldı',
+  'faturalandirildi': 'Faturalandırıldı',
+};
+function normalizeQuoteStatus(raw: unknown): QuoteStatus | null {
+  const s = String(raw ?? '').trim();
+  if ((VALID_QUOTE_STATUSES as string[]).includes(s)) return s as QuoteStatus;
+  return QUOTE_STATUS_SYNONYMS[TR_LC(s)] ?? null;
+}
 function scorePozAgainst(query: string, p: PozItem): number {
   const q = TR_LC(query);
   const tokens = q.split(/[\s,;./()\-x×*]+/).filter(t => t.length >= 2);
@@ -937,20 +967,31 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       function: {
         name: 'set_quote_status',
         description:
-          'Bir teklifin durumunu değiştirir. Status: "Taslak" | "Gönderildi" | "Onaylandı" | "Reddedildi" | "Süresi Doldu".',
+          'Bir teklifin durumunu değiştirir. Status SADECE şunlardan biri olabilir: ' +
+          '"Taslak" | "Onay Bekliyor" | "Müşteriye Gönderildi" | "Kabul Edildi" | "Reddedildi" | "Faturalandırıldı".',
         parameters: {
           type: 'object',
           required: ['id', 'status'],
           properties: {
             id: { type: 'string' },
-            status: { type: 'string' },
+            status: {
+              type: 'string',
+              enum: VALID_QUOTE_STATUSES as unknown as string[],
+            },
           },
         },
       },
     },
     handler: async (args, ctx) => {
-      ctx.app.setQuoteStatus(String(args.id), args.status);
-      return { ok: true, message: 'Teklif durumu güncellendi.' };
+      const status = normalizeQuoteStatus(args.status);
+      if (!status) {
+        return {
+          ok: false,
+          error: `Geçersiz durum: "${args.status}". Geçerli değerler: ${VALID_QUOTE_STATUSES.join(', ')}.`,
+        };
+      }
+      ctx.app.setQuoteStatus(String(args.id), status);
+      return { ok: true, message: `Teklif durumu güncellendi: ${status}` };
     },
   },
 

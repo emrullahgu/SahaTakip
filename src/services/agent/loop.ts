@@ -83,6 +83,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
     { role: 'user', content: goal },
   ];
 
+  let emptyTurns = 0; // sağlayıcı içerik+tool olmadan boş dönerse sayar
   for (let i = 1; i <= maxIterations; i++) {
     if (shouldStop?.()) {
       onEvent({ type: 'stop', reason: 'Kullanıcı durdurdu' });
@@ -109,16 +110,40 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       tool_calls: toolCalls.length ? toolCalls : undefined,
     });
 
-    // Tool çağrısı yoksa: bittiyse dur, yoksa devam (LLM bazen sadece düşünebilir)
+    // Tool çağrısı yoksa: anlamlı içerik varsa bitir; boşsa dürt (büyük/karmaşık
+    // istekte sağlayıcı bazen boş yanıt döndürür — "(boş)" göstermek yerine yeniden dene).
     if (!toolCalls.length) {
-      if (finishReason === 'stop' || finishReason === 'length') {
-        onEvent({ type: 'final', content: content || '(boş)' });
+      const text = (content ?? '').trim();
+      if (text) {
+        if (finishReason === 'stop' || finishReason === 'length') {
+          onEvent({ type: 'final', content: text });
+          return;
+        }
+        // İçerik var ama bitmedi — devam etmesini iste
+        messages.push({ role: 'user', content: 'Devam et: bir sonraki tool çağrını yap veya finish ile bitir.' });
+        continue;
+      }
+      // Boş içerik + tool yok: en fazla 2 kez dürt, sonra anlamlı hata ver
+      emptyTurns += 1;
+      if (emptyTurns >= 2) {
+        onEvent({
+          type: 'final',
+          content:
+            'Üzgünüm, bu isteği şu an işleyemedim (yapay zekâ sağlayıcısı boş yanıt döndürdü). ' +
+            'Çok kalemli bir liste gönderdiyseniz daha küçük parçalara bölüp tekrar deneyin; ' +
+            'sorun sürerse AI Asistan ayarlarından farklı bir model seçin.',
+        });
         return;
       }
-      // No tool, no stop — istek yap ki devam etsin
-      messages.push({ role: 'user', content: 'Devam et: bir sonraki tool çağrını yap veya finish ile bitir.' });
+      messages.push({
+        role: 'user',
+        content:
+          'Boş yanıt verdin. Lütfen uygun bir tool çağır (çok kalemli fiyatsız liste için match_poz_bulk, ' +
+          'ardından create_quote_draft) veya finish ile özetle. Asla boş yanıt verme.',
+      });
       continue;
     }
+    emptyTurns = 0; // tool çağrısı geldi → sayaç sıfırla
 
     let finished = false;
     for (const tc of toolCalls) {

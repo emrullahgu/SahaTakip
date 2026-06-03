@@ -254,7 +254,9 @@ function QuoteCard({
   onPress: () => void;
   onDelete: () => void;
 }) {
-  const sc = STATUS_COLORS[quote.status];
+  // Bilinmeyen/boş status (ör. ajan veya dış kaynaklı kayıt) gelirse Taslak'a düş —
+  // aksi halde STATUS_COLORS[status] undefined olur ve tüm Teklifler ekranı çöker.
+  const sc = STATUS_COLORS[quote.status] ?? STATUS_COLORS['Taslak'];
   return (
     <PressableScale style={styles.card} onPress={onPress}>
       <View style={styles.cardTop}>
