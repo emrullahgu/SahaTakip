@@ -454,6 +454,7 @@ export interface VehicleLog {
   dueAt?: string;
   note?: string;
   performedBy?: string;
+  receiptUri?: string;   // Yakıt/bakım fişi fotoğrafı (Storage URL veya local file://)
   createdAt: string;
 }
 
@@ -1218,6 +1219,73 @@ export interface WeeklyReport {
   totalImportKwh: number;
   totalExportKwh: number;
   peakDemandKw: number;
+  notes?: string;
+  createdAt: string;
+}
+
+// POZ-DEV-250: OSOS Otomasyon — Günlük takip, alarm üretimi ve otomatik rapor dağıtımı
+export type OsosAlarmKind =
+  | 'no_reading'         // gün içi okuma yok
+  | 'demand_exceeded'    // peak demand eşik aştı
+  | 'consumption_spike'  // tüketim ani sıçradı (% sapma)
+  | 'consumption_drop'   // tüketim ani düştü (% sapma)
+  | 'reverse_flow'       // beklenmedik veriş
+  | 'meter_offline';     // belirli saat sayaçtan veri yok
+
+export type OsosAlarmSeverity = 'info' | 'warning' | 'critical';
+
+export interface OsosAlarmRule {
+  id: string;
+  enabled: boolean;
+  meterNo?: string;                  // boşsa tüm sayaçlar
+  kind: OsosAlarmKind;
+  threshold?: number;                // demand kW, % sapma vb.
+  windowHours?: number;              // ör. son 24 saat
+  severity: OsosAlarmSeverity;
+  note?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface OsosAlarm {
+  id: string;
+  ruleId: string;
+  meterNo: string;
+  customerId?: string;
+  kind: OsosAlarmKind;
+  severity: OsosAlarmSeverity;
+  message: string;
+  value?: number;
+  threshold?: number;
+  readingId?: string;
+  detectedAt: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  notifiedAt?: string;
+}
+
+export interface OsosAutoReportConfig {
+  enabled: boolean;
+  hourOfDay: number;                 // 0..23 — gün başına bir kez bu saatten sonra çalışsın
+  emails: string[];
+  whatsapps: string[];
+  gchatSpaces: string[];
+  includeAlarms: boolean;
+  includeDailySummary: boolean;
+  lastRunAt?: string;
+  updatedAt?: string;
+}
+
+export interface OsosDailySummary {
+  id: string;
+  date: string;                      // YYYY-MM-DD
+  totalReadings: number;
+  totalImportKwh: number;
+  totalExportKwh: number;
+  peakDemandKw: number;
+  alarmCount: number;
+  criticalCount: number;
+  meterCount: number;
   notes?: string;
   createdAt: string;
 }
@@ -3953,6 +4021,7 @@ export type RootStackParamList = {
   OsosImport: undefined;
   WeeklyReports: undefined;
   WeeklyReportDetail: { reportId: string };
+  OsosAutomation: undefined;
   PayrollHub: undefined;
   Timesheet: { employeeId?: string; month?: string } | undefined;
   PayrollRuns: { month?: string } | undefined;

@@ -54,7 +54,12 @@ export const quotesRepo: Repository<Quote> = {
       await cacheSet(CACHE_KEY, [quote, ...cached]);
       return quote;
     }
-    const { error: e1 } = await supabase.from('quotes').insert(quoteToRow(quote));
+    // RLS quotes_owner_write created_by = auth.uid() istiyor. created_by set
+    // edilmezse manager olmayan (saha/mühendis) kullanıcının teklifi sessizce
+    // reddediliyor → yalnızca yerelde kalıyor, yönetici asla göremiyor.
+    let userId: string | undefined;
+    try { const { data } = await supabase.auth.getUser(); userId = data?.user?.id ?? undefined; } catch { /* ignore */ }
+    const { error: e1 } = await supabase.from('quotes').insert(quoteToRow(quote, userId));
     if (e1) throw new Error(`[quotes.insert] ${e1.message}`);
     if (quote.lines.length) {
       const { error: e2 } = await supabase
@@ -75,7 +80,12 @@ export const quotesRepo: Repository<Quote> = {
       await enqueueSync({ id, table: 'quotes', action: 'update', payload: quote });
       return quote;
     }
-    const { error: e1 } = await supabase.from('quotes').update(quoteToRow(quote)).eq('id', id);
+    // Update'te created_by'ı GÖNDERME — aksi halde bir yöneticinin başkasının
+    // teklifini güncellemesi sahipliği üzerine geçirir (orijinal sahip yazma
+    // hakkını kaybeder). Mevcut created_by korunur.
+    const { created_by, ...quoteUpdate } = quoteToRow(quote);
+    void created_by;
+    const { error: e1 } = await supabase.from('quotes').update(quoteUpdate).eq('id', id);
     if (e1) throw new Error(`[quotes.update] ${e1.message}`);
     const { error: eDel } = await supabase.from('quote_lines').delete().eq('quote_id', id);
     if (eDel) throw new Error(`[quote_lines.delete] ${eDel.message}`);

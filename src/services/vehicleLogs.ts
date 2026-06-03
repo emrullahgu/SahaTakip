@@ -25,11 +25,12 @@ function fromRow(r: any): VehicleLog {
     dueAt: r.due_at ?? undefined,
     note: r.note ?? undefined,
     performedBy: r.performed_by ?? undefined,
+    receiptUri: r.receipt_uri ?? undefined,
     createdAt: r.created_at ?? new Date().toISOString(),
   };
 }
 function toRow(l: VehicleLog): Record<string, any> {
-  return {
+  const row: Record<string, any> = {
     vehicle_id: l.vehicleId,
     kind: l.kind,
     km: l.km ?? null,
@@ -41,6 +42,10 @@ function toRow(l: VehicleLog): Record<string, any> {
     note: l.note ?? null,
     performed_by: l.performedBy ?? null,
   };
+  // receipt_uri yalnızca değer varsa eklenir — kolon migration'ı uygulanmadan
+  // önce fişsiz kayıtların buluta yazılması bozulmasın.
+  if (l.receiptUri) row.receipt_uri = l.receiptUri;
+  return row;
 }
 
 function uid(): string {

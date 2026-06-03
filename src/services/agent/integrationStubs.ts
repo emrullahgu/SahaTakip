@@ -1,18 +1,19 @@
 // services/agent/integrationStubs.ts
 // ---------------------------------------------------------------
-// Henüz bağlı olmayan dış sistem entegrasyonları için tool stub'ları.
-// Ajan bunları çağırdığında "henüz bağlı değil" diyen yapılandırılmış
-// bir yanıt döner; bu sayede LLM hayal kurmaz ve kullanıcıya net bir
-// "neyi eksik" mesajı verebilir. Gerçek entegrasyon eklendiğinde
-// handler içindeki TODO'lar gerçek API çağrılarıyla doldurulur.
+// Dış sistem entegrasyonları için agent tool'ları.
 //
-// Roadmap:
-//  - Gmail: OAuth2 + Google API'lar (gönder/oku/etiketle)
-//  - WhatsApp: Cloud API (Meta) veya 360dialog (mesaj/şablon gönder)
+// CANLI (Supabase Edge Functions üzerinden gerçek çağrı):
+//  - Gmail: gmail_send → gmail-send fn · gmail_list_recent → inbox_messages tablosu
+//  - WhatsApp: whatsapp_send → whatsapp-send fn (Meta Cloud API)
+//
+// STUB (henüz backend yok — çağrıldığında "yapılandırılmadı" döner):
 //  - Paraşüt: OAuth2 + REST (fatura, müşteri, tahsilat)
+//  - Google Drive: OAuth2 + Drive API (dosya ara/oku)
 // ---------------------------------------------------------------
 
 import type { ToolDef } from './tools';
+import { sendGmail, sendWhatsApp } from '../channels';
+import { supabase, SUPABASE_CONFIGURED } from '../supabase';
 
 const NOT_CONFIGURED = (provider: string, capability: string) => ({
   ok: false,
@@ -42,7 +43,7 @@ export const gmail_send: ToolDef = {
     function: {
       name: 'gmail_send',
       description:
-        '[STUB] Gmail üzerinden e-posta gönderir. Müşteriye teklif/rapor PDF\'i göndermek için kullanılacak. Şu an yapılandırılmadığı için çağrıldığında "konfigüre değil" yanıtı döner.',
+        'Gmail üzerinden e-posta gönderir (gmail-send Edge Function). Müşteriye teklif/rapor/bilgilendirme yollamak için. Body düz metin veya HTML olabilir; otomatik algılanır. (Dosya ekleri şu an desteklenmiyor.)',
       parameters: {
         type: 'object',
         required: ['to', 'subject', 'body'],
@@ -50,16 +51,32 @@ export const gmail_send: ToolDef = {
           to: { type: 'string', description: 'Alıcı e-posta adresi.' },
           subject: { type: 'string' },
           body: { type: 'string', description: 'Düz metin veya HTML.' },
-          attachments: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Ek dosya URL/path listesi (opsiyonel).',
-          },
         },
       },
     },
   },
-  handler: async (args) => NOT_CONFIGURED('Gmail', 'mail gönder: ' + (args.to || '?')),
+  destructive: true, // dışa e-posta gönderir → kullanıcı onayı gerekir
+  handler: async (args) => {
+    if (!SUPABASE_CONFIGURED) return NOT_CONFIGURED('Gmail', 'mail gönder: ' + (args.to || '?'));
+    const to = String(args.to || '').trim();
+    if (!to) return { ok: false, provider: 'Gmail', error: 'Alıcı (to) boş.' };
+    const body = String(args.body ?? '');
+    const looksHtml = /<[a-z][\s\S]*>/i.test(body);
+    try {
+      const r = await sendGmail({
+        to,
+        subject: String(args.subject ?? '(konu yok)'),
+        html: looksHtml ? body : undefined,
+        text: looksHtml ? undefined : body,
+        relatedType: 'agent',
+      });
+      return r.ok
+        ? { ok: true, provider: 'Gmail', to, message: `E-posta gönderildi → ${to}`, result: r.result }
+        : { ok: false, provider: 'Gmail', to, error: r.error || 'Gönderilemedi.' };
+    } catch (e: any) {
+      return { ok: false, provider: 'Gmail', to, error: e?.message || String(e) };
+    }
+  },
 };
 
 export const gmail_list_recent: ToolDef = {
@@ -67,17 +84,52 @@ export const gmail_list_recent: ToolDef = {
     type: 'function',
     function: {
       name: 'gmail_list_recent',
-      description: '[STUB] Son gelen e-postaları listeler (müşteri yanıtlarını izlemek için).',
+      description:
+        'Son gelen e-postaları listeler (inbox_messages tablosu — gmail-webhook tarafından doldurulur). Müşteri yanıtlarını/talepleri izlemek için. query ile "from:adres" veya konu/içerik kelimesi filtrelenebilir.',
       parameters: {
         type: 'object',
         properties: {
-          query: { type: 'string', description: 'Gmail arama sorgusu (örn "from:musteri@x.com").' },
-          maxResults: { type: 'number' },
+          query: { type: 'string', description: 'Arama: "from:musteri@x.com" veya konu/içerikte geçen kelime.' },
+          maxResults: { type: 'number', description: 'Varsayılan 10, max 50.' },
         },
       },
     },
   },
-  handler: async () => NOT_CONFIGURED('Gmail', 'gelen kutusu listele'),
+  handler: async (args) => {
+    if (!SUPABASE_CONFIGURED) return NOT_CONFIGURED('Gmail', 'gelen kutusu listele');
+    const max = Math.min(Math.max(Number(args.maxResults) || 10, 1), 50);
+    try {
+      const { data, error } = await supabase
+        .from('inbox_messages')
+        .select('id, sender, subject, body, received_at, processed')
+        .eq('source', 'gmail')
+        .order('received_at', { ascending: false })
+        .limit(max);
+      if (error) return { ok: false, provider: 'Gmail', error: error.message };
+      let rows: any[] = data || [];
+      const term = String(args.query || '').trim().toLowerCase();
+      if (term) {
+        const m = term.match(/from:(\S+)/);
+        if (m) rows = rows.filter(r => (r.sender || '').toLowerCase().includes(m[1]));
+        else rows = rows.filter(r =>
+          (r.subject || '').toLowerCase().includes(term) || (r.body || '').toLowerCase().includes(term));
+      }
+      return {
+        ok: true,
+        provider: 'Gmail',
+        count: rows.length,
+        messages: rows.map(r => ({
+          from: r.sender,
+          subject: r.subject,
+          date: r.received_at,
+          preview: String(r.body || '').slice(0, 200),
+          processed: r.processed,
+        })),
+      };
+    } catch (e: any) {
+      return { ok: false, provider: 'Gmail', error: e?.message || String(e) };
+    }
+  },
 };
 
 // ============== WHATSAPP ==============
@@ -88,7 +140,7 @@ export const whatsapp_send: ToolDef = {
     function: {
       name: 'whatsapp_send',
       description:
-        '[STUB] WhatsApp üzerinden mesaj/şablon gönderir. Saha ekiplerine bilgi, müşteriye teklif onay linki vs. için. Şu an yapılandırılmadı.',
+        'WhatsApp üzerinden mesaj/şablon gönderir (whatsapp-send Edge Function · Meta Cloud API). Saha ekibine bilgi, müşteriye teklif onay linki vs. için. templateName verilirse onaylı şablon, yoksa düz metin gönderilir.',
       parameters: {
         type: 'object',
         required: ['phone', 'message'],
@@ -96,12 +148,40 @@ export const whatsapp_send: ToolDef = {
           phone: { type: 'string', description: 'E.164 formatında (+90...).' },
           message: { type: 'string', description: 'Düz metin mesaj.' },
           templateName: { type: 'string', description: 'Onaylı şablon adı (opsiyonel).' },
-          templateParams: { type: 'array', items: { type: 'string' } },
+          templateParams: { type: 'array', items: { type: 'string' }, description: 'Şablon body parametreleri (sırasıyla).' },
         },
       },
     },
   },
-  handler: async (args) => NOT_CONFIGURED('WhatsApp', 'mesaj gönder: ' + (args.phone || '?')),
+  destructive: true, // dışa WhatsApp mesajı gönderir → kullanıcı onayı gerekir
+  handler: async (args) => {
+    if (!SUPABASE_CONFIGURED) return NOT_CONFIGURED('WhatsApp', 'mesaj gönder: ' + (args.phone || '?'));
+    const to = String(args.phone || '').trim();
+    if (!to) return { ok: false, provider: 'WhatsApp', error: 'Telefon (phone) boş.' };
+    const params: string[] = Array.isArray(args.templateParams) ? args.templateParams.map(String) : [];
+    const template = args.templateName
+      ? {
+          name: String(args.templateName),
+          language: 'tr',
+          components: params.length
+            ? [{ type: 'body', parameters: params.map(t => ({ type: 'text', text: t })) }]
+            : undefined,
+        }
+      : undefined;
+    try {
+      const r = await sendWhatsApp({
+        to,
+        message: args.message ? String(args.message) : undefined,
+        template,
+        relatedType: 'agent',
+      });
+      return r.ok
+        ? { ok: true, provider: 'WhatsApp', to, message: `WhatsApp gönderildi → ${to}`, result: r.result }
+        : { ok: false, provider: 'WhatsApp', to, error: r.error || 'Gönderilemedi.' };
+    } catch (e: any) {
+      return { ok: false, provider: 'WhatsApp', to, error: e?.message || String(e) };
+    }
+  },
 };
 
 // ============== PARAŞÜT ==============

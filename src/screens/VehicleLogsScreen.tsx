@@ -5,6 +5,8 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
+  Image,
+  Modal,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -51,6 +53,7 @@ export default function VehicleLogsScreen() {
   const [items, setItems] = useState<VehicleLog[]>([]);
   const [vehicles, setVehicles] = useState<Record<string, Vehicle>>({});
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>(initialKind ?? 'Tümü');
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const all = vehicleId ? await listLogsByVehicle(vehicleId) : await listLogs();
@@ -126,6 +129,11 @@ export default function VehicleLogsScreen() {
                   </Text>
                   {l.note ? <Text style={styles.note}>{l.note}</Text> : null}
                 </View>
+                {l.receiptUri ? (
+                  <TouchableOpacity onPress={() => setPreviewUri(l.receiptUri!)} activeOpacity={0.8}>
+                    <Image source={{ uri: l.receiptUri }} style={styles.thumb} resizeMode="cover" />
+                  </TouchableOpacity>
+                ) : null}
                 {typeof l.totalCost === 'number' && (
                   <Text style={styles.cost}>{l.totalCost.toLocaleString('tr-TR')} ₺</Text>
                 )}
@@ -139,12 +147,23 @@ export default function VehicleLogsScreen() {
           })
         )}
       </ScrollView>
+
+      <Modal visible={!!previewUri} transparent animationType="fade" onRequestClose={() => setPreviewUri(null)}>
+        <TouchableOpacity style={styles.previewBackdrop} activeOpacity={1} onPress={() => setPreviewUri(null)}>
+          {previewUri && <Image source={{ uri: previewUri }} style={styles.previewImg} resizeMode="contain" />}
+          <View style={styles.previewClose}><Ionicons name="close" size={28} color="#fff" /></View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
+  thumb: { width: 38, height: 38, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  previewBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', alignItems: 'center', justifyContent: 'center' },
+  previewImg: { width: '92%', height: '80%' },
+  previewClose: { position: 'absolute', top: 48, right: 24 },
   filterRow: { padding: spacing.lg, paddingBottom: spacing.sm, gap: 8 },
   chip: {
     paddingHorizontal: 12,

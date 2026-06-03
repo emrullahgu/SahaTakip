@@ -1,6 +1,25 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, getAuthRedirectUrl } from '../services/supabase';
+import { sendGmail } from '../services/channels';
+import { BRAND } from '../config/brand';
+
+/** Yeni kayıt olan kullanıcıya kendi sistemimizden (gmail-send) bilgilendirme e-postası. */
+async function sendWelcomeEmail(email: string, fullName: string): Promise<void> {
+  const co = BRAND.company;
+  const subject = `${co.name} • Hesabınız oluşturuldu`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#1f2937;max-width:560px">
+      <h2 style="color:#1e40af;margin:0 0 8px">${co.name}</h2>
+      <p>Merhaba <strong>${fullName}</strong>,</p>
+      <p><strong>${BRAND.appName}</strong> hesabınız başarıyla oluşturuldu.</p>
+      <p>Hesabınızın <strong>yetkili (yönetici) onayından</strong> sonra giriş yapabilirsiniz.
+         Onaylandığında bilgilendirileceksiniz. <em>E-posta doğrulaması gerekmez.</em></p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0"/>
+      <p style="font-size:12px;color:#6b7280">${co.legalName}<br/>${co.phone} · ${co.email} · ${co.website}</p>
+    </div>`;
+  await sendGmail({ to: email, subject, html, relatedType: 'signup', relatedId: email });
+}
 
 // Env varsı burada lokal olarak kontrol et (cross-module ReferenceError’ı önlemek için).
 const SUPABASE_CONFIGURED: boolean = !!(
@@ -176,9 +195,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     if (error) return { error: error.message };
-    // Supabase, e-posta onayı kapalıysa otomatik oturum oluşturur.
-    // Yeni kullanıcı admin onayı bekleyeceği için bu oturumu hemen kapatıyoruz.
+    // Supabase e-posta onayı kapalı (mailer_autoconfirm) → otomatik oturum oluşur.
+    // Bu kısa oturumun JWT'siyle (signOut'tan ÖNCE) kullanıcıya KENDİ
+    // sistemimizden (gmail-send) hoş-geldin/onay-bekliyor e-postası gönderiyoruz;
+    // Supabase artık doğrulama maili atmadığı için bilgilendirme bizden gider.
     if (data.session) {
+      try { await sendWelcomeEmail(email, fullName); } catch { /* mail başarısız akışı durdurmasın */ }
       await supabase.auth.signOut();
     }
     return { error: null };

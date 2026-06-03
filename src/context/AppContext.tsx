@@ -39,6 +39,7 @@ import {
 } from '../services/data';
 import { useAuth } from './AuthContext';
 import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotifications';
+import { Notify } from '../services/notifications';
 
 // ======================================================
 // QUOTE — Hesaplama yardımcıları
@@ -520,12 +521,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     auditRepo.log(userId, { action: 'work_order.assign', tableName: 'work_orders', refId: id, meta: { employeeId } });
     showToast(`${employeeName} kişisine atandı.`);
     const s = snapshot as WorkOrder | null;
-    // Bildirim: atanan personele
-    void sendLocalPush(
-      'Yeni görev atandı',
-      `${s?.client ?? ''} — ${s?.serviceName ?? id}`,
-      { workOrderId: id, kind: 'assign', employeeId },
-    );
+    // Bildirim: atanan personelin KENDİ cihazına uzak push (notify-push Edge Fn)
+    // + yöneticinin bildirim merkezi/local push'u. sendLocalPush yalnızca atamayı
+    // yapan cihazda göründüğü için tek başına yetersizdi.
+    void Notify.workOrderAssigned(employeeName, s?.client ?? '', id);
     // Planlanan başlangıç üzerine hatırlatıcı
     if (s?.plannedStart) {
       const d = new Date(s.plannedStart);
@@ -598,11 +597,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     auditRepo.log(userId, { action: 'work_order.transfer', tableName: 'work_orders', refId: id, meta: { employeeId } });
     showToast(`${employeeName} kişisine devredildi.`);
     const s = snapshot as WorkOrder | null;
-    void sendLocalPush(
-      'Görev devredildi',
-      `${s?.client ?? ''} — ${s?.serviceName ?? id} → ${employeeName}`,
-      { workOrderId: id, kind: 'transfer', employeeId },
-    );
+    // Devredilen personelin kendi cihazına uzak push + yönetici bildirimi.
+    void Notify.workOrderAssigned(employeeName, s?.client ?? '', id);
   };
 
   const bulkAssignWorkOrders = (ids: string[], employeeId: string, employeeName: string) => {
@@ -626,11 +622,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       meta: { count: ids.length, employeeId },
     });
     showToast(`${ids.length} görev ${employeeName} kişisine atandı.`);
-    void sendLocalPush(
-      'Toplu atama',
-      `${ids.length} görev ${employeeName} kişisine atandı.`,
-      { kind: 'bulk_assign', employeeId, count: ids.length },
-    );
+    // Atanan personelin kendi cihazına tek bir özet uzak push + yönetici bildirimi.
+    void Notify.workOrderAssigned(employeeName, `${ids.length} görev`, ids[0] ?? '');
   };
 
   const setWorkOrderPriority = (id: string, p: WorkOrderPriority) => {

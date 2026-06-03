@@ -1,9 +1,11 @@
 // reportPdf.ts — POZ-DEV-066
 // Rapor PDF üretimi + paylaşımı (expo-print).
 
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import type { Report } from '../types';
+import { BRAND } from '../config/brand';
+import { deliverPdf } from './pdf';
+
+const COMPANY = BRAND.company;
 
 const fmtNum = (n: number) =>
   n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -105,21 +107,15 @@ function buildHtml(r: Report): string {
 
   ${r.notes ? `<h2>Notlar</h2><p>${escapeHtml(r.notes)}</p>` : ''}
 
-  <div class="footer">SahaTakip · ${new Date().getFullYear()}</div>
+  <div class="footer">${escapeHtml(COMPANY.name)} · ${new Date().getFullYear()}</div>
 </body>
 </html>`;
 }
 
 export async function generateAndShareReportPdf(r: Report): Promise<{ uri: string }> {
   const html = buildHtml(r);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-  const can = await Sharing.isAvailableAsync();
-  if (can) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Rapor ${r.startDate}`,
-      UTI: 'com.adobe.pdf',
-    });
-  }
-  return { uri };
+  return deliverPdf(html, {
+    fileName: `Rapor-${r.startDate}.pdf`,
+    dialogTitle: `Rapor ${r.startDate}`,
+  });
 }

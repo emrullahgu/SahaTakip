@@ -1,10 +1,12 @@
 // receiptPdf.ts — POZ-DEV-079
 // Tahsilat makbuzu PDF + paylaş.
 
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { Payment } from '../types';
 import { PAYMENT_METHODS, PAYMENT_STATUS_LABEL } from './payments';
+import { BRAND } from '../config/brand';
+import { deliverPdf } from './pdf';
+
+const COMPANY = BRAND.company;
 
 function fmtMoney(n: number, c: string = 'TRY'): string {
   return `${n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${c === 'TRY' ? '₺' : c}`;
@@ -38,6 +40,13 @@ function methodLabel(m: Payment['method']): string {
 export function buildReceiptHtml(p: Payment, company?: { title?: string; address?: string; tax?: string }): string {
   const vat = p.vatRate ? (p.amount * p.vatRate) / (100 + p.vatRate) : 0;
   const net = p.amount - vat;
+  // Şirket bilgisi verilmezse BRAND (KOBİNERJİ) varsayılanları kullanılır.
+  const co = {
+    title: company?.title ?? COMPANY.legalName,
+    address: company?.address ?? COMPANY.address.replace(/\n/g, ' '),
+    tax: company?.tax ?? `${COMPANY.taxOffice} · VKN: ${COMPANY.taxNumber}`,
+    contact: `${COMPANY.phone} · ${COMPANY.email} · ${COMPANY.website}`,
+  };
   return `<!doctype html>
 <html lang="tr">
 <head>
@@ -65,9 +74,10 @@ export function buildReceiptHtml(p: Payment, company?: { title?: string; address
 <body>
   <div>
     <h1>TAHSİLAT MAKBUZU</h1>
-    <div class="muted">${esc(company?.title ?? '')}</div>
-    <div class="muted">${esc(company?.address ?? '')}</div>
-    <div class="muted">${esc(company?.tax ?? '')}</div>
+    <div class="muted"><strong>${esc(co.title)}</strong></div>
+    <div class="muted">${esc(co.address)}</div>
+    <div class="muted">${esc(co.tax)}</div>
+    <div class="muted">${esc(co.contact)}</div>
   </div>
 
   <div class="box">
@@ -96,16 +106,16 @@ export function buildReceiptHtml(p: Payment, company?: { title?: string; address
     <div>Teslim Alan</div>
   </div>
 
-  <div class="footer">Bu makbuz SahaTakip uygulaması tarafından oluşturulmuştur.</div>
+  <div class="footer">${esc(co.title)} · Bu makbuz elektronik ortamda oluşturulmuştur.</div>
 </body>
 </html>`;
 }
 
 export async function generateAndShareReceiptPdf(p: Payment): Promise<string | null> {
   const html = buildReceiptHtml(p);
-  const { uri } = await Print.printToFileAsync({ html });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Makbuzu Paylaş' });
-  }
-  return uri;
+  const { uri } = await deliverPdf(html, {
+    fileName: `Makbuz-${p.receiptNo || p.id}.pdf`,
+    dialogTitle: 'Makbuzu Paylaş',
+  });
+  return uri || null;
 }

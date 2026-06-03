@@ -188,6 +188,7 @@ import ProductItemDetailScreen from '../screens/ProductItemDetailScreen';
 import OsosHubScreen from '../screens/OsosHubScreen';
 import OsosReadingsScreen from '../screens/OsosReadingsScreen';
 import OsosImportScreen from '../screens/OsosImportScreen';
+import OsosAutomationScreen from '../screens/OsosAutomationScreen';
 import WeeklyReportsScreen from '../screens/WeeklyReportsScreen';
 import WeeklyReportDetailScreen from '../screens/WeeklyReportDetailScreen';
 import PayrollHubScreen from '../screens/PayrollHubScreen';
@@ -1510,6 +1511,7 @@ function MainStack() {
       <Stack.Screen name="OsosImport" component={OsosImportScreen} options={{ headerShown: true, title: 'CSV İçe Aktar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="WeeklyReports" component={WeeklyReportsScreen} options={{ headerShown: true, title: 'Haftalık Raporlar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="WeeklyReportDetail" component={WeeklyReportDetailScreen} options={{ headerShown: true, title: 'Rapor Detay', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OsosAutomation" component={OsosAutomationScreen} options={{ headerShown: true, title: 'OSOS Otomasyon', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="PayrollHub" component={PayrollHubScreen} options={{ headerShown: true, title: 'Bordro & Puantaj', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="Timesheet" component={TimesheetScreen} options={{ headerShown: true, title: 'Puantaj', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="PayrollRuns" component={PayrollRunsScreen} options={{ headerShown: true, title: 'Bordrolar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

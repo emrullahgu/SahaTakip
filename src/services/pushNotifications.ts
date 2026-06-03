@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { setPushToken } from './notificationPrefs';
+import { supabase, SUPABASE_CONFIGURED, getCurrentUser } from './supabase';
 
 let configured = false;
 
@@ -58,11 +59,120 @@ export async function registerForPushNotifications(): Promise<string | null> {
       projectId ? { projectId } : undefined,
     );
     const token = res.data;
-    if (token) await setPushToken(token);
+    if (token) {
+      await setPushToken(token);
+      // Paylaşımlı push_tokens tablosuna da yaz — başka kullanıcılar (ör. atama
+      // yapan yönetici) bu kullanıcıya uzaktan push gönderebilsin.
+      await registerDeviceToken(token);
+    }
     return token;
   } catch {
     return null;
   }
+}
+
+/**
+ * Mevcut kullanıcının Expo push token'ını paylaşımlı `push_tokens` tablosuna
+ * upsert eder. Çoklu cihaz desteklenir (token doğal anahtar). Cross-user push
+ * için notify-push Edge Function'ı bu tablodan okur.
+ */
+export async function registerDeviceToken(token: string): Promise<void> {
+  if (!SUPABASE_CONFIGURED || !token) return;
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
+    await supabase.from('push_tokens').upsert(
+      { user_id: user.id, token },
+      { onConflict: 'token' },
+    );
+  } catch {
+    /* sessiz — tablo/RLS yoksa local push yine çalışır */
+  }
+}
+
+// ============================================================================
+// UZAK PUSH (Expo Push API) — farklı cihazlara bildirim
+// ============================================================================
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+
+export interface ExpoPushMessage {
+  to: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  sound?: 'default' | null;
+  channelId?: string;
+}
+
+/** Geçerli bir Expo push token'ı mı? (ExponentPushToken[...] / ExpoPushToken[...]) */
+export function isExpoPushToken(t: string | null | undefined): boolean {
+  return !!t && /^Expo(nent)?PushToken\[.+\]$/.test(t.trim());
+}
+
+/** Token listesini tekilleştirip 100'erli (Expo limiti) parçalara böler ve mesaj üretir. */
+export function buildExpoMessages(
+  tokens: string[],
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): ExpoPushMessage[][] {
+  const valid = Array.from(new Set(tokens.filter(isExpoPushToken)));
+  const batches: ExpoPushMessage[][] = [];
+  for (let i = 0; i < valid.length; i += 100) {
+    batches.push(
+      valid.slice(i, i + 100).map(to => ({
+        to,
+        title,
+        body,
+        data: data ?? {},
+        sound: 'default' as const,
+        channelId: 'default',
+      })),
+    );
+  }
+  return batches;
+}
+
+/**
+ * Verilen Expo token'larına doğrudan Expo Push API ile bildirim gönderir.
+ * (Expo uç noktası publiktir — auth gerektirmez; hem client hem Edge Function'da kullanılabilir.)
+ * Geçersiz token'ları eler, 100'erli batch'ler, ticket sonuçlarını özetler.
+ */
+export async function sendRemotePush(
+  tokens: string[],
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): Promise<{ sent: number; failed: number; errors: string[] }> {
+  const batches = buildExpoMessages(tokens, title, body, data);
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+  for (const batch of batches) {
+    if (!batch.length) continue;
+    try {
+      const res = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(batch),
+      });
+      if (!res.ok) {
+        failed += batch.length;
+        errors.push(`HTTP ${res.status}`);
+        continue;
+      }
+      const json = await res.json().catch(() => ({} as any));
+      const tickets = Array.isArray(json?.data) ? json.data : [];
+      for (const t of tickets) {
+        if (t?.status === 'ok') sent++;
+        else { failed++; if (t?.message) errors.push(t.message); }
+      }
+    } catch (e: any) {
+      failed += batch.length;
+      errors.push(e?.message || String(e));
+    }
+  }
+  return { sent, failed, errors };
 }
 
 export async function sendLocalPush(

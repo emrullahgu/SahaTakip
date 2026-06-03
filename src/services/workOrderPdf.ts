@@ -1,6 +1,8 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import type { WorkOrder } from '../types';
+import { BRAND } from '../config/brand';
+import { deliverPdf } from './pdf';
+
+const COMPANY = BRAND.company;
 
 const fmt = (n: number) =>
   n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -51,8 +53,8 @@ function buildHtml(wo: WorkOrder): string {
 <body>
   <div class="header">
     <div class="company">
-      SahaTakip<br/>
-      <small style="font-size: 10px; color: #22c55e;">SAHADA · TAKİPTE · KONTROLDE</small>
+      ${escapeHtml(COMPANY.name)}<br/>
+      <small style="font-size: 10px; color: #22c55e;">${escapeHtml(COMPANY.tagline)}</small>
     </div>
     <div class="doc-type">
       <h1>SERVİS FORMU</h1>
@@ -114,7 +116,7 @@ function buildHtml(wo: WorkOrder): string {
   </div>
 
   <div style="margin-top: 40px; text-align: center; color: #9ca3af; font-size: 9px;">
-    SahaTakip Mühendislik · Bu belge elektronik ortamda oluşturulmuştur.
+    ${escapeHtml(COMPANY.legalName)} · Bu belge elektronik ortamda oluşturulmuştur.
   </div>
 </body>
 </html>`;
@@ -130,13 +132,8 @@ function escapeHtml(s: string): string {
 
 export async function generateAndShareWorkOrderPdf(wo: WorkOrder): Promise<{ uri: string }> {
   const html = buildHtml(wo);
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Servis Formu ${wo.id}`,
-      UTI: 'com.adobe.pdf',
-    });
-  }
-  return { uri };
+  return deliverPdf(html, {
+    fileName: `Servis-Formu-${wo.id}.pdf`,
+    dialogTitle: `Servis Formu ${wo.id}`,
+  });
 }

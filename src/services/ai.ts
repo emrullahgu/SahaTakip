@@ -266,6 +266,132 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
   throw new Error('Bilinmeyen sağlayıcı');
 }
 
+// ---------- Görsel (vision) çağrısı — çoklu sağlayıcı ----------
+// Vision destekleyen sağlayıcılar. Groq'un varsayılan metin modeli görsel almaz.
+export function isVisionCapable(p: AiProvider): boolean {
+  return p === 'openai' || p === 'gemini' || p === 'claude';
+}
+
+export interface VisionImage {
+  base64: string;
+  mimeType?: string; // varsayılan image/jpeg
+}
+
+/** Dosya uzantısından MIME tipini tahmin eder (vision için). */
+export function guessImageMime(uri: string): string {
+  const u = uri.toLowerCase();
+  if (u.endsWith('.png')) return 'image/png';
+  if (u.endsWith('.webp')) return 'image/webp';
+  if (u.endsWith('.heic') || u.endsWith('.heif')) return 'image/heic';
+  if (u.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
+}
+
+/**
+ * Görsel + metin promptu ile çok-sağlayıcılı analiz.
+ * OpenAI, Gemini ve Claude'un vision API'lerini tek arayüzde toplar.
+ * (Önceden yalnızca OpenAI destekleniyordu; Gemini/Claude anahtarı olan
+ *  kullanıcılar mock sonuç alıyordu — bu eksik giderildi.)
+ */
+export async function chatVision(
+  prompt: string,
+  image: VisionImage,
+  settings: AiSettings,
+  systemPrompt?: string,
+): Promise<string> {
+  if (settings.provider === 'mock' || !settings.apiKey) {
+    throw new Error('AI provider yapılandırılmamış.');
+  }
+  if (!isVisionCapable(settings.provider)) {
+    throw new Error(`${settings.provider} sağlayıcısı görsel analizi desteklemiyor.`);
+  }
+  const mime = image.mimeType || 'image/jpeg';
+  const model = settings.model || DEFAULT_MODEL[settings.provider];
+
+  if (settings.provider === 'openai') {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: `data:${mime};base64,${image.base64}` } },
+            ],
+          },
+        ],
+        temperature: 0.2,
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`OpenAI vision HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
+    const json = await res.json();
+    return json.choices?.[0]?.message?.content ?? '';
+  }
+
+  if (settings.provider === 'gemini') {
+    const apiKey = settings.apiKey.trim();
+    const rawModel = (settings.model || DEFAULT_MODEL.gemini).trim();
+    const modelName = rawModel === 'gemini-1.5-flash' ? 'gemini-2.5-flash' : rawModel;
+    const modelPath = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
+    const body = JSON.stringify({
+      system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: mime, data: image.base64 } },
+        ],
+      }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
+    );
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => ({} as any));
+      throw new Error(`Gemini vision HTTP ${res.status}: ${errorJson.error?.message || 'Bilinmeyen hata'}`);
+    }
+    const json = await res.json();
+    return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  }
+
+  // claude
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': settings.apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mime, data: image.base64 } },
+          { type: 'text', text: prompt },
+        ],
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Claude vision HTTP ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  return json.content?.[0]?.text ?? '';
+}
+
 // ---------- Çoklu sağlayıcı otomatik fallback ----------
 // Yapılandırılmış birincil sağlayıcı çalışmazsa (404/429/quota/timeout vb.),
 // mevcut anahtarlara sahip diğer sağlayıcılara sırayla geçer. Yetenek sırasına göre:
@@ -408,33 +534,34 @@ function mockAnalyze(context?: string): DamageAnalysis {
   };
 }
 
+/** Seçili sağlayıcı vision yapamıyorsa, anahtarı olan vision-yetenekli ilk
+ *  sağlayıcıya geçer (openai → gemini → claude). Hiçbiri yoksa null döner. */
+function pickVisionSettings(primary: AiSettings): AiSettings | null {
+  if (isVisionCapable(primary.provider) && primary.apiKey) return primary;
+  for (const p of ['openai', 'gemini', 'claude'] as AiProvider[]) {
+    const key = getBuiltinKey(p);
+    if (key) return { provider: p, apiKey: key, model: DEFAULT_MODEL[p] };
+  }
+  return null;
+}
+
 export async function analyzePhoto(imageUri: string, context?: string): Promise<DamageAnalysis> {
   const settings = await getAiSettings();
   if (settings.provider === 'mock' || !settings.apiKey) {
     return { ...mockAnalyze(context), imageUri };
   }
-  // Real vision call (OpenAI only — needs base64). Fall back to mock on error.
+  // Gerçek vision çağrısı (OpenAI / Gemini / Claude). Hata olursa mock'a düş.
   try {
-    if (settings.provider !== 'openai') return { ...mockAnalyze(context), imageUri };
+    const visionSettings = pickVisionSettings(settings);
+    if (!visionSettings) return { ...mockAnalyze(context), imageUri };
     const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' as never });
     const prompt = `Bu fotoğraftaki elektrik/mekanik hasarı analiz et. Türkçe SADECE şu JSON formatında cevap ver:\n{"severity":"low|medium|high|critical","findings":["..."],"recommendations":["..."],"estimatedCost":<TL sayı>,"confidence":<0-100>}\nBağlam: ${context || 'yok'}`;
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
-      body: JSON.stringify({
-        model: settings.model || 'gpt-4o-mini',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
-          ],
-        }],
-        temperature: 0.2,
-      }),
-    });
-    const json = await res.json();
-    const text = json.choices?.[0]?.message?.content || '';
+    const text = await chatVision(
+      prompt,
+      { base64, mimeType: guessImageMime(imageUri) },
+      visionSettings,
+      'Sen bir Türkçe konuşan saha hasar-tespit uzmanısın. SADECE geçerli JSON döndür.',
+    );
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) throw new Error('parse');
     const obj = JSON.parse(m[0]);
@@ -569,10 +696,178 @@ export interface ChatWithToolsResult {
   raw?: any;
 }
 
+// ============================================================================
+// Tool-calling format dönüştürücüler — Gemini & Claude
+// Agent loop OpenAI formatında (messages + ToolSchema) çalışır; bu yardımcılar
+// onu Gemini (functionDeclarations) ve Claude (tools) formatına çevirir ve
+// yanıtı tekrar OpenAI formatına döndürür.
+// ============================================================================
+
+/** tool_call_id → fonksiyon adı haritası. Gemini functionResponse `name` ister
+ *  ama OpenAI 'tool' mesajı yalnızca id taşır; adı assistant tool_calls'tan kurtarırız. */
+function buildToolCallNameMap(messages: ChatMessage[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const m of messages) {
+    if (m.role === 'assistant' && m.tool_calls) {
+      for (const tc of m.tool_calls) map[tc.id] = tc.function.name;
+    }
+  }
+  return map;
+}
+
+/** OpenAI JSON-schema parametrelerini Gemini'nin kabul ettiği alt kümeye indirger
+ *  (additionalProperties, $schema, default vb. desteklenmez → 400 hatası verir). */
+export function sanitizeGeminiSchema(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema;
+  const ALLOWED = ['type', 'description', 'enum', 'items', 'properties', 'required', 'nullable', 'format'];
+  const out: any = {};
+  for (const k of ALLOWED) {
+    if (schema[k] === undefined) continue;
+    if (k === 'properties' && schema.properties && typeof schema.properties === 'object') {
+      out.properties = {};
+      for (const [pk, pv] of Object.entries(schema.properties)) out.properties[pk] = sanitizeGeminiSchema(pv);
+    } else if (k === 'items') {
+      out.items = sanitizeGeminiSchema(schema.items);
+    } else {
+      out[k] = schema[k];
+    }
+  }
+  return out;
+}
+
+export function toGeminiTools(tools: ToolSchema[]): any[] {
+  const functionDeclarations = tools.map(t => {
+    const decl: any = { name: t.function.name, description: t.function.description };
+    const params = sanitizeGeminiSchema(t.function.parameters);
+    // Boş parametreli (no-arg) tool'larda `parameters` gönderme — Gemini boş object'i reddedebilir.
+    if (params && params.properties && Object.keys(params.properties).length) decl.parameters = params;
+    return decl;
+  });
+  return [{ functionDeclarations }];
+}
+
+export function toGeminiContents(
+  messages: ChatMessage[],
+  nameMap: Record<string, string>,
+): { systemInstruction?: any; contents: any[] } {
+  const sys = messages.filter(m => m.role === 'system').map(m => (m as any).content).filter(Boolean);
+  const contents: any[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+    if (m.role === 'user') {
+      contents.push({ role: 'user', parts: [{ text: m.content }] });
+    } else if (m.role === 'assistant') {
+      const parts: any[] = [];
+      if (m.content) parts.push({ text: m.content });
+      for (const tc of m.tool_calls ?? []) {
+        let args: any = {};
+        try { args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {}; } catch { args = {}; }
+        parts.push({ functionCall: { name: tc.function.name, args } });
+      }
+      if (parts.length) contents.push({ role: 'model', parts });
+    } else if (m.role === 'tool') {
+      const name = nameMap[m.tool_call_id] || 'unknown';
+      let resp: any;
+      try { resp = JSON.parse(m.content); } catch { resp = { result: m.content }; }
+      // Gemini `response` bir struct (obje) olmalı; primitive/dizi ise sarmala.
+      if (resp === null || typeof resp !== 'object' || Array.isArray(resp)) resp = { result: resp };
+      contents.push({ role: 'user', parts: [{ functionResponse: { name, response: resp } }] });
+    }
+  }
+  return {
+    systemInstruction: sys.length ? { parts: [{ text: sys.join('\n') }] } : undefined,
+    contents,
+  };
+}
+
+export function parseGeminiToolResponse(json: any): ChatWithToolsResult {
+  const cand = json?.candidates?.[0];
+  const parts = cand?.content?.parts ?? [];
+  let content = '';
+  const toolCalls: ToolCall[] = [];
+  let idx = 0;
+  for (const p of parts) {
+    if (typeof p.text === 'string') content += p.text;
+    else if (p.functionCall) {
+      toolCalls.push({
+        id: `gem_${p.functionCall.name}_${idx++}`,
+        type: 'function',
+        function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args ?? {}) },
+      });
+    }
+  }
+  const fr = cand?.finishReason;
+  const finishReason = toolCalls.length ? 'tool_calls' : fr === 'MAX_TOKENS' ? 'length' : 'stop';
+  return { content: content || null, toolCalls, finishReason, raw: json };
+}
+
+export function toClaudeTools(tools: ToolSchema[]): any[] {
+  return tools.map(t => ({
+    name: t.function.name,
+    description: t.function.description,
+    input_schema:
+      t.function.parameters && (t.function.parameters as any).type
+        ? t.function.parameters
+        : { type: 'object', properties: {} },
+  }));
+}
+
+export function toClaudeMessages(messages: ChatMessage[]): { system?: string; messages: any[] } {
+  const sys = messages.filter(m => m.role === 'system').map(m => (m as any).content).filter(Boolean);
+  const out: any[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+    if (m.role === 'user') {
+      out.push({ role: 'user', content: m.content });
+    } else if (m.role === 'assistant') {
+      const blocks: any[] = [];
+      if (m.content) blocks.push({ type: 'text', text: m.content });
+      for (const tc of m.tool_calls ?? []) {
+        let input: any = {};
+        try { input = tc.function.arguments ? JSON.parse(tc.function.arguments) : {}; } catch { input = {}; }
+        blocks.push({ type: 'tool_use', id: tc.id, name: tc.function.name, input });
+      }
+      // Claude boş içeriği reddeder — düşünce/araç yoksa yer tutucu metin koy.
+      if (!blocks.length) blocks.push({ type: 'text', text: '(devam)' });
+      out.push({ role: 'assistant', content: blocks });
+    } else if (m.role === 'tool') {
+      const block = { type: 'tool_result', tool_use_id: m.tool_call_id, content: m.content };
+      // Ardışık tool sonuçlarını TEK user turn'ünde birleştir (Claude şartı:
+      // bir assistant turn'ündeki tüm tool_use'lara aynı user turn'ünde yanıt).
+      const last = out[out.length - 1];
+      if (last && last.role === 'user' && Array.isArray(last.content) && last.content[0]?.type === 'tool_result') {
+        last.content.push(block);
+      } else {
+        out.push({ role: 'user', content: [block] });
+      }
+    }
+  }
+  return { system: sys.length ? sys.join('\n') : undefined, messages: out };
+}
+
+export function parseClaudeToolResponse(json: any): ChatWithToolsResult {
+  const blocks = Array.isArray(json?.content) ? json.content : [];
+  let content = '';
+  const toolCalls: ToolCall[] = [];
+  for (const b of blocks) {
+    if (b.type === 'text') content += b.text;
+    else if (b.type === 'tool_use') {
+      toolCalls.push({
+        id: b.id,
+        type: 'function',
+        function: { name: b.name, arguments: JSON.stringify(b.input ?? {}) },
+      });
+    }
+  }
+  const sr = json?.stop_reason;
+  const finishReason = toolCalls.length ? 'tool_calls' : sr === 'max_tokens' ? 'length' : 'stop';
+  return { content: content || null, toolCalls, finishReason, raw: json };
+}
+
 /**
- * Tool-calling destekli chat çağrısı.
- * Şu an Groq + OpenAI'da çalışır (OpenAI-uyumlu /chat/completions).
- * Diğer sağlayıcılar fallback olarak `chat()` üzerinden text-only döner.
+ * Tool-calling destekli chat çağrısı — OpenAI, Groq, Gemini ve Claude.
+ * Agent loop OpenAI formatında konuşur; Gemini/Claude için format çevirisi
+ * şeffaf yapılır. (Önceden Gemini/Claude sessizce text-only'a düşüyordu.)
  */
 export async function chatWithTools(
   messages: ChatMessage[],
@@ -581,7 +876,7 @@ export async function chatWithTools(
 ): Promise<ChatWithToolsResult> {
   const s = settings ?? (await getAiSettings());
   if (s.provider === 'mock' || !s.apiKey) {
-    throw new Error('AI provider yapılandırılmamış (Agent için Groq/OpenAI gerekli).');
+    throw new Error('AI provider yapılandırılmamış (Agent için OpenAI/Groq/Gemini/Claude gerekli).');
   }
   const model = s.model || DEFAULT_MODEL[s.provider];
 
@@ -620,7 +915,56 @@ export async function chatWithTools(
     };
   }
 
-  // Fallback: tool-calling olmayan sağlayıcılar
+  // Gemini — functionDeclarations ile native tool-calling
+  if (s.provider === 'gemini') {
+    const apiKey = s.apiKey.trim();
+    const rawModel = (s.model || DEFAULT_MODEL.gemini).trim();
+    const modelName = rawModel === 'gemini-1.5-flash' ? 'gemini-2.5-flash' : rawModel;
+    const modelPath = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
+    const nameMap = buildToolCallNameMap(messages);
+    const { systemInstruction, contents } = toGeminiContents(messages, nameMap);
+    const body: any = {
+      system_instruction: systemInstruction,
+      contents,
+      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+    };
+    if (tools.length) {
+      body.tools = toGeminiTools(tools);
+      body.tool_config = { function_calling_config: { mode: 'AUTO' } };
+    }
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    );
+    if (!res.ok) {
+      const errorJson = await res.json().catch(() => ({} as any));
+      throw new Error(`Gemini HTTP ${res.status}: ${errorJson.error?.message || 'Bilinmeyen hata'}`);
+    }
+    return parseGeminiToolResponse(await res.json());
+  }
+
+  // Claude — tools ile native tool-calling
+  if (s.provider === 'claude') {
+    const { system, messages: cmsgs } = toClaudeMessages(messages);
+    const body: any = { model, max_tokens: 2048, system, messages: cmsgs };
+    if (tools.length) body.tools = toClaudeTools(tools);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': s.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`Claude HTTP ${res.status}: ${txt.slice(0, 240)}`);
+    }
+    return parseClaudeToolResponse(await res.json());
+  }
+
+  // Bilinmeyen sağlayıcı — text-only fallback (tool çağrısı yapılamaz)
   const sysParts = messages.filter(m => m.role === 'system').map(m => (m as any).content).filter(Boolean);
   const lastUser = [...messages].reverse().find(m => m.role === 'user') as any;
   const content = await chat(lastUser?.content ?? '', s, sysParts.join('\n'));

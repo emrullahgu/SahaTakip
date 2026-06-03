@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -17,9 +18,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { addLog, getLog, updateLog } from '../services/vehicleLogs';
+import { uploadPhoto } from '../services/photoUpload';
 import { VehicleLog, VehicleLogKind, RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'VehicleLogForm'>;
@@ -48,6 +51,8 @@ export default function VehicleLogFormScreen() {
   const [serviceType, setServiceType] = useState('');
   const [dueAt, setDueAt] = useState('');
   const [note, setNote] = useState('');
+  const [receiptUri, setReceiptUri] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -62,10 +67,27 @@ export default function VehicleLogFormScreen() {
           setServiceType(l.serviceType ?? '');
           setDueAt(l.dueAt ?? '');
           setNote(l.note ?? '');
+          setReceiptUri(l.receiptUri);
         }
       }
     })();
   }, [logId]);
+
+  const pickReceipt = async (fromCamera: boolean) => {
+    try {
+      if (fromCamera) {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) { Alert.alert('İzin', 'Kamera izni reddedildi.'); return; }
+        const res = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+        if (!res.canceled && res.assets[0]) setReceiptUri(res.assets[0].uri);
+      } else {
+        const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.6, allowsMultipleSelection: false });
+        if (!res.canceled && res.assets[0]) setReceiptUri(res.assets[0].uri);
+      }
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Fotoğraf seçilemedi.');
+    }
+  };
 
   // Otomatik toplam hesabı (yakıt)
   useEffect(() => {
@@ -76,38 +98,51 @@ export default function VehicleLogFormScreen() {
   }, [kind, liters, unitPrice, totalCost]);
 
   const save = async () => {
-    const log: Omit<VehicleLog, 'id' | 'createdAt'> = {
-      vehicleId,
-      kind,
-      km: km ? Number(km.replace(',', '.')) : undefined,
-      liters: liters ? Number(liters.replace(',', '.')) : undefined,
-      unitPrice: unitPrice ? Number(unitPrice.replace(',', '.')) : undefined,
-      totalCost: totalCost ? Number(totalCost.replace(',', '.')) : undefined,
-      serviceType: serviceType.trim() || undefined,
-      dueAt: dueAt.trim() || undefined,
-      note: note.trim() || undefined,
-    };
-
-    if (kind === 'km' && !log.km) {
-      Alert.alert('Eksik', 'Km değeri girin.');
-      return;
-    }
-    if (kind === 'fuel' && !log.liters) {
-      Alert.alert('Eksik', 'Litre girin.');
-      return;
-    }
-    if ((kind === 'inspection' || kind === 'insurance') && !log.dueAt) {
+    if (saving) return;
+    if (kind === 'km' && !km) { Alert.alert('Eksik', 'Km değeri girin.'); return; }
+    if (kind === 'fuel' && !liters) { Alert.alert('Eksik', 'Litre girin.'); return; }
+    if ((kind === 'inspection' || kind === 'insurance') && !dueAt.trim()) {
       Alert.alert('Eksik', 'Vade tarihi girin (YYYY-AA-GG).');
       return;
     }
 
-    if (logId) {
-      const existing = await getLog(logId);
-      if (existing) await updateLog({ ...existing, ...log });
-    } else {
-      await addLog(log);
+    setSaving(true);
+    try {
+      // Yeni seçilen yerel fişi Storage'a yükle (online ise URL, değilse local kalır).
+      let finalReceipt = receiptUri;
+      if (receiptUri && !receiptUri.startsWith('http')) {
+        try {
+          finalReceipt = await uploadPhoto(receiptUri, `vehicle-receipts/${vehicleId}`);
+        } catch {
+          finalReceipt = receiptUri; // yükleme başarısız → local uri ile devam
+        }
+      }
+
+      const log: Omit<VehicleLog, 'id' | 'createdAt'> = {
+        vehicleId,
+        kind,
+        km: km ? Number(km.replace(',', '.')) : undefined,
+        liters: liters ? Number(liters.replace(',', '.')) : undefined,
+        unitPrice: unitPrice ? Number(unitPrice.replace(',', '.')) : undefined,
+        totalCost: totalCost ? Number(totalCost.replace(',', '.')) : undefined,
+        serviceType: serviceType.trim() || undefined,
+        dueAt: dueAt.trim() || undefined,
+        note: note.trim() || undefined,
+        receiptUri: finalReceipt || undefined,
+      };
+
+      if (logId) {
+        const existing = await getLog(logId);
+        if (existing) await updateLog({ ...existing, ...log });
+      } else {
+        await addLog(log);
+      }
+      navigation.goBack();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Kaydedilemedi.');
+    } finally {
+      setSaving(false);
     }
-    navigation.goBack();
   };
 
   return (
@@ -209,6 +244,31 @@ export default function VehicleLogFormScreen() {
             </>
           )}
 
+          {(kind === 'fuel' || kind === 'maintenance') && (
+            <>
+              <Text style={styles.label}>Fiş Fotoğrafı</Text>
+              {receiptUri ? (
+                <View style={styles.receiptBox}>
+                  <Image source={{ uri: receiptUri }} style={styles.receiptImg} resizeMode="cover" />
+                  <TouchableOpacity style={styles.receiptRemove} onPress={() => setReceiptUri(undefined)}>
+                    <Ionicons name="close-circle" size={26} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.receiptActions}>
+                  <TouchableOpacity style={styles.receiptBtn} onPress={() => pickReceipt(true)} activeOpacity={0.85}>
+                    <Ionicons name="camera-outline" size={18} color={brand.green} />
+                    <Text style={styles.receiptBtnText}>Fotoğraf Çek</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.receiptBtn} onPress={() => pickReceipt(false)} activeOpacity={0.85}>
+                    <Ionicons name="image-outline" size={18} color={brand.green} />
+                    <Text style={styles.receiptBtnText}>Galeriden</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          )}
+
           <Text style={styles.label}>Not</Text>
           <TextInput
             value={note}
@@ -219,9 +279,14 @@ export default function VehicleLogFormScreen() {
             multiline
           />
 
-          <TouchableOpacity style={styles.saveBtn} onPress={save} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+            onPress={save}
+            activeOpacity={0.85}
+            disabled={saving}
+          >
             <Ionicons name="save-outline" size={18} color="#fff" />
-            <Text style={styles.saveText}>Kaydet</Text>
+            <Text style={styles.saveText}>{saving ? 'Kaydediliyor…' : 'Kaydet'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -272,4 +337,34 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   saveText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  receiptActions: { flexDirection: 'row', gap: spacing.sm },
+  receiptBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    backgroundColor: colors.bg.secondary,
+  },
+  receiptBtnText: { color: colors.text.primary, fontWeight: '700', fontSize: typography.xs },
+  receiptBox: { position: 'relative', alignSelf: 'flex-start' },
+  receiptImg: {
+    width: 160,
+    height: 160,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    backgroundColor: colors.bg.secondary,
+  },
+  receiptRemove: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: colors.bg.primary,
+    borderRadius: 13,
+  },
 });
