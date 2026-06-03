@@ -22,6 +22,7 @@ import EmptyState from '../components/EmptyState';
 import PressableScale from '../components/PressableScale';
 import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { a11yButton, a11yInput } from '../utils/a11y';
 import { supabase } from '../services/supabase';
 import { quoteFromRow } from '../services/data/mappers';
 
@@ -122,6 +123,7 @@ export default function QuotesScreen() {
           style={styles.newBtn}
           onPress={() => navigation.navigate('NewQuote')}
           activeOpacity={0.85}
+          {...a11yButton('Yeni teklif oluştur')}
         >
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={styles.newBtnText}>Yeni Teklif</Text>
@@ -159,6 +161,9 @@ export default function QuotesScreen() {
           placeholderTextColor={colors.text.faint}
           value={search}
           onChangeText={setSearch}
+          returnKeyType="search"
+          autoCorrect={false}
+          {...a11yInput('Teklif ara', search)}
         />
       </View>
 
@@ -182,6 +187,7 @@ export default function QuotesScreen() {
           style={styles.tplBtn}
           onPress={() => navigation.navigate('QuoteTemplates')}
           activeOpacity={0.85}
+          {...a11yButton('Teklif şablonları')}
         >
           <Ionicons name="copy-outline" size={14} color="#fff" />
           <Text style={styles.tplBtnText}>Şablonlar</Text>
@@ -196,6 +202,9 @@ export default function QuotesScreen() {
             style={[styles.chip, filter === f && styles.chipActive]}
             onPress={() => setFilter(f)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ selected: filter === f }}
+            accessibilityLabel={`Durum filtresi: ${f}`}
           >
             <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>{f}</Text>
           </TouchableOpacity>

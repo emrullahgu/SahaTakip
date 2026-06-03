@@ -16,6 +16,7 @@ import EmptyState from '../components/EmptyState';
 import PressableScale from '../components/PressableScale';
 import RowMenu from '../components/RowMenu';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { a11yButton, a11yInput } from '../utils/a11y';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'Tasks'>;
@@ -48,8 +49,8 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.toolbar}>
-        <TextInput style={s.search} value={search} onChangeText={setSearch} placeholder="Görev ara..." placeholderTextColor={colors.text.faint} />
-        <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('TaskForm')}>
+        <TextInput style={s.search} value={search} onChangeText={setSearch} placeholder="Görev ara..." placeholderTextColor={colors.text.faint} returnKeyType="search" autoCorrect={false} {...a11yInput('Görev ara', search)} />
+        <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('TaskForm')} {...a11yButton('Görev ekle')}>
           <Ionicons name="add" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
