@@ -6,7 +6,7 @@ import {
   getAiSettings, setAiSettings, chat, chatWithFallback, suggestPozFromDescription,
   chatVision, analyzePhoto, guessImageMime, isVisionCapable,
   chatWithTools, chatWithToolsFallback, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
-  toClaudeTools, toClaudeMessages, parseClaudeToolResponse,
+  toClaudeTools, toClaudeMessages, parseClaudeToolResponse, fetchWithTimeout,
   type ChatMessage, type ToolSchema,
 } from '../ai';
 
@@ -139,6 +139,30 @@ describe('AI Service', () => {
         expect.stringContaining('/v1beta/models/gemini-2.5-flash:generateContent'),
         expect.any(Object)
       );
+    });
+  });
+
+  describe('fetchWithTimeout', () => {
+    it('istek init\'ine AbortController signal ekler ve normalde çözülür', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+      const res = await fetchWithTimeout('https://x', { method: 'POST', body: '{}' });
+      expect((res as any).ok).toBe(true);
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://x');
+      expect((init as any).signal).toBeDefined();
+      expect((init as any).body).toBe('{}'); // mevcut init alanları korunur
+    });
+
+    it('AbortError\'u anlaşılır bir zaman aşımı hatasına çevirir', async () => {
+      const err = new Error('Aborted');
+      (err as any).name = 'AbortError';
+      mockFetch.mockRejectedValueOnce(err);
+      await expect(fetchWithTimeout('https://x', {}, 10)).rejects.toThrow(/zaman aşımına/);
+    });
+
+    it('AbortError olmayan ağ hatasını olduğu gibi yükseltir', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network down'));
+      await expect(fetchWithTimeout('https://x', {})).rejects.toThrow('Network down');
     });
   });
 
