@@ -77,8 +77,18 @@ export default function WorkOrdersScreen() {
       <View style={styles.container}>
         {/* Screen Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>İş Emirlerim</Text>
-          <Text style={styles.subtitle}>Tarafınıza atanan iş emirleri</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>İş Emirlerim</Text>
+            <Text style={styles.subtitle}>Tarafınıza atanan iş emirleri</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('NewService')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.addBtnText}>İş Emri Ekle</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Search */}
@@ -231,7 +241,23 @@ export default function WorkOrdersScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   container: { flex: 1, paddingHorizontal: spacing.lg },
-  header: { paddingTop: spacing.lg, marginBottom: spacing.md },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.lg,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.indigo.default,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+  },
+  addBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
   title: { fontSize: typography.xl, color: colors.text.primary, fontWeight: '900' },
   subtitle: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },
   searchBox: {
