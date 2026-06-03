@@ -79,6 +79,26 @@ describe('AI Service', () => {
       expect(mockFetch).toHaveBeenCalledWith('https://api.openai.com/v1/chat/completions', expect.any(Object));
     });
 
+    it('OpenAI hata gövdesini hata mesajına dahil eder (teşhis için)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false, status: 401,
+        text: () => Promise.resolve('{"error":{"message":"invalid api key"}}'),
+      });
+      await expect(
+        chat('Hello', { provider: 'openai', apiKey: 'bad', model: 'gpt-4o-mini' }),
+      ).rejects.toThrow(/OpenAI HTTP 401.*invalid api key/);
+    });
+
+    it('Claude hata gövdesini hata mesajına dahil eder', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false, status: 429,
+        text: () => Promise.resolve('rate limit exceeded'),
+      });
+      await expect(
+        chat('Hello', { provider: 'claude', apiKey: 'k', model: 'claude-3-5-sonnet' }),
+      ).rejects.toThrow(/Claude HTTP 429.*rate limit/);
+    });
+
     it('should successfully query Groq API', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

@@ -198,7 +198,10 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
         temperature: 0.3,
       }),
     });
-    if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`OpenAI HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
     const json = await res.json();
     return json.choices?.[0]?.message?.content ?? '';
   }
@@ -240,7 +243,10 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
         messages: [{ role: 'user', content: prompt }],
       }),
     });
-    if (!res.ok) throw new Error(`Claude HTTP ${res.status}`);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`Claude HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
     const json = await res.json();
     return json.content?.[0]?.text ?? '';
   }
