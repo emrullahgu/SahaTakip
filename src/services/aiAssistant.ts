@@ -231,11 +231,13 @@ async function seedCust(): Promise<AiCustomerInsight[]> {
 export async function listCustomerInsights() { return seedCust(); }
 export async function generateCustomerInsight(customerId: string, customerName: string): Promise<AiCustomerInsight> {
   const list = await load<AiCustomerInsight>(K.custIns);
+  // Gerçek veri (teklif/iş emri/ciro) bu katmanda mevcut değil — sahte sayı
+  // üretmek yerine dürüst sıfır + bilgilendirme döndürülür.
   const c: AiCustomerInsight = {
     id: uid(), customerId, customerName,
-    summary: `${customerName} için otomatik özet: aktif müşteri, son ziyaret 7 gün önce. Risk düşük.`,
-    quotesCount: Math.floor(Math.random() * 10), workOrdersCount: Math.floor(Math.random() * 25),
-    totalRevenue: Math.floor(Math.random() * 500000), lastVisitAt: now(), createdAt: now(),
+    summary: `${customerName} — detaylı özet için müşterinin teklif, iş emri ve tahsilat geçmişi sistemde oluştukça otomatik dolar.`,
+    quotesCount: 0, workOrdersCount: 0,
+    totalRevenue: 0, lastVisitAt: now(), createdAt: now(),
   };
   list.unshift(c); await save(K.custIns, list);
   await logUsage('customer_summary', 'openai', 250, 200, true);
@@ -260,14 +262,15 @@ async function seedDaily(): Promise<AiDailyReport[]> {
 export async function listDailyReports() { return seedDaily(); }
 export async function generateDailyReport(): Promise<AiDailyReport> {
   const list = await load<AiDailyReport>(K.daily);
+  // Sahte rastgele metrik yerine dürüst sıfır — gün içi veri oluştukça dolar.
   const r: AiDailyReport = {
     id: uid(), date: new Date().toISOString().slice(0, 10),
-    text: 'Otomatik gün özeti: operasyon normal, kritik olay yok.',
+    text: 'Günlük özet, gün içinde iş emri/teklif/ziyaret kayıtları oluştukça otomatik güncellenir.',
     metrics: [
-      { label: 'İş Emri', value: String(10 + Math.floor(Math.random() * 20)) },
-      { label: 'Teklif', value: String(2 + Math.floor(Math.random() * 8)) },
-      { label: 'Ziyaret', value: String(5 + Math.floor(Math.random() * 15)) },
-      { label: 'SLA', value: `%${85 + Math.floor(Math.random() * 12)}` },
+      { label: 'İş Emri', value: '0' },
+      { label: 'Teklif', value: '0' },
+      { label: 'Ziyaret', value: '0' },
+      { label: 'SLA', value: '—' },
     ],
     createdAt: now(),
   };
