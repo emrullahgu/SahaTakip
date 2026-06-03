@@ -8,7 +8,7 @@ const COMPANY = BRAND.company;
 const fmt = (n: number) =>
   n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function buildHtml(wo: WorkOrder): string {
+export function buildWorkOrderHtml(wo: WorkOrder): string {
   const materialsRows = (wo.materials || [])
     .map((m, idx) => `
       <tr>
@@ -32,6 +32,7 @@ function buildHtml(wo: WorkOrder): string {
   .logo { height: 42px; width: auto; display: block; margin-bottom: 8px; }
   .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px; }
   .company { font-size: 20px; font-weight: 900; color: #1e40af; }
+  .company .contact { font-size: 9px; color: #6b7280; margin-top: 6px; line-height: 1.5; }
   .doc-type { text-align: right; }
   .doc-type h1 { margin: 0; font-size: 24px; color: #1f2937; }
   .section-title { font-size: 12px; font-weight: 800; color: #1e40af; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin: 20px 0 10px; }
@@ -58,6 +59,7 @@ function buildHtml(wo: WorkOrder): string {
     <div class="company">
       <img class="logo" src="${LOGO_DATA_URI}" alt="${escapeHtml(COMPANY.name)}" />
       <small style="font-size: 10px; color: #22c55e;">${escapeHtml(COMPANY.tagline)}</small>
+      <div class="contact">${escapeHtml(COMPANY.address.replace(/\n/g, ' '))}<br/>${escapeHtml(COMPANY.phone)} · ${escapeHtml(COMPANY.email)}<br/>${escapeHtml(COMPANY.taxOffice)} · VKN: ${escapeHtml(COMPANY.taxNumber)}</div>
     </div>
     <div class="doc-type">
       <h1>SERVİS FORMU</h1>
@@ -135,7 +137,7 @@ function escapeHtml(s: string): string {
 }
 
 export async function generateAndShareWorkOrderPdf(wo: WorkOrder): Promise<{ uri: string }> {
-  const html = buildHtml(wo);
+  const html = buildWorkOrderHtml(wo);
   return deliverPdf(html, {
     fileName: `Servis-Formu-${wo.id}.pdf`,
     dialogTitle: `Servis Formu ${wo.id}`,
