@@ -5,6 +5,7 @@ import {
   phoneTR,
   tcNo,
   vergiNo,
+  isValidVKN,
   iban,
   minLength,
   numberRange,
@@ -29,6 +30,7 @@ describe('validators', () => {
   describe('phoneTR', () => {
     it('5XXXXXXXXX geçerli', () => expect(phoneTR('5321234567')).toBeNull());
     it('05XXXXXXXXX geçerli', () => expect(phoneTR('05321234567')).toBeNull());
+    it('+90 5XX... (905...) geçerli', () => expect(phoneTR('+90 532 123 45 67')).toBeNull());
     it('9 hane hata', () => expect(phoneTR('532123456')).not.toBeNull());
   });
 
@@ -39,8 +41,16 @@ describe('validators', () => {
   });
 
   describe('vergiNo', () => {
-    it('10 hane geçerli', () => expect(vergiNo('1234567890')).toBeNull());
-    it('9 hane hata', () => expect(vergiNo('123456789')).not.toBeNull());
+    it('geçerli VKN (gerçek firma) null döner', () => expect(vergiNo('5641385589')).toBeNull());
+    it('9 hane uzunluk hatası', () => expect(vergiNo('123456789')).toBe('Vergi No 10 haneli olmalı'));
+    it('10 hane ama sağlama yanlış → hata', () => expect(vergiNo('5641385588')).toBe('Geçersiz Vergi No (sağlama hatası)'));
+    it('boş değer null (opsiyonel alan)', () => expect(vergiNo('')).toBeNull());
+  });
+
+  describe('isValidVKN', () => {
+    it('gerçek firma VKN geçerli', () => expect(isValidVKN('5641385589')).toBe(true));
+    it('yanlış sağlama basamağı geçersiz', () => expect(isValidVKN('5641385588')).toBe(false));
+    it('10 haneden farklı geçersiz', () => expect(isValidVKN('123')).toBe(false));
   });
 
   describe('iban', () => {

@@ -20,11 +20,32 @@ export const email: Validator = (v) => {
 export const phoneTR: Validator = (v) => {
   if (v == null || v === '') return null;
   const s = String(v).replace(/\D/g, '');
-  // 5XXXXXXXXX (10 hane) veya 05XXXXXXXXX (11)
+  // 5XXXXXXXXX (10 hane) | 05XXXXXXXXX (11) | 905XXXXXXXXX (+90, 12 hane)
   if (s.length === 10 && s.startsWith('5')) return null;
   if (s.length === 11 && s.startsWith('05')) return null;
+  if (s.length === 12 && s.startsWith('905')) return null;
   return 'Geçersiz telefon';
 };
+
+/**
+ * Resmi Türk Vergi Kimlik No (VKN) sağlama-basamağı doğrulaması.
+ * 10 hanenin son hanesi kontrol basamağıdır; sadece uzunluk kontrolü
+ * yazım hatalarını yakalamaz, bu algoritma yakalar.
+ */
+export function isValidVKN(s: string): boolean {
+  if (!/^\d{10}$/.test(s)) return false;
+  const d = s.split('').map(Number);
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    const tmp = (d[i] + (9 - i)) % 10;
+    if (tmp === 0) continue; // katkı 0
+    let p = (tmp * Math.pow(2, 9 - i)) % 9;
+    if (p === 0) p = 9; // tmp != 0 iken mod 9 == 0 → 9
+    sum += p;
+  }
+  const check = (10 - (sum % 10)) % 10;
+  return check === d[9];
+}
 
 export const tcNo: Validator = (v) => {
   if (v == null || v === '') return null;
@@ -40,8 +61,9 @@ export const tcNo: Validator = (v) => {
 
 export const vergiNo: Validator = (v) => {
   if (v == null || v === '') return null;
-  const s = String(v);
-  return /^\d{10}$/.test(s) ? null : 'Vergi No 10 haneli olmalı';
+  const s = String(v).trim();
+  if (!/^\d{10}$/.test(s)) return 'Vergi No 10 haneli olmalı';
+  return isValidVKN(s) ? null : 'Geçersiz Vergi No (sağlama hatası)';
 };
 
 export const iban: Validator = (v) => {
