@@ -19,6 +19,7 @@ import { POZ_CATALOG, type PozItem } from '../../data/pozCatalog';
 import { suggestionStore, type SuggestionSeverity } from './suggestionStore';
 import { WEB_TOOLS } from './webTools';
 import { INTEGRATION_TOOLS } from './integrationStubs';
+import { newUuid } from '../data/repository';
 
 export interface AgentContext {
   app: AppContextType;
@@ -265,7 +266,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       },
     },
     handler: async (args, ctx) => {
-      const id = 'CUST-' + Date.now().toString(36).toUpperCase();
+      const id = newUuid(); // UUID → DB'ye kalıcı yazılır (önceden 'CUST-...' yereldeydi)
       const customer: Customer = {
         id,
         name: String(args.name),
@@ -717,8 +718,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       });
 
       const totals = calcQuoteTotals(lines);
-      const id = 'QT-' + new Date().getFullYear() + '-' + Date.now().toString(36).toUpperCase();
-      const number = id;
+      // id = UUID (DB primary key, uuid kolonu) → quotesRepo gerçekten DB'ye yazar.
+      // Önceden id='QT-...' (UUID değil) olduğu için teklif yalnızca yerelde kalıyordu.
+      const id = newUuid();
+      const number = 'QT-' + new Date().getFullYear() + '-' + Date.now().toString(36).toUpperCase();
       const q: Quote = {
         id,
         number,
