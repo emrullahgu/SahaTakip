@@ -3,6 +3,7 @@ import React from 'react';
 import { View, TextInput, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton, a11yInput, HIT_SLOP_8 } from '../utils/a11y';
 
 export interface FilterChip {
   key: string;
@@ -30,9 +31,13 @@ export default function SearchFilterBar({ value, onChange, placeholder = 'Ara…
           onChangeText={onChange}
           placeholder={placeholder}
           placeholderTextColor={colors.text.faint}
+          returnKeyType="search"
+          autoCorrect={false}
+          clearButtonMode="never"
+          {...a11yInput(placeholder, value)}
         />
         {value.length > 0 && (
-          <TouchableOpacity onPress={() => onChange('')}>
+          <TouchableOpacity onPress={() => onChange('')} hitSlop={HIT_SLOP_8} {...a11yButton('Aramayı temizle')}>
             <Ionicons name="close-circle" size={16} color={colors.text.faint} />
           </TouchableOpacity>
         )}
@@ -42,7 +47,14 @@ export default function SearchFilterBar({ value, onChange, placeholder = 'Ara…
           {chips.map(c => {
             const active = c.key === activeKey;
             return (
-              <TouchableOpacity key={c.key} style={[styles.chip, active && styles.chipActive]} onPress={() => onChipPress?.(c.key)}>
+              <TouchableOpacity
+                key={c.key}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => onChipPress?.(c.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={typeof c.count === 'number' ? `${c.label}, ${c.count} kayıt` : c.label}
+              >
                 <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</Text>
                 {typeof c.count === 'number' && (
                   <View style={[styles.countPill, active && styles.countPillActive]}>

@@ -34,6 +34,7 @@ import {
   totalLabourMinutes,
 } from '../services/workOrderFlow';
 import SignaturePad from '../components/SignaturePad';
+import EmptyState from '../components/EmptyState';
 import {
   isAudioSupported,
   startAudioRecording,
@@ -91,7 +92,13 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   if (!wo) {
     return (
       <View style={styles.container}>
-        <Text style={styles.empty}>İş emri bulunamadı.</Text>
+        <EmptyState
+          icon="construct-outline"
+          title="İş emri bulunamadı"
+          subtitle="İş emri silinmiş veya henüz yüklenmemiş olabilir."
+          actionLabel="Geri Dön"
+          onAction={() => navigation.goBack()}
+        />
       </View>
     );
   }

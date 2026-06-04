@@ -1,10 +1,11 @@
 // Faz 45 — SafetyChecklistsScreen
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import type { SafetyChecklist, SafetyChecklistItem } from '../types';
 import { listChecklists, createChecklist } from '../services/quality';
 
@@ -24,7 +25,13 @@ export default function SafetyChecklistsScreen() {
   const [performedBy, setPerformedBy] = useState('');
   const [chkItems, setChkItems] = useState<SafetyChecklistItem[]>([]);
 
-  const load = useCallback(async () => { setItems(await listChecklists()); }, []);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listChecklists()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const openModal = () => {
@@ -43,8 +50,12 @@ export default function SafetyChecklistsScreen() {
 
   const onSave = async () => {
     if (!location.trim() || !performedBy.trim()) { Alert.alert('Eksik', 'Lokasyon ve uygulayan gerekli.'); return; }
-    await createChecklist(TEMPLATES[tpl].title, location, performedBy, chkItems);
-    setModal(false); load();
+    try {
+      await createChecklist(TEMPLATES[tpl].title, location.trim(), performedBy.trim(), chkItems);
+      setModal(false); load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'Kontrol listesi kaydedilemedi.');
+    }
   };
 
   return (
@@ -53,6 +64,7 @@ export default function SafetyChecklistsScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
         renderItem={({ item }) => {
           const c = item.passed ? '#22c55e' : '#ef4444';
           return (
@@ -71,9 +83,9 @@ export default function SafetyChecklistsScreen() {
             </TouchableOpacity>
           );
         }}
-        ListEmptyComponent={<Text style={s.empty}>Kontrol kaydı yok.</Text>}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Kontrol kaydı yok.</Text> : null}
       />
-      <TouchableOpacity style={s.fab} onPress={openModal}>
+      <TouchableOpacity style={s.fab} onPress={openModal} {...a11yButton('Yeni kontrol listesi oluştur')}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 

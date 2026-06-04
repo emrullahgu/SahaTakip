@@ -1,0 +1,49 @@
+name: EAS APK Build (Android · preview)
+
+# APK derlemesini EAS bulutunda çalıştırır.
+# GEREKLİ: Repo → Settings → Secrets and variables → Actions → New repository secret
+#   ad:  EXPO_TOKEN
+#   değer: Expo hesabınızdan alınan access token (https://expo.dev/accounts/[hesap]/settings/access-tokens)
+#
+# Çalıştırma: Actions sekmesi → "EAS APK Build" → "Run workflow" (manuel)
+# İstersen aşağıdaki `push` tetikleyicisinin yorumunu kaldırarak her push'ta otomatik derleyebilirsin.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+  # push:
+  #   branches: [ main ]
+
+jobs:
+  build:
+    name: Android APK (EAS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build APK on EAS
+        run: eas build --platform android --profile ${{ github.event.inputs.profile || 'preview' }} --non-interactive --no-wait

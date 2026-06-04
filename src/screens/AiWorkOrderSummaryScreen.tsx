@@ -1,6 +1,6 @@
 // AiWorkOrderSummaryScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,16 +18,27 @@ export default function AiWorkOrderSummaryScreen() {
   const onGen = async () => {
     if (!woId.trim()) return;
     setBusy(true);
-    try { await summarizeWorkOrder(woId); setWoId(''); load(); } finally { setBusy(false); }
+    try {
+      await summarizeWorkOrder(woId.trim()); setWoId(''); load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'İş emri özeti üretilemedi.');
+    } finally { setBusy(false); }
   };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.head}>
         <TextInput style={s.input} value={woId} onChangeText={setWoId} placeholder="İş emri no (örn: WO-2024-0451)" placeholderTextColor={colors.text.faint} />
-        <TouchableOpacity style={[s.btn, busy && { opacity: 0.5 }]} onPress={onGen} disabled={busy}>
+        <TouchableOpacity
+          style={[s.btn, (busy || !woId.trim()) && { opacity: 0.5 }]}
+          onPress={onGen}
+          disabled={busy || !woId.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy || !woId.trim(), busy }}
+          accessibilityLabel="İş emri için AI özeti üret"
+        >
           <Ionicons name={busy ? 'hourglass-outline' : 'sparkles'} size={18} color="#fff" />
-          <Text style={s.btnT}>Özet Üret</Text>
+          <Text style={s.btnT}>{busy ? 'Üretiliyor…' : 'Özet Üret'}</Text>
         </TouchableOpacity>
       </View>
       <FlatList

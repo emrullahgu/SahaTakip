@@ -17,6 +17,31 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
   mock: 'mock',
 };
 
+// Sağlayıcı isteklerinde varsayılan zaman aşımı. Mobil ağlarda asılı kalan bir
+// fetch sonsuza dek "yükleniyor" gösterip ekranı kilitliyordu; AbortController ile
+// belirli süre sonra iptal edilir. Mesaj "timeout" içerir → isTransientAiError
+// bunu yakalayıp diğer sağlayıcıya/denemeye geçer.
+export const AI_TIMEOUT_MS = 45000;
+
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number = AI_TIMEOUT_MS,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw new Error(`AI isteği zaman aşımına uğradı (${Math.round(timeoutMs / 1000)}sn timeout)`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // Sağlayıcı kartına tıklandığında otomatik dolduracağımız built-in anahtarlar —
 // Önce Supabase'den indirilmiş `ai_settings.keys` map'i, yoksa .env fallback.
 export function getBuiltinKey(p: AiProvider): string | undefined {
@@ -158,7 +183,7 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
   }
   const model = settings.model || DEFAULT_MODEL[settings.provider];
   if (settings.provider === 'openai') {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -173,12 +198,15 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
         temperature: 0.3,
       }),
     });
-    if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`OpenAI HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
     const json = await res.json();
     return json.choices?.[0]?.message?.content ?? '';
   }
   if (settings.provider === 'groq') {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -201,7 +229,7 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
     return json.choices?.[0]?.message?.content ?? '';
   }
   if (settings.provider === 'claude') {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -215,7 +243,10 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
         messages: [{ role: 'user', content: prompt }],
       }),
     });
-    if (!res.ok) throw new Error(`Claude HTTP ${res.status}`);
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`Claude HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    }
     const json = await res.json();
     return json.content?.[0]?.text ?? '';
   }
@@ -245,7 +276,7 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
 
     try {
       // Sistem talimatları (system_instruction) için v1beta kullanımı zorunludur.
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
         { method: 'POST', headers, body }
       );
@@ -309,7 +340,7 @@ export async function chatVision(
   const model = settings.model || DEFAULT_MODEL[settings.provider];
 
   if (settings.provider === 'openai') {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
       body: JSON.stringify({
@@ -351,7 +382,7 @@ export async function chatVision(
       }],
       generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
     });
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body },
     );
@@ -364,7 +395,7 @@ export async function chatVision(
   }
 
   // claude
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -531,6 +562,7 @@ function mockAnalyze(context?: string): DamageAnalysis {
     estimatedCost: cost,
     confidence: 72,
     analyzedAt: new Date().toISOString(),
+    source: 'demo',
   };
 }
 
@@ -573,6 +605,7 @@ export async function analyzePhoto(imageUri: string, context?: string): Promise<
       confidence: typeof obj.confidence === 'number' ? obj.confidence : 70,
       imageUri,
       analyzedAt: new Date().toISOString(),
+      source: 'ai',
     };
   } catch {
     return { ...mockAnalyze(context), imageUri };
@@ -886,7 +919,7 @@ export async function chatWithTools(
       s.provider === 'groq'
         ? 'https://api.groq.com/openai/v1/chat/completions'
         : 'https://api.openai.com/v1/chat/completions';
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -932,7 +965,7 @@ export async function chatWithTools(
       body.tools = toGeminiTools(tools);
       body.tool_config = { function_calling_config: { mode: 'AUTO' } };
     }
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     );
@@ -948,7 +981,7 @@ export async function chatWithTools(
     const { system, messages: cmsgs } = toClaudeMessages(messages);
     const body: any = { model, max_tokens: 2048, system, messages: cmsgs };
     if (tools.length) body.tools = toClaudeTools(tools);
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

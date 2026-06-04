@@ -101,7 +101,18 @@ export default function PhotoAnalysisScreen() {
                   <Text style={styles.cost}>Tahmini Maliyet: ₺{result.estimatedCost.toLocaleString('tr-TR')}</Text>
                 ) : null}
               </View>
+              {result.source === 'demo' && (
+                <View style={styles.demoBadge}>
+                  <Ionicons name="flask-outline" size={11} color="#b45309" />
+                  <Text style={styles.demoText}>YEREL DEMO</Text>
+                </View>
+              )}
             </View>
+            {result.source === 'demo' && (
+              <Text style={styles.demoNote}>
+                AI sağlayıcı tanımlı değil — bu sonuç anahtar kelime tabanlı yerel tahmindir. Gerçek görsel analizi için AI Ayarları'ndan bir sağlayıcı ekleyin.
+              </Text>
+            )}
 
             <Text style={styles.sectionT}>Bulgular</Text>
             {result.findings.map((f, i) => (
@@ -146,6 +157,9 @@ const styles = StyleSheet.create({
   sevText: { color: '#fff', fontWeight: '800', fontSize: typography.xs },
   confidence: { color: colors.text.muted, fontSize: typography.xs },
   cost: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700', marginTop: 2 },
+  demoBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#fef3c7', borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
+  demoText: { color: '#b45309', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  demoNote: { color: colors.text.muted, fontSize: typography.xs, lineHeight: 16, marginBottom: spacing.sm, fontStyle: 'italic' },
   sectionT: { color: colors.text.muted, fontSize: typography.xs, fontWeight: '800', marginTop: spacing.sm, marginBottom: 4 },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 4 },
   bullet: { flex: 1, color: colors.text.primary, fontSize: typography.sm, lineHeight: 18 },

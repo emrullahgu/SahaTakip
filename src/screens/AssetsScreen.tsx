@@ -9,6 +9,7 @@ import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { a11yButton, a11yInput } from '../utils/a11y';
 import { listAssets, ASSET_TYPES, ASSET_TYPE_LABEL } from '../services/assets';
 import { Asset, AssetType, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
@@ -56,10 +57,14 @@ export default function AssetsScreen() {
           placeholderTextColor={colors.text.faint}
           value={q}
           onChangeText={setQ}
+          returnKeyType="search"
+          autoCorrect={false}
+          {...a11yInput('Cihaz ara', q)}
         />
         <TouchableOpacity
           style={styles.newBtn}
           onPress={() => navigation.navigate('AssetForm', filterCustomerId ? { customerId: filterCustomerId } : undefined)}
+          {...a11yButton('Yeni cihaz ekle')}
         >
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={styles.newBtnText}>Yeni</Text>

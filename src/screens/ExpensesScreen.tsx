@@ -7,7 +7,8 @@ import {
   TextInput,
   ScrollView,
   Alert,
- FlatList,} from 'react-native';
+ FlatList,
+  RefreshControl,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -31,8 +32,12 @@ export default function ExpensesScreen() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const load = useCallback(async () => {
-    setExpenses(await listExpenses());
+    setLoading(true);
+    try { setExpenses(await listExpenses()); }
+    finally { setLoading(false); setLoaded(true); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -60,9 +65,13 @@ export default function ExpensesScreen() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteExpense(id);
-    showToast('Masraf silindi');
-    await load();
+    try {
+      await deleteExpense(id);
+      showToast('Masraf silindi');
+      await load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Masraf silinemedi');
+    }
   };
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
@@ -82,6 +91,9 @@ export default function ExpensesScreen() {
             style={styles.addBtn}
             onPress={() => setShowForm(!showForm)}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showForm }}
+            accessibilityLabel={showForm ? 'Masraf formunu kapat' : 'Masraf ekle'}
           >
             <Ionicons name={showForm ? 'close' : 'add'} size={20} color="#fff" />
           </TouchableOpacity>
@@ -164,7 +176,8 @@ export default function ExpensesScreen() {
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
-          ListEmptyComponent={
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+          ListEmptyComponent={loaded ? (
             <EmptyState
               icon="receipt-outline"
               title="Henüz masraf yok"
@@ -172,7 +185,7 @@ export default function ExpensesScreen() {
               actionLabel="+ Masraf Ekle"
               onAction={() => setShowForm(true)}
             />
-          }
+          ) : null}
           renderItem={({ item: e }) => (
             <View key={e.id} style={styles.expenseCard}>
               <View style={styles.expenseIcon}>

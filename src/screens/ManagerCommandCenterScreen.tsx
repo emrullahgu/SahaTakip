@@ -13,14 +13,13 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import { deliverPdf, PDF_BRAND_CSS, pdfBrandHeader } from '../services/pdf';
+import { BRAND } from '../config/brand';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
@@ -389,7 +388,7 @@ function Inner() {
         .join('');
       const activityHtml = activityRows
         .slice(0, 50)
-        .map((a) => `<tr><td class="small">${esc(fmtDateTime(a.created_at))}</td><td><strong>${esc(a.userName)}</strong> ${esc(a.meta.label)}</td><td class="small">${esc(a.table_name || '')}${a.ref_id ? ' #' + esc(String(a.ref_id).slice(0, 8)) : ''}</td></tr>`)
+        .map((a) => `<tr><td class="small">${esc(fmtDateTime(a.created_at))}</td><td><strong>${esc(a.userName)}</strong> ${esc(a.meta?.label ?? '')}</td><td class="small">${esc(a.table_name || '')}${a.ref_id ? ' #' + esc(String(a.ref_id).slice(0, 8)) : ''}</td></tr>`)
         .join('');
 
       const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"/>
@@ -416,14 +415,10 @@ function Inner() {
   .empty { padding: 14px; text-align: center; color: #9ca3af; font-style: italic; }
   .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .pgbrk { page-break-before: always; }
+  ${PDF_BRAND_CSS}
+  tbody tr { page-break-inside: avoid; }
 </style></head><body>
-  <div class="header">
-    <div>
-      <div class="title">YÖNETİCİ RAPORU</div>
-      <div class="sub">SahaTakip Mühendislik · ${esc(periodLabel)} · ${esc(trDate(startDate))} → ${esc(trDate(endDate))}</div>
-    </div>
-    <div class="sub">Hazırlanma: ${esc(new Date().toLocaleString('tr-TR'))}</div>
-  </div>
+  ${pdfBrandHeader('YÖNETİCİ RAPORU', `${periodLabel} · ${trDate(startDate)} → ${trDate(endDate)}`)}
 
   <div class="stats">
     <div class="stat green"><div class="l">Ciro</div><div class="v">${esc(rev)}</div></div>
@@ -476,17 +471,10 @@ function Inner() {
   <h2>Aktivite Akışı (Kim Ne Yaptı)</h2>
   ${activityHtml ? `<table><thead><tr><th>Zaman</th><th>İşlem</th><th>Kayıt</th></tr></thead><tbody>${activityHtml}</tbody></table>` : '<div class="empty">Bu dönem için aktivite kaydı yok.</div>'}
 
-  <div class="footer">SahaTakip Yönetici Komuta Merkezi · Bu rapor sistem tarafından üretilmiştir.</div>
+  <div class="footer">${esc(BRAND.company.legalName)} · Yönetici Komuta Merkezi · Bu rapor sistem tarafından üretilmiştir.</div>
 </body></html>`;
 
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      if (Platform.OS !== 'web' && uri && await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: `Yönetici Raporu ${periodLabel}`,
-          UTI: 'com.adobe.pdf',
-        });
-      }
+      await deliverPdf(html, { fileName: `Yonetici-Raporu-${periodLabel}.pdf`, dialogTitle: `Yönetici Raporu ${periodLabel}` });
     } catch (e: any) {
       Alert.alert('Hata', e?.message ?? 'PDF oluşturulamadı.');
     } finally {

@@ -1,12 +1,13 @@
 // DepartmentsScreen — POZ-DEV-352
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import PressableScale from '../components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import { listDepartments, deleteDepartment } from '../services/governance';
 import type { Department, RootStackParamList } from '../types';
 
@@ -15,14 +16,23 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'Departments'>;
 export default function DepartmentsScreen() {
   const nav = useNavigation<Nav>();
   const [items, setItems] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItems(await listDepartments()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listDepartments()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onDelete = (d: Department) => {
     Alert.alert('Sil', `"${d.name}" silinsin mi?`, [
       { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: async () => { await deleteDepartment(d.id); load(); } },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteDepartment(d.id); load(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Departman silinemedi.'); }
+      } },
     ]);
   };
 
@@ -32,7 +42,8 @@ export default function DepartmentsScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz departman yok.</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Henüz departman yok.</Text> : null}
         renderItem={({ item }) => (
           <PressableScale style={s.card} onPress={() => nav.navigate('DepartmentForm', { departmentId: item.id })}>
             <View style={s.iconWrap}><Ionicons name="business-outline" size={22} color="#0ea5e9" /></View>
@@ -40,13 +51,13 @@ export default function DepartmentsScreen() {
               <Text style={s.t}>{item.name}</Text>
               {item.parentId ? <Text style={s.sub}>Üst: {item.parentId}</Text> : null}
             </View>
-            <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10}>
+            <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10} {...a11yButton(`${item.name} departmanını sil`)}>
               <Ionicons name="trash-outline" size={20} color="#ef4444" />
             </TouchableOpacity>
           </PressableScale>
         )}
       />
-      <TouchableOpacity style={s.fab} onPress={() => nav.navigate('DepartmentForm')}>
+      <TouchableOpacity style={s.fab} onPress={() => nav.navigate('DepartmentForm')} {...a11yButton('Yeni departman ekle')}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>

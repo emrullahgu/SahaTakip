@@ -1,10 +1,11 @@
 // Faz 46 — AssetListScreen
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import type { EqAsset, EqAssetType, EqAssetStatus } from '../types';
 import { listEqAssets, createEqAsset, updateEqAssetStatus, EQ_TYPE_LABEL, EQ_TYPE_ICON, EQ_TYPE_COLOR, EQ_STATUS_LABEL, EQ_STATUS_COLOR } from '../services/equipment';
 
@@ -18,18 +19,26 @@ export default function AssetListScreen() {
   const [open, setOpen] = useState(false);
   const [statusFor, setStatusFor] = useState<EqAsset | null>(null);
   const [form, setForm] = useState({ type: 'transformer' as EqAssetType, name: '', customerName: '', location: '', brand: '', model: '', serialNo: '', capacity: '' });
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItems(await listEqAssets()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listEqAssets()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filtered = useMemo(() => filter === 'all' ? items : items.filter(i => i.type === filter), [items, filter]);
 
   const submit = async () => {
     if (!form.name || !form.brand) { Alert.alert('Eksik', 'Ad ve marka zorunlu.'); return; }
-    await createEqAsset({ ...form, installedAt: new Date().toISOString(), status: 'active' });
-    setOpen(false);
-    setForm({ type: 'transformer', name: '', customerName: '', location: '', brand: '', model: '', serialNo: '', capacity: '' });
-    load();
+    try {
+      await createEqAsset({ ...form, installedAt: new Date().toISOString(), status: 'active' });
+      setOpen(false);
+      setForm({ type: 'transformer', name: '', customerName: '', location: '', brand: '', model: '', serialNo: '', capacity: '' });
+      load();
+    } catch (e: any) { Alert.alert('Hata', e?.message || 'Varlık kaydedilemedi.'); }
   };
 
   return (
@@ -50,6 +59,7 @@ export default function AssetListScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
         renderItem={({ item }) => (
           <TouchableOpacity style={[s.card, { borderLeftColor: EQ_TYPE_COLOR[item.type] }]} onPress={() => nav.navigate('ServiceCard', { assetId: item.id })}>
             <View style={[s.icon, { backgroundColor: EQ_TYPE_COLOR[item.type] + '33' }]}>
@@ -65,10 +75,10 @@ export default function AssetListScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={s.empty}>Henüz varlık yok.</Text>}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Henüz varlık yok.</Text> : null}
       />
 
-      <TouchableOpacity style={s.fab} onPress={() => setOpen(true)}>
+      <TouchableOpacity style={s.fab} onPress={() => setOpen(true)} {...a11yButton('Yeni varlık ekle')}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
@@ -107,7 +117,7 @@ export default function AssetListScreen() {
             <Text style={s.mT}>Durum Değiştir</Text>
             {STATUSES.map(st => (
               <TouchableOpacity key={st} style={[s.stRow, { backgroundColor: EQ_STATUS_COLOR[st] + '33' }]}
-                onPress={async () => { if (statusFor) { await updateEqAssetStatus(statusFor.id, st); setStatusFor(null); load(); } }}>
+                onPress={async () => { if (statusFor) { try { await updateEqAssetStatus(statusFor.id, st); setStatusFor(null); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Durum güncellenemedi.'); } } }}>
                 <View style={[s.stDot, { backgroundColor: EQ_STATUS_COLOR[st] }]} />
                 <Text style={s.stT}>{EQ_STATUS_LABEL[st]}</Text>
               </TouchableOpacity>

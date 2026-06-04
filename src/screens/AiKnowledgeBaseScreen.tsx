@@ -3,7 +3,7 @@
 // dokümanlarını yapıştırır. Copilot her sorguda ilgili kayıtları çekip
 // sistem promptuna ekler.
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -81,10 +81,10 @@ export default function AiKnowledgeBaseScreen() {
           <Text style={s.title}>Bilgi Tabanı</Text>
           <Text style={s.sub}>{docs.length} doküman · Copilot bunları okur</Text>
         </View>
-        <TouchableOpacity style={[s.syncBtn, syncing && { opacity: 0.6 }]} onPress={onSync} disabled={syncing}>
-          <Ionicons name={syncing ? 'sync' : 'cloud-download-outline'} size={18} color="#0ea5e9" />
+        <TouchableOpacity style={[s.syncBtn, syncing && { opacity: 0.6 }]} onPress={onSync} disabled={syncing} accessibilityRole="button" accessibilityState={{ busy: syncing }} accessibilityLabel="Buluttan dokümanları senkronize et">
+          {syncing ? <ActivityIndicator size="small" color="#0ea5e9" /> : <Ionicons name="cloud-download-outline" size={18} color="#0ea5e9" />}
         </TouchableOpacity>
-        <TouchableOpacity style={s.addBtn} onPress={openNew}>
+        <TouchableOpacity style={s.addBtn} onPress={openNew} accessibilityRole="button" accessibilityLabel="Yeni doküman ekle">
           <Ionicons name="add" size={20} color="#fff" />
           <Text style={s.addText}>Ekle</Text>
         </TouchableOpacity>

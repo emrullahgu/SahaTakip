@@ -1,6 +1,6 @@
 // AiDailyReportScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,12 +11,20 @@ import { listDailyReports, generateDailyReport } from '../services/aiAssistant';
 export default function AiDailyReportScreen() {
   const [items, setItems] = useState<AiDailyReport[]>([]);
   const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => { setItems(await listDailyReports()); }, []);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listDailyReports()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onGen = async () => {
     setBusy(true);
-    try { await generateDailyReport(); load(); } finally { setBusy(false); }
+    try { await generateDailyReport(); load(); }
+    catch (e: any) { Alert.alert('Hata', e?.message || 'Günlük rapor üretilemedi.'); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -25,7 +33,8 @@ export default function AiDailyReportScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 8, paddingBottom: 90 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz rapor yok. FAB ile üretin.</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Henüz rapor yok. FAB ile üretin.</Text> : null}
         renderItem={({ item }) => (
           <View style={s.card}>
             <View style={s.head}>
@@ -45,7 +54,7 @@ export default function AiDailyReportScreen() {
           </View>
         )}
       />
-      <TouchableOpacity style={s.fab} onPress={onGen} disabled={busy}>
+      <TouchableOpacity style={[s.fab, busy && { opacity: 0.6 }]} onPress={onGen} disabled={busy} accessibilityRole="button" accessibilityState={{ busy }} accessibilityLabel="Günlük AI raporu üret">
         <Ionicons name={busy ? 'hourglass-outline' : 'sparkles'} size={26} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>

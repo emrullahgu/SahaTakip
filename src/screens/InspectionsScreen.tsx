@@ -1,7 +1,7 @@
 // InspectionsScreen — denetim listesi
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import { listInspections, deleteInspection, INSPECTION_TYPE_LABEL } from '../services/inspections';
 import { Inspection, InspectionType, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
@@ -29,8 +30,14 @@ export default function InspectionsScreen() {
   const filterCustomerId = route.params?.customerId;
   const [items, setItems] = useState<Inspection[]>([]);
   const [typeFilter, setTypeFilter] = useState<InspectionType | 'all'>(route.params?.type ?? 'all');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const refresh = useCallback(async () => { setItems(await listInspections()); }, []);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listInspections()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const filtered = useMemo(() => items.filter(i => {
@@ -43,18 +50,21 @@ export default function InspectionsScreen() {
   const onDelete = (id: string) => {
     Alert.alert('Sil', 'Denetim silinsin mi?', [
       { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: async () => { await deleteInspection(id); await refresh(); } },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteInspection(id); await refresh(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Denetim silinemedi.'); }
+      } },
     ]);
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.toolbar}>
-        <TouchableOpacity style={styles.newBtn} onPress={() => nav.navigate('InspectionForm', filterAssetId ? { assetId: filterAssetId } : undefined)}>
+        <TouchableOpacity style={styles.newBtn} onPress={() => nav.navigate('InspectionForm', filterAssetId ? { assetId: filterAssetId } : undefined)} {...a11yButton('Yeni denetim oluştur')}>
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={styles.newBtnText}>Yeni Denetim</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.newBtn, { backgroundColor: '#dc2626' }]} onPress={() => nav.navigate('Nonconformities', filterAssetId ? { assetId: filterAssetId } : undefined)}>
+        <TouchableOpacity style={[styles.newBtn, { backgroundColor: '#dc2626' }]} onPress={() => nav.navigate('Nonconformities', filterAssetId ? { assetId: filterAssetId } : undefined)} {...a11yButton('Uygunsuzluklar')}>
           <Ionicons name="warning-outline" size={16} color="#fff" />
           <Text style={styles.newBtnText}>Uygunsuzluklar</Text>
         </TouchableOpacity>
@@ -78,7 +88,8 @@ export default function InspectionsScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 80 }}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="clipboard-outline"
             title="Denetim bulunamadı"
@@ -86,7 +97,7 @@ export default function InspectionsScreen() {
             actionLabel="+ Yeni Denetim"
             onAction={() => nav.navigate('InspectionForm', filterAssetId ? { assetId: filterAssetId } : undefined)}
           />
-        }
+        ) : null}
         renderItem={({ item }) => (
           <PressableScale
             style={styles.card}

@@ -1,7 +1,7 @@
 // SalesVisitsScreen — POZ-DEV-089 Satış ziyaret listesi
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import { listVisits, deleteVisit, OUTCOME_LABEL, OUTCOME_COLOR } from '../services/salesVisits';
 import { RootStackParamList, SalesVisit, SalesVisitOutcome } from '../types';
 
@@ -29,8 +30,14 @@ export default function SalesVisitsScreen() {
   const filterCustomerId = route.params?.customerId;
   const [items, setItems] = useState<SalesVisit[]>([]);
   const [outcomeFilter, setOutcomeFilter] = useState<SalesVisitOutcome | 'all'>('all');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const refresh = useCallback(async () => { setItems(await listVisits()); }, []);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listVisits()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const filtered = useMemo(() => items.filter(v => {
@@ -48,7 +55,10 @@ export default function SalesVisitsScreen() {
   const onDelete = (id: string) => {
     Alert.alert('Sil', 'Ziyaret kaydı silinsin mi?', [
       { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: async () => { await deleteVisit(id); await refresh(); } },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteVisit(id); await refresh(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Ziyaret silinemedi.'); }
+      } },
     ]);
   };
 
@@ -60,7 +70,7 @@ export default function SalesVisitsScreen() {
           <Pill label="Kazandı" value={stats.won} color={OUTCOME_COLOR.won} />
           <Pill label="Takip" value={stats.followUp} color={OUTCOME_COLOR.follow_up} />
         </View>
-        <TouchableOpacity style={styles.newBtn} onPress={() => nav.navigate('SalesVisitForm', filterCustomerId ? { customerId: filterCustomerId } : undefined)}>
+        <TouchableOpacity style={styles.newBtn} onPress={() => nav.navigate('SalesVisitForm', filterCustomerId ? { customerId: filterCustomerId } : undefined)} {...a11yButton('Yeni ziyaret ekle')}>
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={styles.newBtnText}>Yeni Ziyaret</Text>
         </TouchableOpacity>
@@ -83,12 +93,13 @@ export default function SalesVisitsScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 80 }}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={42} color={colors.text.faint} />
             <Text style={styles.emptyText}>Ziyaret yok.</Text>
           </View>
-        }
+        ) : null}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}

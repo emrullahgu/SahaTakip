@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
  FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,19 +56,27 @@ export default function StockMovementsScreen() {
   const [items, setItems] = useState<StockMovement[]>([]);
   const [warehouses, setWarehouses] = useState<Record<string, Warehouse>>({});
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Tümü');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    const all = materialId
-      ? await listMovementsByMaterial(materialId)
-      : await listMovements();
-    const filtered = warehouseId
-      ? all.filter(m => m.fromWarehouseId === warehouseId || m.toWarehouseId === warehouseId)
-      : all;
-    setItems(filtered);
-    const ws = await listWarehouses();
-    const map: Record<string, Warehouse> = {};
-    ws.forEach(w => (map[w.id] = w));
-    setWarehouses(map);
+    setLoading(true);
+    try {
+      const all = materialId
+        ? await listMovementsByMaterial(materialId)
+        : await listMovements();
+      const filtered = warehouseId
+        ? all.filter(m => m.fromWarehouseId === warehouseId || m.toWarehouseId === warehouseId)
+        : all;
+      setItems(filtered);
+      const ws = await listWarehouses();
+      const map: Record<string, Warehouse> = {};
+      ws.forEach(w => (map[w.id] = w));
+      setWarehouses(map);
+    } finally {
+      setLoading(false);
+      setLoaded(true);
+    }
   }, [materialId, warehouseId]);
 
   useFocusEffect(
@@ -103,13 +112,14 @@ export default function StockMovementsScreen() {
         data={filtered}
         keyExtractor={mv => mv.id}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="time-outline"
             title="Hareket yok"
             subtitle="Filtreyi değiştirerek tekrar deneyebilirsiniz."
           />
-        }
+        ) : null}
         renderItem={({ item: mv }) => {
           const meta = KIND_META[mv.kind as StockMovementKind];
           const fromName = mv.fromWarehouseId ? warehouses[mv.fromWarehouseId]?.name : null;

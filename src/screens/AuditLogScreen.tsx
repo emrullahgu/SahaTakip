@@ -150,13 +150,13 @@ export default function AuditLogScreen() {
           keyExtractor={(r) => r.id}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#22c55e" />}
-          ListEmptyComponent={
+          ListEmptyComponent={!loading ? (
             <EmptyState
               icon="document-text-outline"
               title="Kayıt bulunamadı"
               subtitle="Arama kriterlerini değiştirerek tekrar deneyebilirsiniz."
             />
-          }
+          ) : null}
           renderItem={({ item }) => {
             const c = actionColor(item.action);
             const metaPreview = item.meta && typeof item.meta === 'object'

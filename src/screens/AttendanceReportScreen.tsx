@@ -5,8 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import { deliverPdf, PDF_BRAND_CSS, pdfBrandHeader } from '../services/pdf';
+import { BRAND } from '../config/brand';
 
 import { colors, spacing, radius, typography } from '../theme';
 import { shiftsRepo, isOnlineMode } from '../services/data';
@@ -134,8 +134,10 @@ export default function AttendanceReportScreen() {
   td { padding:7px 6px; border-bottom:1px solid #e5e7eb; font-size:11px; }
   td.right { text-align:right; font-variant-numeric:tabular-nums; }
   .footer { margin-top:22px; font-size:9px; color:#6b7280; text-align:center; border-top:1px solid #e5e7eb; padding-top:10px; }
+  ${PDF_BRAND_CSS}
+  tbody tr { page-break-inside: avoid; }
 </style></head><body>
-<div class="header"><div><div class="title">PUANTAJ RAPORU</div><div class="sub">SahaTakip Mühendislik · ${esc(monthLabel)}</div></div><div class="sub">Hazırlanma: ${esc(new Date().toLocaleString('tr-TR'))}</div></div>
+${pdfBrandHeader('PUANTAJ RAPORU', monthLabel)}
 <div class="stats">
   <div class="stat"><div class="l">Personel</div><div class="v">${totals.users}</div></div>
   <div class="stat"><div class="l">Vardiya</div><div class="v">${totals.shifts}</div></div>
@@ -143,12 +145,9 @@ export default function AttendanceReportScreen() {
   <div class="stat"><div class="l">Toplam Mola</div><div class="v">${esc(hhmm(totals.breakMinutes))}</div></div>
 </div>
 <table><thead><tr><th>Personel</th><th style="text-align:right">Gün</th><th style="text-align:right">Vardiya</th><th style="text-align:right">Mesai</th><th style="text-align:right">Mola</th></tr></thead><tbody>${trs}</tbody></table>
-<div class="footer">SahaTakip · Bu rapor sistem tarafından üretilmiştir.</div>
+<div class="footer">${esc(BRAND.company.legalName)} · Bu rapor sistem tarafından üretilmiştir.</div>
 </body></html>`;
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Puantaj ${monthLabel}`, UTI: 'com.adobe.pdf' });
-      }
+      await deliverPdf(html, { fileName: `Puantaj-${monthLabel}.pdf`, dialogTitle: `Puantaj ${monthLabel}` });
     } catch (e: any) {
       Alert.alert('Hata', e?.message ?? 'PDF oluşturulamadı.');
     } finally {

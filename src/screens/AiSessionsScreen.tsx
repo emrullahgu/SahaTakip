@@ -1,6 +1,6 @@
 // AiSessionsScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -13,13 +13,23 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function AiSessionsScreen() {
   const [items, setItems] = useState<AiSession[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const nav = useNavigation<Nav>();
-  const load = useCallback(async () => { setItems(await listSessions()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listSessions()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const newSession = async () => {
-    const s = await createSession('Yeni Sohbet', 'chat');
-    nav.navigate('AiChat', { sessionId: s.id });
+    try {
+      const s = await createSession('Yeni Sohbet', 'chat');
+      nav.navigate('AiChat', { sessionId: s.id });
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'Yeni sohbet oluşturulamadı.');
+    }
   };
 
   const onDelete = (id: string) => {
@@ -35,7 +45,8 @@ export default function AiSessionsScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6, paddingBottom: 90 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz sohbet yok. Yeni başlat.</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Henüz sohbet yok. Yeni başlat.</Text> : null}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={s.card}
@@ -51,7 +62,7 @@ export default function AiSessionsScreen() {
           </TouchableOpacity>
         )}
       />
-      <TouchableOpacity style={s.fab} onPress={newSession}>
+      <TouchableOpacity style={s.fab} onPress={newSession} accessibilityRole="button" accessibilityLabel="Yeni sohbet başlat">
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>

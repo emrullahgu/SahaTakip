@@ -24,6 +24,7 @@ import RowMenu from '../components/RowMenu';
 import PressableScale from '../components/PressableScale';
 import { TabParamList, RootStackParamList } from '../types';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { a11yButton, a11yInput } from '../utils/a11y';
 import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
 
 type WorkOrdersNavProp = CompositeNavigationProp<
@@ -86,6 +87,7 @@ export default function WorkOrdersScreen() {
             style={styles.addBtn}
             onPress={() => navigation.navigate('NewService')}
             activeOpacity={0.85}
+            {...a11yButton('İş emri ekle')}
           >
             <Ionicons name="add" size={18} color="#fff" />
             <Text style={styles.addBtnText}>İş Emri Ekle</Text>
@@ -101,6 +103,9 @@ export default function WorkOrdersScreen() {
             placeholderTextColor={colors.text.faint}
             value={searchText}
             onChangeText={setSearchText}
+            returnKeyType="search"
+            autoCorrect={false}
+            {...a11yInput('İş emri ara', searchText)}
           />
         </View>
 
@@ -112,6 +117,9 @@ export default function WorkOrdersScreen() {
               style={[styles.filter, activeFilter === f && styles.filterActive]}
               onPress={() => setActiveFilter(f)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeFilter === f }}
+              accessibilityLabel={`Filtre: ${f}`}
             >
               <Text
                 style={[styles.filterText, activeFilter === f && styles.filterTextActive]}

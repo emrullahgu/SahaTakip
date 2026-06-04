@@ -1,6 +1,6 @@
 // AiPozSuggestScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,16 +18,27 @@ export default function AiPozSuggestScreen() {
   const onSuggest = async () => {
     if (!desc.trim()) return;
     setBusy(true);
-    try { await suggestPoz(desc); setDesc(''); load(); } finally { setBusy(false); }
+    try {
+      await suggestPoz(desc); setDesc(''); load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'POZ önerisi alınamadı.');
+    } finally { setBusy(false); }
   };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.head}>
         <TextInput style={s.input} value={desc} onChangeText={setDesc} placeholder="İş tanımı girin (örn: 50kVA trafo bakımı)" placeholderTextColor={colors.text.faint} multiline />
-        <TouchableOpacity style={[s.btn, busy && { opacity: 0.5 }]} onPress={onSuggest} disabled={busy}>
+        <TouchableOpacity
+          style={[s.btn, (busy || !desc.trim()) && { opacity: 0.5 }]}
+          onPress={onSuggest}
+          disabled={busy || !desc.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy || !desc.trim(), busy }}
+          accessibilityLabel="İş tanımından POZ öner"
+        >
           <Ionicons name={busy ? 'hourglass-outline' : 'sparkles'} size={18} color="#fff" />
-          <Text style={s.btnT}>POZ Öner</Text>
+          <Text style={s.btnT}>{busy ? 'Öneriliyor…' : 'POZ Öner'}</Text>
         </TouchableOpacity>
       </View>
       <FlatList

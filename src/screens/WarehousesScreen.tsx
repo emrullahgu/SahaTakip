@@ -9,10 +9,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  RefreshControl,
  FlatList,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { a11yButton } from '../utils/a11y';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
@@ -39,9 +41,13 @@ export default function WarehousesScreen() {
   const navigation = useNavigation<Nav>();
   const [items, setItems] = useState<Warehouse[]>([]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Tümü');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    setItems(await listWarehouses());
+    setLoading(true);
+    try { setItems(await listWarehouses()); }
+    finally { setLoading(false); setLoaded(true); }
   }, []);
 
   useFocusEffect(
@@ -59,8 +65,8 @@ export default function WarehousesScreen() {
         text: 'Sil',
         style: 'destructive',
         onPress: async () => {
-          await deleteWarehouse(w.id);
-          load();
+          try { await deleteWarehouse(w.id); load(); }
+          catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); }
         },
       },
     ]);
@@ -73,6 +79,7 @@ export default function WarehousesScreen() {
         <TouchableOpacity
           style={styles.newBtn}
           onPress={() => navigation.navigate('WarehouseForm')}
+          {...a11yButton('Yeni depo/zimmet noktası ekle')}
         >
           <Ionicons name="add" size={16} color="#fff" />
           <Text style={styles.newBtnText}>Yeni</Text>
@@ -102,6 +109,7 @@ export default function WarehousesScreen() {
         data={filtered}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
         renderItem={({ item }) => {
           const meta = KIND_META[item.kind as WarehouseKind];
           return (
@@ -139,7 +147,7 @@ export default function WarehousesScreen() {
             </PressableScale>
           );
         }}
-        ListEmptyComponent={
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="business-outline"
             title="Nokta bulunamadı"
@@ -147,7 +155,7 @@ export default function WarehousesScreen() {
             actionLabel="+ Yeni Depo/Zimmet"
             onAction={() => navigation.navigate('WarehouseForm')}
           />
-        }
+        ) : null}
       />
     </SafeAreaView>
   );

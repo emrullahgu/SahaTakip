@@ -1,6 +1,6 @@
 // ApprovalDetailScreen — POZ-DEV-358
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -9,6 +9,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { getApproval, decideApproval, APPROVAL_KIND_LABEL, APPROVAL_STATUS_LABEL, APPROVAL_STATUS_COLOR } from '../services/governance';
 import { useAuth } from '../context/AuthContext';
 import { recordAudit } from '../services/governance';
+import EmptyState from '../components/EmptyState';
 import type { ApprovalRequest, RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ApprovalDetail'>;
@@ -19,11 +20,30 @@ export default function ApprovalDetailScreen() {
   const route = useRoute<R>();
   const { profile } = useAuth();
   const [item, setItem] = useState<ApprovalRequest | undefined>();
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItem(await getApproval(route.params.requestId)); }, [route.params.requestId]);
+  const load = useCallback(async () => {
+    try { setItem(await getApproval(route.params.requestId)); }
+    finally { setLoaded(true); }
+  }, [route.params.requestId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!item) return <SafeAreaView style={s.safe}><Text style={s.empty}>Onay bulunamadı.</Text></SafeAreaView>;
+  if (!loaded) {
+    return <SafeAreaView style={s.safe}><ActivityIndicator style={{ marginTop: 48 }} color={colors.text.muted} /></SafeAreaView>;
+  }
+  if (!item) {
+    return (
+      <SafeAreaView style={s.safe}>
+        <EmptyState
+          icon="checkmark-done-outline"
+          title="Onay bulunamadı"
+          subtitle="Talep silinmiş veya erişim izniniz olmayabilir."
+          actionLabel="Geri Dön"
+          onAction={() => nav.goBack()}
+        />
+      </SafeAreaView>
+    );
+  }
 
   const act = async (next: 'approved' | 'rejected') => {
     await decideApproval(item.id, next, profile?.id, undefined);

@@ -11,14 +11,17 @@ const COMPANY = BRAND.company;
 const fmtNum = (n: number) =>
   n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-const fmtMoney = (n: number) => fmtNum(n) + ' ₺';
+// Para her zaman 2 ondalık ile gösterilir (diğer PDF'lerle tutarlı).
+const fmtMoney = (n: number) =>
+  n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
 
 function escapeHtml(s: string): string {
-  return s
+  return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function periodLabel(period: Report['period']) {
@@ -71,6 +74,7 @@ function buildHtml(r: Report): string {
 </head>
 <body>
   <img class="logo" src="${LOGO_DATA_URI}" alt="${escapeHtml(COMPANY.name)}" />
+  <div style="font-size:11px;color:#22c55e;font-weight:800;margin-bottom:2px">${escapeHtml(COMPANY.name)}</div>
   <h1>${periodLabel(r.period)} Rapor</h1>
   <div class="sub">${escapeHtml(r.startDate)} → ${escapeHtml(r.endDate)} · Oluşturuldu: ${new Date(
     r.generatedAt,

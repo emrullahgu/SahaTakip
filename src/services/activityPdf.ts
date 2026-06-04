@@ -2,9 +2,11 @@ import { Alert } from 'react-native';
 import type { WorkOrder, Quote } from '../types';
 import { BRAND } from '../config/brand';
 import { LOGO_DATA_URI } from '../config/logoBase64';
-import { deliverPdf } from './pdf';
+import { deliverPdf, escapePdfHtml as esc } from './pdf';
 
 const COMPANY = BRAND.company;
+
+const fmtTl = (n: number) => (Number.isFinite(n) ? n : 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export async function generateAndShareActivityPdf(
   date: string,
@@ -17,22 +19,22 @@ export async function generateAndShareActivityPdf(
   const woRows = dayWos.map((w, i) => `
     <tr>
       <td>${i+1}</td>
-      <td><strong>${w.id}</strong></td>
-      <td>${w.client}</td>
-      <td>${w.serviceName}</td>
-      <td>${w.status}</td>
-      <td class="right">${w.quoteAmount.toLocaleString('tr-TR')} ₺</td>
+      <td><strong>${esc(w.id)}</strong></td>
+      <td>${esc(w.client)}</td>
+      <td>${esc(w.serviceName)}</td>
+      <td>${esc(w.status)}</td>
+      <td class="right">${fmtTl(w.quoteAmount)} ₺</td>
     </tr>
   `).join('');
 
   const qRows = dayQuotes.map((q, i) => `
     <tr>
       <td>${i+1}</td>
-      <td><strong>${q.number}</strong></td>
-      <td>${q.customerName}</td>
-      <td>${q.title}</td>
-      <td>${q.status}</td>
-      <td class="right">${q.grandTotal.toLocaleString('tr-TR')} ₺</td>
+      <td><strong>${esc(q.number)}</strong></td>
+      <td>${esc(q.customerName)}</td>
+      <td>${esc(q.title)}</td>
+      <td>${esc(q.status)}</td>
+      <td class="right">${fmtTl(q.grandTotal)} ₺</td>
     </tr>
   `).join('');
 
@@ -40,7 +42,7 @@ export async function generateAndShareActivityPdf(
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<title>Aktivite Raporu ${date}</title>
+<title>Aktivite Raporu ${esc(date)}</title>
 <style>
   @page { size: A4; margin: 0; }
   body { font-family: 'Helvetica', Arial, sans-serif; margin: 0; padding: 30px; font-size: 11px; color: #333; }
@@ -58,7 +60,7 @@ export async function generateAndShareActivityPdf(
 <body>
   <img class="logo" src="${LOGO_DATA_URI}" alt="${COMPANY.name}" />
   <h1>SAHA AKTİVİTE RAPORU</h1>
-  <div class="date">Tarih: ${date}</div>
+  <div class="date">Tarih: ${esc(date)}</div>
 
   <div class="section-title">İş Emirleri & Servisler (${dayWos.length})</div>
   <table>

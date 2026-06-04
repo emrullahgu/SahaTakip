@@ -24,7 +24,8 @@ import {
 import { FormTemplate, FormTemplateCategory, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
-import { FlatList } from 'react-native';
+import { a11yButton } from '../utils/a11y';
+import { FlatList, RefreshControl } from 'react-native';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'FormTemplates'>;
 
@@ -51,11 +52,15 @@ export default function FormTemplatesScreen() {
   const navigation = useNavigation<Nav>();
   const [templates, setTemplates] = useState<FormTemplate[]>([]);
   const [filter, setFilter] = useState<(typeof CATEGORIES)[number]>('Tümü');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    await ensureSeeded();
-    const list = await listTemplates();
-    setTemplates(list);
+    setLoading(true);
+    try {
+      await ensureSeeded();
+      setTemplates(await listTemplates());
+    } finally { setLoading(false); setLoaded(true); }
   }, []);
 
   useFocusEffect(
@@ -77,8 +82,8 @@ export default function FormTemplatesScreen() {
           text: 'Sil',
           style: 'destructive',
           onPress: async () => {
-            await deleteTemplate(tpl.id);
-            load();
+            try { await deleteTemplate(tpl.id); load(); }
+            catch (e: any) { Alert.alert('Hata', e?.message || 'Şablon silinemedi.'); }
           },
         },
       ],
@@ -93,6 +98,7 @@ export default function FormTemplatesScreen() {
           style={styles.newBtn}
           onPress={() => navigation.navigate('FormBuilder')}
           activeOpacity={0.85}
+          {...a11yButton('Yeni form şablonu oluştur')}
         >
           <Ionicons name="add" size={16} color="#fff" />
           <Text style={styles.newBtnText}>Yeni</Text>
@@ -122,7 +128,8 @@ export default function FormTemplatesScreen() {
         data={filtered}
         keyExtractor={t => t.id}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="document-text-outline"
             title="Henüz şablon yok"
@@ -130,7 +137,7 @@ export default function FormTemplatesScreen() {
             actionLabel="+ Yeni Şablon"
             onAction={() => navigation.navigate('FormBuilder')}
           />
-        }
+        ) : null}
         renderItem={({ item: t }) => (
           <TouchableOpacity
             key={t.id}

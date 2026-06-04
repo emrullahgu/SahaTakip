@@ -1,6 +1,6 @@
 // Faz 47 — AiExecSummaryScreen (POZ-DEV-180)
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -10,10 +10,14 @@ import type { AiExecSummary } from '../types';
 
 export default function AiExecSummaryScreen() {
   const [d, setD] = useState<AiExecSummary | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const nav = useNavigation<any>();
-  useFocusEffect(useCallback(() => { (async () => setD(await getAiSummary()))(); }, []));
+  useFocusEffect(useCallback(() => {
+    (async () => { try { setD(await getAiSummary()); } finally { setLoaded(true); } })();
+  }, []));
 
-  if (!d) return <SafeAreaView style={s.safe} />;
+  if (!loaded) return <SafeAreaView style={s.safe}><ActivityIndicator style={{ marginTop: 48 }} color={colors.text.muted} /></SafeAreaView>;
+  if (!d) return <SafeAreaView style={s.safe}><Text style={s.empty}>Özet üretilemedi.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
@@ -69,6 +73,7 @@ export default function AiExecSummaryScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
+  empty: { color: colors.text.muted, textAlign: 'center', marginTop: 40 },
   scroll: { padding: spacing.md, gap: spacing.sm },
   heroCard: { backgroundColor: '#ec489922', padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: '#ec4899', gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },

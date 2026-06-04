@@ -907,6 +907,8 @@ export interface DamageAnalysis {
   confidence: number; // 0..100
   imageUri?: string;
   analyzedAt: string;
+  /** 'ai' = gerçek görsel modeli; 'demo' = yerel/anahtarsız yedek sonuç */
+  source?: 'ai' | 'demo';
 }
 
 export interface VoiceReport {

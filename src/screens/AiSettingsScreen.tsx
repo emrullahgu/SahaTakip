@@ -63,9 +63,13 @@ export default function AiSettingsScreen() {
       Alert.alert('Eksik', 'API anahtarı girin veya Demo sağlayıcısını seçin.');
       return;
     }
-    await setAiSettings(payload);
-    Alert.alert('Kaydedildi', 'AI ayarları güncellendi.');
-    nav.goBack();
+    try {
+      await setAiSettings(payload);
+      Alert.alert('Kaydedildi', 'AI ayarları güncellendi.');
+      nav.goBack();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'AI ayarları kaydedilemedi.');
+    }
   };
 
   const onTest = async () => {

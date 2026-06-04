@@ -1,6 +1,6 @@
 // AiCustomerInsightScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,16 +18,27 @@ export default function AiCustomerInsightScreen() {
   const onGen = async () => {
     if (!name.trim()) return;
     setBusy(true);
-    try { await generateCustomerInsight('cust-' + Date.now(), name); setName(''); load(); } finally { setBusy(false); }
+    try {
+      await generateCustomerInsight('cust-' + Date.now(), name); setName(''); load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'Müşteri özeti üretilemedi.');
+    } finally { setBusy(false); }
   };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.head}>
         <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Müşteri adı" placeholderTextColor={colors.text.faint} />
-        <TouchableOpacity style={[s.btn, busy && { opacity: 0.5 }]} onPress={onGen} disabled={busy}>
+        <TouchableOpacity
+          style={[s.btn, (busy || !name.trim()) && { opacity: 0.5 }]}
+          onPress={onGen}
+          disabled={busy || !name.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy || !name.trim(), busy }}
+          accessibilityLabel="Müşteri için AI özeti üret"
+        >
           <Ionicons name={busy ? 'hourglass-outline' : 'sparkles'} size={18} color="#fff" />
-          <Text style={s.btnT}>Özet Üret</Text>
+          <Text style={s.btnT}>{busy ? 'Üretiliyor…' : 'Özet Üret'}</Text>
         </TouchableOpacity>
       </View>
       <FlatList

@@ -271,12 +271,40 @@ export function buildQuoteHtml(quote: Quote): string {
 }
 
 function escapeHtml(s: string): string {
-  return String(s)
+  return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/** Tüm PDF'ler arasında ortak kullanılan HTML-escape (XSS / bozuk layout önler). */
+export const escapePdfHtml = escapeHtml;
+
+/**
+ * Ekran-içi PDF üreticilerinin (puantaj, mesai, denetim, yönetici raporu vb.)
+ * tek tip marka başlığı kullanması için ortak yardımcı. Logo + gerçek firma adı
+ * (BRAND) ekler — böylece her PDF aynı kurumsal kimlikle çıkar.
+ * `<style>` bloğuna PDF_BRAND_CSS eklenmeli.
+ */
+export const PDF_BRAND_CSS = `
+  .pdf-brand { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:3px solid #1e40af; padding-bottom:14px; margin-bottom:18px; }
+  .pdf-brand .pdf-logo { height:40px; width:auto; display:block; margin-bottom:8px; }
+  .pdf-brand .pdf-title { font-size:20px; font-weight:900; color:#1e40af; letter-spacing:0.3px; }
+  .pdf-brand .pdf-sub { font-size:10px; color:#6b7280; margin-top:4px; }
+`;
+
+export function pdfBrandHeader(title: string, subtitle?: string, rightText?: string): string {
+  const right = rightText ?? `Hazırlanma: ${new Date().toLocaleString('tr-TR')}`;
+  return `<div class="pdf-brand">
+    <div>
+      <img class="pdf-logo" src="${LOGO_DATA_URI}" alt="${escapeHtml(COMPANY.name)}" />
+      <div class="pdf-title">${escapeHtml(title)}</div>
+      <div class="pdf-sub">${escapeHtml(COMPANY.name)}${subtitle ? ' · ' + escapeHtml(subtitle) : ''}</div>
+    </div>
+    <div class="pdf-sub">${escapeHtml(right)}</div>
+  </div>`;
 }
 
 /**
@@ -435,6 +463,8 @@ function buildAttendanceHtml(employees: Employee[], yyyyMm: string): string {
   td.no      { background: #fee2e2; color: #7f1d1d; font-weight: 800; }
   td.absent  { background: #f3f4f6; color: #4b5563; font-weight: 800; }
   td.empty   { color: #d1d5db; }
+  /* Çok personelli puantaj birden fazla sayfaya taşarsa satırlar ortadan bölünmesin */
+  tbody tr { page-break-inside: avoid; }
   tfoot td { background: #f1f5f9; font-weight: 900; }
   .legend { margin-top: 10px; font-size: 9px; color: #4b5563; line-height: 1.7; }
   .legend span { display: inline-block; margin-right: 14px; }
@@ -525,7 +555,7 @@ export async function generateAndShareAttendanceCsv(
   const csvStatusMap: Record<string, string> = {
     'Geldi': 'G', 'Tam': 'G',
     'Yarım Gün': 'Y', 'Yarım': 'Y',
-    'İzinli': 'I',
+    'İzinli': 'İ',
     'Raporlu': 'R',
     'Resmi Tatil': 'T',
     'Eğitim': 'E',

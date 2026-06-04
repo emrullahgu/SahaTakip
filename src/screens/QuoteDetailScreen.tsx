@@ -9,6 +9,7 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext, calcLineTotal } from '../context/AppContext';
 import { RootStackParamList, QuoteStatus, Quote } from '../types';
 import Toast from '../components/Toast';
+import EmptyState from '../components/EmptyState';
 import { generateAndShareQuotePdf } from '../services/pdf';
 import { sendQuoteEmail } from '../services/quoteEmail';
 import { newUuid } from '../services/data/repository';
@@ -46,7 +47,13 @@ export default function QuoteDetailScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>Teklif bulunamadı.</Text>
+          <EmptyState
+            icon="document-text-outline"
+            title="Teklif bulunamadı"
+            subtitle="Teklif silinmiş veya henüz yüklenmemiş olabilir."
+            actionLabel="Geri Dön"
+            onAction={() => navigation.goBack()}
+          />
         </View>
       </SafeAreaView>
     );

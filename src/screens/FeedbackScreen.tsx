@@ -1,11 +1,12 @@
 // FeedbackScreen — POZ-DEV-333 Geri bildirim listesi
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import type { RootStackParamList, FeedbackEntry, FeedbackStatus } from '../types';
 import { listFeedback, FEEDBACK_CATEGORY_COLOR, FEEDBACK_CATEGORY_LABEL, FEEDBACK_STATUS_COLOR, FEEDBACK_STATUS_LABEL } from '../services/feedback';
 
@@ -15,8 +16,14 @@ export default function FeedbackScreen() {
   const nav = useNavigation<Nav>();
   const [items, setItems] = useState<FeedbackEntry[]>([]);
   const [filter, setFilter] = useState<'all' | FeedbackStatus>('all');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const refresh = useCallback(async () => { setItems(await listFeedback()); }, []);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listFeedback()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const filtered = useMemo(() => filter === 'all' ? items : items.filter(i => i.status === filter), [items, filter]);
@@ -25,7 +32,7 @@ export default function FeedbackScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.toolbar}>
         <Text style={s.count}>{items.length} kayıt</Text>
-        <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('FeedbackForm', undefined)}>
+        <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('FeedbackForm', undefined)} {...a11yButton('Yeni geri bildirim ekle')}>
           <Ionicons name="add" size={18} color="#fff" />
           <Text style={s.addT}>Yeni</Text>
         </TouchableOpacity>
@@ -38,8 +45,11 @@ export default function FeedbackScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView contentContainerStyle={s.content}>
-        {filtered.length === 0 && <Text style={s.empty}>Kayıt yok</Text>}
+      <ScrollView
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.text.muted} />}
+      >
+        {loaded && filtered.length === 0 && <Text style={s.empty}>Kayıt yok</Text>}
         {filtered.map(f => (
           <TouchableOpacity key={f.id} style={[s.card, { borderLeftColor: FEEDBACK_CATEGORY_COLOR[f.category] }]} onPress={() => nav.navigate('FeedbackDetail', { entryId: f.id })}>
             <View style={s.row}>
