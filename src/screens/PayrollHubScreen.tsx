@@ -35,6 +35,7 @@ export default function PayrollHubScreen() {
   const TILES = [
     { key: 'Timesheet',   label: 'Puantaj',         desc: 'Günlük gel/git/izin',    icon: 'calendar-outline' as const,  color: '#0ea5e9', poz: 'POZ-DEV-252' },
     { key: 'PayrollRuns', label: 'Bordro Listesi',  desc: 'Aylık bordrolar',        icon: 'document-text-outline' as const, color: '#22c55e', poz: 'POZ-DEV-253' },
+    { key: 'LeaveRequests', label: 'İzin Talepleri', desc: 'İzin onay/ret',          icon: 'airplane-outline' as const, color: '#f59e0b', poz: 'POZ-DEV-254' },
   ];
 
   return (

@@ -4035,6 +4035,7 @@ export type RootStackParamList = {
   PayrollHub: undefined;
   Timesheet: { employeeId?: string; month?: string } | undefined;
   PayrollRuns: { month?: string } | undefined;
+  LeaveRequests: undefined;
   PayrollDetail: { runId: string };
   // FAZ 33 — Auth, Görev İşbirliği, Takvim, Profil, Analitik
   ForgotPassword: undefined;

@@ -197,6 +197,7 @@ import WeeklyReportDetailScreen from '../screens/WeeklyReportDetailScreen';
 import PayrollHubScreen from '../screens/PayrollHubScreen';
 import TimesheetScreen from '../screens/TimesheetScreen';
 import PayrollRunsScreen from '../screens/PayrollRunsScreen';
+import LeaveRequestsScreen from '../screens/LeaveRequestsScreen';
 import PayrollDetailScreen from '../screens/PayrollDetailScreen';
 // FAZ 33 — Auth ek akışlar, Profil, Görev detay, Analitik, Takvim
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -1521,6 +1522,7 @@ function MainStack() {
       <Stack.Screen name="PayrollHub" component={PayrollHubScreen} options={{ headerShown: true, title: 'Bordro & Puantaj', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="Timesheet" component={TimesheetScreen} options={{ headerShown: true, title: 'Puantaj', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="PayrollRuns" component={PayrollRunsScreen} options={{ headerShown: true, title: 'Bordrolar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="LeaveRequests" component={LeaveRequestsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PayrollDetail" component={PayrollDetailScreen} options={{ headerShown: true, title: 'Bordro Detay', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       {/* FAZ 33 — Auth, Profil, Görev detay, Analitik, Takvim */}
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profil', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
