@@ -268,7 +268,10 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
         temperature: 0.3,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 4096,
+        // 2.5-* thinking modelleri düşünme token'ı harcar; kapatılmazsa düşük
+        // limitte BOŞ metin döner. thinkingBudget:0 → tüm bütçe gerçek yanıta.
+        ...(modelName.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
     });
 
@@ -288,7 +291,9 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
       }
 
       const json = await res.json();
-      return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      // TÜM text parpart'larını birleştir (thinking part'ı varsa parts[0] boş olabilir).
+      const parts = json.candidates?.[0]?.content?.parts ?? [];
+      return parts.filter((p: any) => typeof p?.text === 'string').map((p: any) => p.text).join('') || '';
     } catch (e: any) {
       console.warn('[Gemini Call Error]', e.message);
       throw e;
@@ -380,7 +385,11 @@ export async function chatVision(
           { inline_data: { mime_type: mime, data: image.base64 } },
         ],
       }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 4096,
+        ...(modelName.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+      },
     });
     const res = await fetchWithTimeout(
       `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -391,7 +400,8 @@ export async function chatVision(
       throw new Error(`Gemini vision HTTP ${res.status}: ${errorJson.error?.message || 'Bilinmeyen hata'}`);
     }
     const json = await res.json();
-    return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    return parts.filter((p: any) => typeof p?.text === 'string').map((p: any) => p.text).join('') || '';
   }
 
   // claude
@@ -959,7 +969,17 @@ export async function chatWithTools(
     const body: any = {
       system_instruction: systemInstruction,
       contents,
-      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+      generationConfig: {
+        temperature: 0.2,
+        // 8192: büyük araç çağrıları (ör. match_poz_bulk ile 30+ kalemlik liste)
+        // için yeterli alan. 2048 idi → uzun listede yanıt yarıda kesiliyordu.
+        maxOutputTokens: 8192,
+        // KRİTİK: gemini-2.5-* "thinking" modelleridir ve varsayılan olarak
+        // düşünme (reasoning) token'ı harcar. Düşük token limitinde TÜM bütçeyi
+        // düşünmeye harcayıp BOŞ parts döndürür → ajan "(boş)" yanıt verir.
+        // thinkingBudget:0 düşünmeyi kapatır → tüm bütçe gerçek yanıta/araç çağrısına.
+        ...(modelName.includes('2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+      },
     };
     if (tools.length) {
       body.tools = toGeminiTools(tools);

@@ -142,6 +142,37 @@ describe('AI Service', () => {
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.system_instruction.parts[0].text).toBe('System rule');
+      // 2.5 thinking modeli için düşünme KAPALI olmalı (boş-yanıt bug'ı önlemi)
+      expect(requestBody.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+      expect(requestBody.generationConfig.maxOutputTokens).toBeGreaterThanOrEqual(4096);
+    });
+
+    it('chatWithTools (gemini 2.5): thinking kapalı + buyuk token limiti + cok-part yaniti birlestirir', async () => {
+      // Gemini yanıtı: önce boş bir thinking part, sonra functionCall → eski parse
+      // boş dönerdi; yeni parse functionCall'ı yakalamalı.
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          candidates: [{
+            content: { parts: [
+              { text: '' },
+              { functionCall: { name: 'match_poz_bulk', args: { items: [{ description: 'x' }] } } },
+            ] },
+            finishReason: 'STOP',
+          }],
+        }),
+      });
+      const tools: any = [{ type: 'function', function: { name: 'match_poz_bulk', description: 'd', parameters: { type: 'object', properties: {} } } }];
+      const res = await chatWithTools(
+        [{ role: 'user', content: 'liste...' } as any],
+        tools,
+        { provider: 'gemini', apiKey: 'gem-key', model: 'gemini-2.5-flash' },
+      );
+      expect(res.toolCalls).toHaveLength(1);
+      expect(res.toolCalls[0].function.name).toBe('match_poz_bulk');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+      expect(body.generationConfig.maxOutputTokens).toBeGreaterThanOrEqual(8192);
     });
 
     it('should automatically promote legacy gemini-1.5-flash model to gemini-2.5-flash', async () => {
