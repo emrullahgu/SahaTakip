@@ -75,8 +75,12 @@ async function applyOp(op: { table: string; action: string; payload: any }) {
     }
   };
 
+  // work_orders app id'yi text `number` kolonunda tutar (DB id = uuid); diğer
+  // tablolar uuid `id` kullanır. Yanlış kolonla eşleştirme 0 satır → sessiz kayıp.
+  const keyCol = table === 'work_orders' ? 'number' : 'id';
+
   if (action === 'delete') {
-    const { error } = await supabase.from(table).delete().eq('id', payload.id);
+    const { error } = await supabase.from(table).delete().eq(keyCol, payload.id);
     if (error) throw new Error(error.message);
     return;
   }
@@ -94,7 +98,10 @@ async function applyOp(op: { table: string; action: string; payload: any }) {
   }
 
   if (action === 'update') {
-    const { error } = await supabase.from(table).update(toRow()).eq('id', payload.id);
+    // created_by update'te GÖNDERİLMEZ — sahiplik korunur (insert'te atanır).
+    const { created_by, ...row } = toRow();
+    void created_by;
+    const { error } = await supabase.from(table).update(row).eq(keyCol, payload.id);
     if (error) throw new Error(error.message);
     if (table === 'quotes') {
       const { error: eDel } = await supabase.from('quote_lines').delete().eq('quote_id', payload.id);

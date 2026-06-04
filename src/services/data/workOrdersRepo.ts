@@ -55,13 +55,13 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await enqueueSync({ id, table: 'work_orders', action: 'update', payload: w });
       return w;
     }
-    let userId: string | undefined;
-    try {
-      const { data } = await supabase.auth.getUser();
-      userId = data.user?.id;
-    } catch { /* ignore */ }
+    // Update'te created_by GÖNDERİLMEZ — aksi halde bir yöneticinin başkasının iş
+    // emrini düzenlemesi sahipliği üzerine geçirir (orijinal oluşturan yazma hakkını
+    // kaybeder). Sahiplik yalnız insert'te (auth.uid) atanır. (quotesRepo ile tutarlı.)
     // App id `number` kolonunda saklanır (DB id = uuid).
-    const { error } = await supabase.from('work_orders').update(workOrderToRow(w, userId)).eq('number', id);
+    const { created_by, ...woUpdate } = workOrderToRow(w);
+    void created_by;
+    const { error } = await supabase.from('work_orders').update(woUpdate).eq('number', id);
     if (error) throw new Error(`[workOrders.update] ${error.message}`);
     return w;
   },
