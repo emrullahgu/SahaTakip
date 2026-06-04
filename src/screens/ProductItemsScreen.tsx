@@ -1,6 +1,6 @@
 // ProductItemsScreen — POZ-DEV-242 Ürün listesi + filtre/arama
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList, RefreshControl} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
@@ -13,6 +13,7 @@ import {
 } from '../services/productItems';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { a11yButton, a11yInput } from '../utils/a11y';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'ProductItems'>;
@@ -24,7 +25,13 @@ export default function ProductItemsScreen() {
   const [items, setItems] = useState<ProductItem[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<ProductItemStatus | 'all'>(route.params?.status || 'all');
-  const refresh = useCallback(async () => { setItems(await listProductItems()); }, []);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listProductItems()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const filtered = useMemo(() => filterProductItems(items, { search, status: status === 'all' ? undefined : status, customerId: route.params?.customerId }), [items, search, status, route.params?.customerId]);
@@ -32,8 +39,8 @@ export default function ProductItemsScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.toolbar}>
-        <TextInput style={s.search} value={search} onChangeText={setSearch} placeholder="Ad / kod / seri no..." placeholderTextColor={colors.text.faint} />
-        <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('ProductItemForm')}>
+        <TextInput style={s.search} value={search} onChangeText={setSearch} placeholder="Ad / kod / seri no..." placeholderTextColor={colors.text.faint} returnKeyType="search" autoCorrect={false} {...a11yInput('Ürün ara', search)} />
+        <TouchableOpacity style={s.addBtn} onPress={() => nav.navigate('ProductItemForm')} {...a11yButton('Yeni ürün ekle')}>
           <Ionicons name="add" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -48,7 +55,8 @@ export default function ProductItemsScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={s.content}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="cube-outline"
             title="Ürün bulunamadı"
@@ -56,7 +64,7 @@ export default function ProductItemsScreen() {
             actionLabel="+ Yeni Ürün"
             onAction={() => nav.navigate('ProductItemForm')}
           />
-        }
+        ) : null}
         renderItem={({ item: p }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('ProductItemDetail', { itemId: p.id })}>
             <View style={[s.statusStripe, { backgroundColor: PRODUCT_ITEM_STATUS_COLOR[p.status as keyof typeof PRODUCT_ITEM_STATUS_COLOR] }]} />
@@ -72,8 +80,11 @@ export default function ProductItemsScreen() {
             </View>
             <TouchableOpacity onPress={() => Alert.alert('Sil', 'Ürün silinsin mi?', [
               { text: 'Vazgeç', style: 'cancel' },
-              { text: 'Sil', style: 'destructive', onPress: async () => { await deleteProductItem(p.id); refresh(); } },
-            ])} style={s.delBtn}>
+              { text: 'Sil', style: 'destructive', onPress: async () => {
+                try { await deleteProductItem(p.id); refresh(); }
+                catch (e: any) { Alert.alert('Hata', e?.message || 'Ürün silinemedi.'); }
+              } },
+            ])} style={s.delBtn} {...a11yButton(`${p.name} ürününü sil`)}>
               <Ionicons name="trash-outline" size={16} color="#ef4444" />
             </TouchableOpacity>
           </TouchableOpacity>
