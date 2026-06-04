@@ -1,6 +1,6 @@
 // AiQuoteDraftScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -25,7 +25,11 @@ export default function AiQuoteDraftScreen() {
   const onGen = async () => {
     if (!name.trim() || !survey.trim()) return;
     setBusy(true);
-    try { await generateQuoteDraft(name, survey); setName(''); setSurvey(''); load(); } finally { setBusy(false); }
+    try {
+      await generateQuoteDraft(name, survey); setName(''); setSurvey(''); load();
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message || 'AI teklif oluşturulamadı.');
+    } finally { setBusy(false); }
   };
 
   return (
@@ -33,9 +37,16 @@ export default function AiQuoteDraftScreen() {
       <View style={s.head}>
         <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Müşteri adı" placeholderTextColor={colors.text.faint} />
         <TextInput style={[s.input, { minHeight: 60 }]} value={survey} onChangeText={setSurvey} placeholder="Keşif notu" placeholderTextColor={colors.text.faint} multiline />
-        <TouchableOpacity style={[s.btn, busy && { opacity: 0.5 }]} onPress={onGen} disabled={busy}>
+        <TouchableOpacity
+          style={[s.btn, (busy || !name.trim() || !survey.trim()) && { opacity: 0.5 }]}
+          onPress={onGen}
+          disabled={busy || !name.trim() || !survey.trim()}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy || !name.trim() || !survey.trim(), busy }}
+          accessibilityLabel="AI ile teklif taslağı oluştur"
+        >
           <Ionicons name={busy ? 'hourglass-outline' : 'sparkles'} size={18} color="#fff" />
-          <Text style={s.btnT}>AI Teklif Oluştur</Text>
+          <Text style={s.btnT}>{busy ? 'Oluşturuluyor…' : 'AI Teklif Oluştur'}</Text>
         </TouchableOpacity>
       </View>
       <FlatList

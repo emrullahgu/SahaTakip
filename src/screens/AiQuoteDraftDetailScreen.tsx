@@ -1,6 +1,6 @@
 // AiQuoteDraftDetailScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, useFocusEffect, RouteProp } from '@react-navigation/native';
@@ -14,7 +14,11 @@ export default function AiQuoteDraftDetailScreen() {
   const route = useRoute<R>();
   const nav = useNavigation();
   const [draft, setDraft] = useState<AiQuoteDraft | null>(null);
-  const load = useCallback(async () => { const d = await getQuoteDraft(route.params.draftId); setDraft(d || null); }, [route.params.draftId]);
+  const [loaded, setLoaded] = useState(false);
+  const load = useCallback(async () => {
+    try { const d = await getQuoteDraft(route.params.draftId); setDraft(d || null); }
+    finally { setLoaded(true); }
+  }, [route.params.draftId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const action = async (status: 'approved' | 'rejected') => {
@@ -24,7 +28,8 @@ export default function AiQuoteDraftDetailScreen() {
     ]);
   };
 
-  if (!draft) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  if (!loaded) return <SafeAreaView style={s.safe}><ActivityIndicator style={{ marginTop: 48 }} color={colors.text.muted} /></SafeAreaView>;
+  if (!draft) return <SafeAreaView style={s.safe}><Text style={s.empty}>Taslak bulunamadı.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>

@@ -60,7 +60,7 @@ export default function CoPilotScreen() {
       const asstMsg: CopilotMessage = {
         id: 'm_' + Date.now() + '_a',
         role: 'assistant',
-        content: reply + (provider === 'mock' ? '' : ''),
+        content: reply + (provider === 'mock' ? '\n\n_— Yerel demo yanıtı (AI sağlayıcı tanımlı değil; AI Ayarları\'ndan ekleyebilirsiniz)_' : ''),
         createdAt: new Date().toISOString(),
       };
       const updated = [...next, asstMsg];

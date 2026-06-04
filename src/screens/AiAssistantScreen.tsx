@@ -218,7 +218,7 @@ Hatalı: ${res.failed}`);
           setCurrentSessionId(s.id);
         }
         await appendMessage(sessionId, 'user', text);
-      } catch { /* offline / RLS yoksa sessiz geç */ }
+      } catch (e) { /* offline / RLS yoksa sohbet yine de çalışır */ console.warn('[AiAssistant] oturum kaydı başarısız:', e); }
     }
 
     try {
@@ -593,11 +593,23 @@ Hatalı: ${res.failed}`);
             editable={!busy}
           />
           {busy ? (
-            <TouchableOpacity style={[styles.sendBtn, { backgroundColor: colors.rose.default }]} onPress={cancelStream}>
+            <TouchableOpacity
+              style={[styles.sendBtn, { backgroundColor: colors.rose.default }]}
+              onPress={cancelStream}
+              accessibilityRole="button"
+              accessibilityLabel="Yanıtı durdur"
+            >
               <Ionicons name="stop" size={18} color="#fff" />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.sendBtn} onPress={send}>
+            <TouchableOpacity
+              style={[styles.sendBtn, !input.trim() && { opacity: 0.5 }]}
+              onPress={send}
+              disabled={!input.trim()}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !input.trim() }}
+              accessibilityLabel="Mesaj gönder"
+            >
               <Ionicons name="send" size={18} color="#fff" />
             </TouchableOpacity>
           )}
