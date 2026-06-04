@@ -174,6 +174,17 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.gridItem}
+            onPress={() => navigation.navigate('Messages')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.blue.bg }]}>
+              <Ionicons name="chatbubbles-outline" size={26} color={colors.blue.default} />
+            </View>
+            <Text style={styles.gridLabel}>Mesajlar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.gridItem}
             onPress={() => navigation.navigate('Map')}
             activeOpacity={0.75}
           >

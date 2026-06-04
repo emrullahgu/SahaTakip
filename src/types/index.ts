@@ -3867,6 +3867,8 @@ export type RootStackParamList = {
   QuoteDetail: { quoteId: string };
   WorkOrderDetail: { workOrderId: string };
   NewWorkOrder: undefined;
+  Messages: undefined;
+  ChatThread: { conversationId: string; title: string };
   Map: undefined;
   Shift: undefined;
   EmployeeDetail: { employeeId: string };
