@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
   let payload: any;
   try { payload = await req.json(); } catch { return json({ ok: false, error: 'Geçersiz JSON' }, 400); }
 
-  const { userIds = [], userNames = [], all = false, excludeUserId = null, type = 'custom', title, body, relatedId = null } = payload ?? {};
+  const { userIds = [], userNames = [], all = false, excludeUserId = null, email = false, type = 'custom', title, body, relatedId = null } = payload ?? {};
   if (!title || !body) return json({ ok: false, error: 'title ve body zorunlu' }, 400);
 
   // 1) Hedef user id setini topla
@@ -116,5 +116,38 @@ Deno.serve(async (req) => {
   const { error: insErr } = await supabase.from('notifications').insert(rows);
   if (insErr) errors.push(`notifications insert: ${insErr.message}`);
 
-  return json({ ok: true, sent, targets: ids.length, tokens: tokens.length, errors });
+  // 5) E-POSTA yayını (email===true): tüm hedef kullanıcılara Resend ile mail.
+  // RESEND_API_KEY yoksa sessizce atlanır (push + in-app yine çalışır).
+  let emailsSent = 0;
+  if (payload.email === true) {
+    try {
+      const resendKey = Deno.env.get('RESEND_API_KEY');
+      if (resendKey && ids.length) {
+        const idSet = new Set(ids);
+        const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+        const emails = (list?.users ?? [])
+          .filter((u: any) => idSet.has(u.id) && u.email)
+          .map((u: any) => u.email as string);
+        if (emails.length) {
+          const from = Deno.env.get('RESEND_FROM') || 'SahaTakip <onboarding@resend.dev>';
+          // bcc ile gönder → alıcılar birbirini görmez (gizlilik).
+          const r = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from, to: [from], bcc: emails,
+              subject: title,
+              html: `<div style="font-family:Arial,sans-serif"><h3 style="color:#1e40af">${title}</h3><p>${body}</p><p style="color:#888;font-size:12px">SahaTakip · KOBİNERJİ</p></div>`,
+            }),
+          });
+          if (r.ok) emailsSent = emails.length;
+          else errors.push(`resend: HTTP ${r.status}`);
+        }
+      }
+    } catch (e) {
+      errors.push(`email: ${String((e as Error)?.message ?? e)}`);
+    }
+  }
+
+  return json({ ok: true, sent, targets: ids.length, tokens: tokens.length, emailsSent, errors });
 });

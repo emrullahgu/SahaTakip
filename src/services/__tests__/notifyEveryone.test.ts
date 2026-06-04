@@ -21,6 +21,7 @@ describe('notifyEveryone', () => {
     expect(fn).toBe('notify-push');
     expect(opts.body.all).toBe(true);
     expect(opts.body.excludeUserId).toBe('actor-123'); // kendi işine bildirim gitmez
+    expect(opts.body.email).toBe(true); // herkese e-posta da gider (RESEND varsa)
     expect(opts.body.title).toBe('Yeni İş Emri');
     expect(opts.body.relatedId).toBe('wo-1');
   });

@@ -254,6 +254,7 @@ export interface NotifyTarget {
   userNames?: string[];   // profiles.full_name ile eşleştir (employee→user bağı yoksa)
   all?: boolean;          // TÜM kullanıcılara yayın (her iş herkese bildirim)
   excludeUserId?: string; // işlemi yapan kişiyi hariç tut (kendi işine bildirim gitmesin)
+  email?: boolean;        // push + in-app'e EK olarak e-posta da gönder (RESEND_API_KEY gerekir)
 }
 
 /**
@@ -278,6 +279,7 @@ export async function notifyUsers(
         userNames: target.userNames,
         all: target.all ?? false,
         excludeUserId: target.excludeUserId ?? null,
+        email: target.email ?? false,
         type,
         title,
         body: message,
@@ -305,7 +307,8 @@ export async function notifyEveryone(
 ): Promise<{ ok: boolean; sent?: number; error?: string }> {
   let excludeUserId: string | undefined;
   try { excludeUserId = (await getCurrentUser())?.id; } catch { /* ignore */ }
-  return notifyUsers({ all: true, excludeUserId }, type, title, message, relatedId);
+  // email:true → push + in-app'e ek olarak HERKESE e-posta (RESEND_API_KEY varsa).
+  return notifyUsers({ all: true, excludeUserId, email: true }, type, title, message, relatedId);
 }
 
 // Convenience emitters
