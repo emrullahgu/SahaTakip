@@ -138,6 +138,18 @@ export default function NewServiceScreen() {
     );
   };
 
+  // Manuel (katalogda olmayan) malzeme — saha personeli tek tek katalogdan seçmek
+  // istemezse adı + fiyatı kendi yazar.
+  const isManualMat = (id: string) => id.startsWith('MANUAL-');
+  const addManualMaterial = () => {
+    const id = 'MANUAL-' + Date.now().toString(36);
+    setSelectedMaterials(prev => [...prev, { id, name: '', price: 0, qty: 1, discountPct: 0 }]);
+  };
+  const updateMaterialName = (id: string, name: string) =>
+    setSelectedMaterials(prev => prev.map(m => (m.id === id ? { ...m, name } : m)));
+  const updateMaterialPrice = (id: string, price: number) =>
+    setSelectedMaterials(prev => prev.map(m => (m.id === id ? { ...m, price: Math.max(0, isFinite(price) ? price : 0) } : m)));
+
   const lineTotal = (m: SelectedMaterial) =>
     m.price * m.qty * (1 - (m.discountPct ?? 0) / 100);
 
@@ -278,7 +290,8 @@ export default function NewServiceScreen() {
       serviceName: selectedService.name,
       date: new Date().toISOString().split('T')[0],
       engineer: engineerName,
-      materials: [...selectedMaterials],
+      // Boş bırakılmış manuel kalemleri (ad girilmemiş) ele.
+      materials: selectedMaterials.filter(m => !isManualMat(m.id) || (m.name || '').trim().length > 0),
       otherCost: extraCost,
       laborCost,
       materialCost,
@@ -403,6 +416,15 @@ export default function NewServiceScreen() {
           </Text>
           <Ionicons name="search-outline" size={16} color={colors.text.muted} />
         </TouchableOpacity>
+        {/* Katalogda olmayan ürünü elle ekle */}
+        <TouchableOpacity
+          style={styles.manualMaterialBtn}
+          onPress={addManualMaterial}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="create-outline" size={18} color={colors.indigo.default} />
+          <Text style={styles.manualMaterialBtnText}>Manuel Malzeme Ekle (ad + fiyat yaz)</Text>
+        </TouchableOpacity>
 
         {selectedMaterials.length > 0 ? (
           <View style={styles.selectedMaterials}>
@@ -413,6 +435,31 @@ export default function NewServiceScreen() {
               return (
                 <View key={m.id} style={styles.matRow}>
                   <View style={{ flex: 1 }}>
+                    {isManualMat(m.id) ? (
+                      <>
+                        <TextInput
+                          style={styles.manualNameInput}
+                          value={m.name}
+                          onChangeText={v => updateMaterialName(m.id, v)}
+                          placeholder="Malzeme/ürün adı"
+                          placeholderTextColor={colors.text.faint}
+                        />
+                        <View style={styles.discRow}>
+                          <Text style={styles.discLabel}>Birim ₺</Text>
+                          <TextInput
+                            style={styles.discInput}
+                            value={m.price ? String(m.price) : ''}
+                            onChangeText={v => updateMaterialPrice(m.id, parseFloat(v.replace(',', '.')) || 0)}
+                            keyboardType="decimal-pad"
+                            placeholder="0"
+                            placeholderTextColor={colors.text.faint}
+                            selectTextOnFocus
+                          />
+                          <Text style={[styles.matPrice, { marginLeft: 8 }]}>= ₺{Math.round(line).toLocaleString('tr-TR')}</Text>
+                        </View>
+                      </>
+                    ) : (
+                    <>
                     <Text style={styles.matName} numberOfLines={2}>{m.name}</Text>
                     <Text style={styles.matPrice}>
                       ₺{Math.round(line).toLocaleString('tr-TR')}
@@ -422,6 +469,8 @@ export default function NewServiceScreen() {
                         </Text>
                       )}
                     </Text>
+                    </>
+                    )}
                     <View style={styles.discRow}>
                       <Text style={styles.discLabel}>İskonto %</Text>
                       <TextInput
@@ -1133,6 +1182,36 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontSize: typography.sm,
     fontWeight: '700',
+  },
+  manualMaterialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.indigo.bg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.indigo.border,
+    borderStyle: 'dashed',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+  },
+  manualMaterialBtnText: {
+    flex: 1,
+    color: colors.indigo.default,
+    fontSize: typography.xs,
+    fontWeight: '700',
+  },
+  manualNameInput: {
+    backgroundColor: colors.bg.primary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: '600',
   },
   materialHint: {
     color: colors.text.muted,
