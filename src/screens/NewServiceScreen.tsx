@@ -25,6 +25,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
+import { loadOverrides, applyOverrides, type OverrideMap } from '../services/catalogOverrides';
 import { createApproval } from '../services/governance';
 import { newUuid } from '../services/data/repository';
 import { uploadPhoto } from '../services/photoUpload';
@@ -50,6 +51,8 @@ export default function NewServiceScreen() {
     SERVICE_CATALOG[0] ?? { id: 'custom', name: 'Saha Servisi', price: 0, estCost: 0 }
   );
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedMaterial[]>([]);
+  const [catOverrides, setCatOverrides] = useState<OverrideMap>({});
+  React.useEffect(() => { loadOverrides().then(setCatOverrides); }, []);
   const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
   const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
@@ -81,7 +84,7 @@ export default function NewServiceScreen() {
 
   const filteredMaterials = useMemo(() => {
     const q = materialSearch.trim().toLocaleLowerCase('tr-TR');
-    let base = MATERIAL_CATALOG;
+    let base = applyOverrides(MATERIAL_CATALOG, catOverrides);
     if (materialCategory) base = base.filter(m => m.category === materialCategory);
     if (materialBrand) base = base.filter(m => m.brand === materialBrand);
     if (q) {
@@ -94,7 +97,7 @@ export default function NewServiceScreen() {
     }
     // Performans: ilk 400 sonuç yeterli (FlatList zaten lazy render eder).
     return base.slice(0, 400);
-  }, [materialSearch, materialCategory, materialBrand]);
+  }, [materialSearch, materialCategory, materialBrand, catOverrides]);
 
   const handleCreateCustomer = () => {
     const shortName = newCustomer.shortName.trim();

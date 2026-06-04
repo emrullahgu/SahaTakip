@@ -31,6 +31,7 @@ import {
 } from '../data/pozCatalog';
 import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recentPozes';
 import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
+import { loadOverrides, applyOverrides, type OverrideMap } from '../services/catalogOverrides';
 import { newUuid } from '../services/data/repository';
 import { upsertMaterial } from '../services/materials';
 import { listPricingRules, applyPricingRules, type BrandPricingRule } from '../services/productPricing';
@@ -85,10 +86,12 @@ export default function NewQuoteScreen() {
   const [showAllProductBrands, setShowAllProductBrands] = useState(false);
   // Toplu fiyat/iskonto kuralları — ürün eklerken indirimli fiyatı yansıtmak için.
   const [productRules, setProductRules] = useState<BrandPricingRule[]>([]);
+  const [catOverrides, setCatOverrides] = useState<OverrideMap>({});
 
   React.useEffect(() => {
     listRecentPozes().then(setRecents);
     listPricingRules().then(setProductRules);
+    loadOverrides().then(setCatOverrides);
   }, []);
 
   React.useLayoutEffect(() => {
@@ -204,7 +207,7 @@ export default function NewQuoteScreen() {
 
   const filteredProducts = useMemo(() => {
     const q = productSearch.trim().toLocaleLowerCase('tr-TR');
-    let base = MATERIAL_CATALOG;
+    let base = applyOverrides(MATERIAL_CATALOG, catOverrides);
     if (productCategory) base = base.filter(m => m.category === productCategory);
     if (productBrand) base = base.filter(m => m.brand === productBrand);
     if (q) {
@@ -217,7 +220,7 @@ export default function NewQuoteScreen() {
     }
     // Toplu fiyat/iskonto kurallarını uygula → eklenecek fiyat indirimli gelir.
     return applyPricingRules(base.slice(0, 400), productRules);
-  }, [productSearch, productCategory, productBrand, productRules]);
+  }, [productSearch, productCategory, productBrand, productRules, catOverrides]);
 
   const addProductLine = (p: typeof MATERIAL_CATALOG[number]) => {
     const newLine: QuoteLine = {

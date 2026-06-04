@@ -11,6 +11,10 @@ import {
   listPricingRules, upsertPricingRule, deletePricingRule,
   applyPricingRules, countAffected, type BrandPricingRule, type PricingScope,
 } from '../services/productPricing';
+import {
+  loadOverrides, setProductPrice, setProductDeleted, applyOverrides,
+  type OverrideMap,
+} from '../services/catalogOverrides';
 
 export default function ProductCatalogScreen() {
   const [search, setSearch] = useState('');
@@ -20,13 +24,22 @@ export default function ProductCatalogScreen() {
   const [showAllBrands, setShowAllBrands] = useState(false);
   const [rules, setRules] = useState<BrandPricingRule[]>([]);
   const [showBulk, setShowBulk] = useState(false);
+  const [overrides, setOverrides] = useState<OverrideMap>({});
+  const [editItem, setEditItem] = useState<{ id: string; name: string; price: number } | null>(null);
+  const [editPrice, setEditPrice] = useState('');
 
-  const loadRules = useCallback(async () => { setRules(await listPricingRules()); }, []);
+  const loadRules = useCallback(async () => {
+    setRules(await listPricingRules());
+    setOverrides(await loadOverrides());
+  }, []);
   useFocusEffect(useCallback(() => { loadRules(); }, [loadRules]));
+
+  // Önce paylaşımlı override'ları (fiyat/silme) base kataloga uygula.
+  const effectiveCatalog = useMemo(() => applyOverrides(MATERIAL_CATALOG, overrides), [overrides]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase('tr-TR');
-    let base = MATERIAL_CATALOG;
+    let base = effectiveCatalog;
     if (category) base = base.filter(m => m.category === category);
     if (brand) base = base.filter(m => m.brand === brand);
     if (q) {
@@ -39,7 +52,30 @@ export default function ProductCatalogScreen() {
     }
     // Toplu fiyat kurallarını yalnızca görünen ≤500 ürüne uygula (ucuz).
     return applyPricingRules(base.slice(0, 500), rules);
-  }, [search, category, brand, rules]);
+  }, [search, category, brand, rules, effectiveCatalog]);
+
+  const saveEditPrice = async () => {
+    if (!editItem) return;
+    const p = parseFloat(editPrice.replace(',', '.'));
+    if (!isFinite(p) || p < 0) { Alert.alert('Geçersiz', 'Geçerli bir fiyat girin.'); return; }
+    try {
+      await setProductPrice(editItem.id, p);
+      setOverrides(prev => ({ ...prev, [editItem.id]: { ...(prev[editItem.id] || { deleted: false }), price: p } }));
+      setEditItem(null);
+    } catch (e: any) { Alert.alert('Hata', e?.message || 'Kaydedilemedi'); }
+  };
+
+  const deleteProduct = (id: string, name: string) => {
+    Alert.alert('Ürünü Sil', `"${name}" katalogdan kaldırılsın mı? (geri alınabilir)`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try {
+          await setProductDeleted(id, true);
+          setOverrides(prev => ({ ...prev, [id]: { ...(prev[id] || {}), deleted: true } }));
+        } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi'); }
+      } },
+    ]);
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
@@ -52,7 +88,7 @@ export default function ProductCatalogScreen() {
           </TouchableOpacity>
         </View>
         <Text style={s.headerMeta}>
-          {MATERIAL_CATALOG.length.toLocaleString('tr-TR')} ürün · {MATERIAL_CATEGORIES.length} kategori · {MATERIAL_BRANDS.length} marka
+          {effectiveCatalog.length.toLocaleString('tr-TR')} ürün · {MATERIAL_CATEGORIES.length} kategori · {MATERIAL_BRANDS.length} marka
         </Text>
       </View>
 
@@ -120,12 +156,21 @@ export default function ProductCatalogScreen() {
               </View>
               <View style={s.priceBox}>
                 <Text style={s.priceTL}>₺{item.price.toLocaleString('tr-TR')}</Text>
+                {overrides[item.id]?.price != null && <Text style={s.edited}>düzenlendi</Text>}
                 {showOriginal && (
                   <Text style={s.priceOrig}>{item.listPrice} {item.currency}</Text>
                 )}
                 {!!item.discountRate && item.discountRate > 0 && (
                   <Text style={s.discount}>%{item.discountRate} isk.</Text>
                 )}
+              </View>
+              <View style={s.rowActions}>
+                <TouchableOpacity onPress={() => { setEditItem({ id: item.id, name: item.name, price: item.price }); setEditPrice(String(item.price)); }} hitSlop={6}>
+                  <Ionicons name="pencil" size={17} color={colors.blue.default} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => deleteProduct(item.id, item.name)} hitSlop={6}>
+                  <Ionicons name="trash-outline" size={17} color={colors.rose.default} />
+                </TouchableOpacity>
               </View>
             </View>
           );
@@ -134,6 +179,34 @@ export default function ProductCatalogScreen() {
           <Text style={s.empty}>Sonuç bulunamadı.</Text>
         }
       />
+
+      {/* Fiyat düzenleme modalı */}
+      <Modal visible={!!editItem} transparent animationType="fade" onRequestClose={() => setEditItem(null)}>
+        <View style={s.editOverlay}>
+          <View style={s.editBox}>
+            <Text style={s.editTitle} numberOfLines={2}>{editItem?.name}</Text>
+            <Text style={s.editLabel}>Yeni birim fiyat (₺)</Text>
+            <TextInput
+              style={s.editInput}
+              value={editPrice}
+              onChangeText={setEditPrice}
+              keyboardType="decimal-pad"
+              autoFocus
+              selectTextOnFocus
+              placeholder="0"
+              placeholderTextColor={colors.text.faint}
+            />
+            <View style={s.editActions}>
+              <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.bg.card }]} onPress={() => setEditItem(null)}>
+                <Text style={[s.editBtnText, { color: colors.text.muted }]}>Vazgeç</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.emerald.default }]} onPress={saveEditPrice}>
+                <Text style={s.editBtnText}>Kaydet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <BulkPricingModal
         visible={showBulk}
@@ -361,7 +434,17 @@ const s = StyleSheet.create({
   code: { color: colors.text.faint, fontSize: 11, fontWeight: '700' },
   name: { color: colors.text.primary, fontWeight: '600', fontSize: typography.sm, marginTop: 2 },
   tags: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4 },
-  priceBox: { alignItems: 'flex-end', minWidth: 90 },
+  priceBox: { alignItems: 'flex-end', minWidth: 80 },
+  edited: { color: colors.blue.default, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  rowActions: { flexDirection: 'row', gap: spacing.md, alignItems: 'center', paddingLeft: spacing.sm },
+  editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  editBox: { width: '100%', maxWidth: 360, backgroundColor: colors.bg.primary, borderRadius: radius.lg, padding: spacing.lg },
+  editTitle: { fontSize: typography.md, color: colors.text.primary, fontWeight: '800' },
+  editLabel: { fontSize: typography.xs, color: colors.text.muted, fontWeight: '700', marginTop: spacing.md, marginBottom: spacing.xs },
+  editInput: { backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text.primary, fontSize: typography.lg, fontWeight: '700' },
+  editActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  editBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, paddingVertical: spacing.sm },
+  editBtnText: { color: '#fff', fontSize: typography.sm, fontWeight: '800' },
   priceTL: { color: '#10b981', fontWeight: '800', fontSize: typography.sm },
   priceOrig: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
   discount: { color: '#f59e0b', fontSize: 10, fontWeight: '700', marginTop: 2 },
