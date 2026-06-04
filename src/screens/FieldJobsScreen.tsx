@@ -1,6 +1,6 @@
 // Faz 42 — FieldJobsScreen
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -23,8 +23,14 @@ const FILTERS: { key: 'all' | FieldJobStage; label: string }[] = [
 export default function FieldJobsScreen() {
   const [items, setItems] = useState<FieldJob[]>([]);
   const [filter, setFilter] = useState<'all' | FieldJobStage>('all');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const nav = useNavigation<Nav>();
-  const load = useCallback(async () => { setItems(await listJobs()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listJobs()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const filtered = filter === 'all' ? items : items.filter(i => i.stage === filter);
@@ -33,7 +39,7 @@ export default function FieldJobsScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.tabs}>
         {FILTERS.map(f => (
-          <TouchableOpacity key={f.key} style={[s.tab, filter === f.key && s.tabActive]} onPress={() => setFilter(f.key)}>
+          <TouchableOpacity key={f.key} style={[s.tab, filter === f.key && s.tabActive]} onPress={() => setFilter(f.key)} accessibilityRole="button" accessibilityState={{ selected: filter === f.key }} accessibilityLabel={`Filtre: ${f.label}`}>
             <Text style={[s.tabT, filter === f.key && s.tabTActive]}>{f.label}</Text>
           </TouchableOpacity>
         ))}
@@ -43,13 +49,14 @@ export default function FieldJobsScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="list-outline"
             title="İş bulunamadı"
             subtitle="Filtreyi değiştirerek tekrar deneyebilirsiniz."
           />
-        }
+        ) : null}
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('FieldJobDetail', { jobId: item.id })}>
             <View style={{ flex: 1 }}>

@@ -1,6 +1,6 @@
 // Faz 42 — FieldTodayScreen: bugün yapılacaklar + akıllı sıralama
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -17,10 +17,15 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function FieldTodayScreen() {
   const [jobs, setJobs] = useState<FieldJob[]>([]);
   const [stats, setStats] = useState<FieldOpsLiveStat[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const nav = useNavigation<Nav>();
   const load = useCallback(async () => {
-    setJobs(await smartSortJobs());
-    setStats(await getLiveStats());
+    setLoading(true);
+    try {
+      setJobs(await smartSortJobs());
+      setStats(await getLiveStats());
+    } finally { setLoading(false); setLoaded(true); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -41,13 +46,14 @@ export default function FieldTodayScreen() {
         data={jobs}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="clipboard-outline"
             title="Bugün için iş yok"
             subtitle="Planlanmış görevleriniz olduğunda burada görünecek."
           />
-        }
+        ) : null}
         renderItem={({ item, index }) => (
           <TouchableOpacity style={s.card} onPress={() => nav.navigate('FieldJobDetail', { jobId: item.id })}>
             <View style={s.rank}><Text style={s.rankT}>{index + 1}</Text></View>

@@ -1,10 +1,11 @@
 // FieldFavoritesScreen — POZ-DEV-385
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import { listFavorites, deleteFavorite, resetFavorites } from '../services/offline';
 import type { OfflineFavorite } from '../types';
 import EmptyState from '../components/EmptyState';
@@ -13,14 +14,23 @@ import { FLATLIST_DEFAULTS } from '../utils/perf';
 export default function FieldFavoritesScreen() {
   const nav = useNavigation<any>();
   const [items, setItems] = useState<OfflineFavorite[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItems(await listFavorites()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listFavorites()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const doDelete = (f: OfflineFavorite) => {
     Alert.alert('Sil', `"${f.label}" favorilerden silinsin mi?`, [
       { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: async () => { await deleteFavorite(f.id); load(); } },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteFavorite(f.id); load(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Favori silinemedi.'); }
+      } },
     ]);
   };
 
@@ -40,7 +50,7 @@ export default function FieldFavoritesScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.toolbar}>
         <Text style={s.toolbarT}>{items.length} favori</Text>
-        <TouchableOpacity style={s.btn} onPress={doReset}>
+        <TouchableOpacity style={s.btn} onPress={doReset} {...a11yButton('Varsayılan favorilere dön')}>
           <Ionicons name="refresh-outline" size={14} color="#fff" />
           <Text style={s.btnTxt}>Varsayılan</Text>
         </TouchableOpacity>
@@ -52,7 +62,8 @@ export default function FieldFavoritesScreen() {
         numColumns={2}
         columnWrapperStyle={{ gap: spacing.sm }}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="star-outline"
             title="Henüz favori yok"
@@ -60,7 +71,7 @@ export default function FieldFavoritesScreen() {
             actionLabel="Varsayılanları Yükle"
             onAction={doReset}
           />
-        }
+        ) : null}
         renderItem={({ item }) => (
           <TouchableOpacity style={[s.card, { borderLeftColor: item.color }]} onPress={() => launch(item)} onLongPress={() => doDelete(item)}>
             <View style={[s.iconWrap, { backgroundColor: item.color + '22' }]}>

@@ -1,6 +1,6 @@
 // ApprovalsScreen — POZ-DEV-357 Onay akışları
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -31,8 +31,14 @@ export default function ApprovalsScreen() {
   const { workOrders } = useAppContext();
   const [items, setItems] = useState<ApprovalRequest[]>([]);
   const [filter, setFilter] = useState<ApprovalStatus | 'all'>(route.params?.status || 'all');
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItems(await listApprovals()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listApprovals()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Saha cihazlarından Supabase'e yazılan "Onay Bekliyor" iş emirlerini de listele
@@ -79,7 +85,7 @@ export default function ApprovalsScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.bar} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.md }}>
         {STATUS_FILTERS.map(f => (
-          <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} style={[s.chip, filter === f.key && { backgroundColor: '#22c55e' }]}>
+          <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} style={[s.chip, filter === f.key && { backgroundColor: '#22c55e' }]} accessibilityRole="button" accessibilityState={{ selected: filter === f.key }} accessibilityLabel={`Filtre: ${f.label}`}>
             <Text style={[s.chipTxt, filter === f.key && { color: '#fff' }]}>{f.label}</Text>
           </TouchableOpacity>
         ))}
@@ -90,7 +96,8 @@ export default function ApprovalsScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 100 }}
-        ListEmptyComponent={
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="checkmark-circle-outline"
             title="Bekleyen onay yok"
@@ -98,7 +105,7 @@ export default function ApprovalsScreen() {
             actionLabel="+ Demo Onay Oluştur"
             onAction={seedDemo}
           />
-        }
+        ) : null}
         renderItem={({ item }) => (
           <TouchableOpacity style={s.card} onPress={() => onPressItem(item)}>
             <View style={[s.statusDot, { backgroundColor: APPROVAL_STATUS_COLOR[item.status as keyof typeof APPROVAL_STATUS_COLOR] }]} />
