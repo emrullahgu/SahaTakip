@@ -1,12 +1,13 @@
 // RegionsScreen — POZ-DEV-354
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import PressableScale from '../components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import { listRegions, deleteRegion } from '../services/governance';
 import type { Region, RootStackParamList } from '../types';
 
@@ -15,14 +16,23 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'Regions'>;
 export default function RegionsScreen() {
   const nav = useNavigation<Nav>();
   const [items, setItems] = useState<Region[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItems(await listRegions()); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listRegions()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onDelete = (r: Region) => {
     Alert.alert('Sil', `"${r.name}" silinsin mi?`, [
       { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: async () => { await deleteRegion(r.id); load(); } },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteRegion(r.id); load(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Bölge silinemedi.'); }
+      } },
     ]);
   };
 
@@ -32,7 +42,8 @@ export default function RegionsScreen() {
         data={items}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz bölge yok.</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Henüz bölge yok.</Text> : null}
         renderItem={({ item }) => (
           <PressableScale style={s.card} onPress={() => nav.navigate('RegionForm', { regionId: item.id })}>
             <View style={s.iconWrap}><Ionicons name="map-outline" size={22} color="#06b6d4" /></View>
@@ -40,13 +51,13 @@ export default function RegionsScreen() {
               <Text style={s.t}>{item.name}</Text>
               <Text style={s.sub}>{item.code ? `Kod: ${item.code} · ` : ''}{(item.cities || []).length} şehir</Text>
             </View>
-            <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10}>
+            <TouchableOpacity onPress={() => onDelete(item)} hitSlop={10} {...a11yButton(`${item.name} bölgesini sil`)}>
               <Ionicons name="trash-outline" size={20} color="#ef4444" />
             </TouchableOpacity>
           </PressableScale>
         )}
       />
-      <TouchableOpacity style={s.fab} onPress={() => nav.navigate('RegionForm')}>
+      <TouchableOpacity style={s.fab} onPress={() => nav.navigate('RegionForm')} {...a11yButton('Yeni bölge ekle')}>
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </SafeAreaView>
