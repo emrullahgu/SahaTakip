@@ -3866,6 +3866,7 @@ export type RootStackParamList = {
   NewQuote: { quoteId?: string } | undefined;
   QuoteDetail: { quoteId: string };
   WorkOrderDetail: { workOrderId: string };
+  NewWorkOrder: undefined;
   Map: undefined;
   Shift: undefined;
   EmployeeDetail: { employeeId: string };

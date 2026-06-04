@@ -15,6 +15,7 @@ export const navigationRef = createNavigationContainerRef<any>();
 import HomeScreen from '../screens/HomeScreen';
 import WorkOrdersScreen from '../screens/WorkOrdersScreen';
 import NewServiceScreen from '../screens/NewServiceScreen';
+import NewWorkOrderScreen from '../screens/NewWorkOrderScreen';
 import ServicesScreen from '../screens/ServicesScreen';
 import ManagerScreen from '../screens/ManagerScreen';
 import CompanyScreen from '../screens/CompanyScreen';
@@ -675,6 +676,7 @@ function MainStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="NewWorkOrder" component={NewWorkOrderScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="Company"
         component={CompanyScreen}

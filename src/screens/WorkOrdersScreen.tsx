@@ -85,7 +85,7 @@ export default function WorkOrdersScreen() {
           </View>
           <TouchableOpacity
             style={styles.addBtn}
-            onPress={() => navigation.navigate('NewService')}
+            onPress={() => navigation.navigate('NewWorkOrder')}
             activeOpacity={0.85}
             {...a11yButton('İş emri ekle')}
           >
