@@ -143,6 +143,7 @@ export const workOrderFromRow = (row: any): WorkOrder => ({
   audioUri: row.audio_uri ?? undefined,
   signatureUri: row.signature_uri ?? undefined,
   templateId: row.template_id ?? undefined,
+  jobType: row.job_type ?? 'FIELD',
 });
 
 export const workOrderToRow = (w: WorkOrder, userId?: string) => ({
@@ -180,6 +181,7 @@ export const workOrderToRow = (w: WorkOrder, userId?: string) => ({
   audio_uri: w.audioUri ?? null,
   signature_uri: w.signatureUri ?? null,
   template_id: w.templateId ?? null,
+  job_type: w.jobType ?? 'FIELD',
 });
 
 // ========== EMPLOYEES ==========

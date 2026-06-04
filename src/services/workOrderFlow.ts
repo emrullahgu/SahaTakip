@@ -2,7 +2,23 @@
 // İş emri durum akışı yardımcıları — FAZ 3
 // ====================================================================
 
-import type { WorkOrder, WorkOrderPriority } from '../types';
+import type { WorkOrder, WorkOrderPriority, WorkOrderJobType } from '../types';
+
+// ---- İş türü (saha / ofis / uzaktan) ----
+export const WORK_ORDER_JOB_TYPES: { value: WorkOrderJobType; label: string; icon: string }[] = [
+  { value: 'FIELD', label: 'Saha İşi', icon: 'location' },
+  { value: 'OFFICE', label: 'Ofis İşi', icon: 'business' },
+  { value: 'REMOTE', label: 'Uzaktan Destek', icon: 'laptop' },
+];
+
+export function jobTypeLabel(t?: WorkOrderJobType): string {
+  return WORK_ORDER_JOB_TYPES.find(x => x.value === t)?.label ?? 'Saha İşi';
+}
+
+/** Sadece saha işleri (FIELD) lokasyon/check-in gerektirir; ofis/uzaktan gerektirmez. */
+export function requiresCheckIn(wo: Pick<WorkOrder, 'jobType'>): boolean {
+  return (wo.jobType ?? 'FIELD') === 'FIELD';
+}
 
 export const WORK_STATUS_FLOW: WorkOrder['status'][] = [
   'Bekliyor',

@@ -17,6 +17,8 @@ export type WorkOrderAssignmentStatus =
   | 'Reddedildi'
   | 'Devredildi';
 
+export type WorkOrderJobType = 'FIELD' | 'OFFICE' | 'REMOTE';
+
 export interface WorkOrderTimeLog {
   id: string;
   startAt: string; // ISO
@@ -80,6 +82,9 @@ export interface WorkOrder {
   audioUri?: string;
   signatureUri?: string;
   templateId?: string;
+  /** İş türü: FIELD=saha (check-in zorunlu), OFFICE=ofis (lokasyon yok),
+   *  REMOTE=uzaktan destek. Varsayılan FIELD. */
+  jobType?: WorkOrderJobType;
   // Optional aliases / metadata used by some legacy screens
   customerId?: string;
   customerName?: string;
