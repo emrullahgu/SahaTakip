@@ -197,22 +197,30 @@ const AgentConsoleScreen: React.FC = () => {
           placeholderTextColor={colors.text.muted}
           multiline
           editable={!running}
+          accessibilityLabel="Ajan hedefi"
         />
       </View>
 
       <View style={st.actions}>
         {!running ? (
-          <TouchableOpacity style={[st.btn, st.btnPrimary]} onPress={start} disabled={!goal.trim()}>
+          <TouchableOpacity
+            style={[st.btn, st.btnPrimary, !goal.trim() && { opacity: 0.5 }]}
+            onPress={start}
+            disabled={!goal.trim()}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !goal.trim() }}
+            accessibilityLabel="Ajanı başlat"
+          >
             <Ionicons name="play" size={16} color="#fff" />
             <Text style={st.btnTextPrimary}>Başlat</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[st.btn, st.btnDanger]} onPress={stop}>
+          <TouchableOpacity style={[st.btn, st.btnDanger]} onPress={stop} accessibilityRole="button" accessibilityLabel="Ajanı durdur">
             <Ionicons name="stop" size={16} color="#fff" />
             <Text style={st.btnTextPrimary}>Durdur</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={[st.btn, st.btnGhost]} onPress={clear} disabled={running}>
+        <TouchableOpacity style={[st.btn, st.btnGhost, running && { opacity: 0.5 }]} onPress={clear} disabled={running} accessibilityRole="button" accessibilityLabel="Transkripti temizle">
           <Ionicons name="trash" size={16} color={colors.text.primary} />
           <Text style={st.btnTextGhost}>Temizle</Text>
         </TouchableOpacity>
@@ -338,7 +346,10 @@ const st = StyleSheet.create({
     padding: spacing.sm,
     marginBottom: spacing.sm,
   },
-  bubbleText: { color: colors.text.primary, fontSize: 13, lineHeight: 19 },
+  // Baloncuk arka planları her zaman açık pastel renkler; bu yüzden metin SABİT
+  // koyu renk olmalı. (colors.text.primary koyu temada açık olur → açık baloncukta
+  // okunmazdı.)
+  bubbleText: { color: '#1f2937', fontSize: 13, lineHeight: 19 },
 });
 
 export default AgentConsoleScreen;
