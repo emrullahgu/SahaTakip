@@ -21,6 +21,7 @@ export const workOrdersRepo: Repository<WorkOrder> = {
     const { data, error } = await supabase
       .from('work_orders')
       .select('*')
+      .is('deleted_at', null) // soft-delete edilenler gizlenir
       .order('created_at', { ascending: false });
     if (error) {
       console.warn('[workOrders.list]', error.message);
@@ -71,12 +72,11 @@ export const workOrdersRepo: Repository<WorkOrder> = {
       await enqueueSync({ id, table: 'work_orders', action: 'delete', payload: { id } });
       return;
     }
-    // DB'den sil. 0 satır dönmesi HATA DEĞİLDİR: kayıt yerel-only olabilir
-    // (hiç senkronlanmadı) — bu durumda yerel state'ten kaldırmak yeterlidir.
-    // Yalnızca gerçek bir Supabase hatası (ağ/izin) fırlatılır.
+    // Soft delete: hard DELETE yerine deleted_at damgalanır (geri alınabilir).
+    // 0 satır güncellenmesi HATA DEĞİLDİR (kayıt yerel-only olabilir).
     const { error } = await supabase
       .from('work_orders')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('number', id);
     if (error) throw new Error(`[workOrders.delete] ${error.message}`);
   },

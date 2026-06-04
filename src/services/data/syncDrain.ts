@@ -80,7 +80,11 @@ async function applyOp(op: { table: string; action: string; payload: any }) {
   const keyCol = table === 'work_orders' ? 'number' : 'id';
 
   if (action === 'delete') {
-    const { error } = await supabase.from(table).delete().eq(keyCol, payload.id);
+    // quotes/work_orders/customers soft-delete kullanır (deleted_at). Diğerleri hard delete.
+    const SOFT = table === 'quotes' || table === 'work_orders' || table === 'customers';
+    const { error } = SOFT
+      ? await supabase.from(table).update({ deleted_at: new Date().toISOString() }).eq(keyCol, payload.id)
+      : await supabase.from(table).delete().eq(keyCol, payload.id);
     if (error) throw new Error(error.message);
     return;
   }

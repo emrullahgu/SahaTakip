@@ -30,6 +30,7 @@ export const quotesRepo: Repository<Quote> = {
     const { data, error } = await supabase
       .from('quotes')
       .select('*, quote_lines(*)')
+      .is('deleted_at', null) // soft-delete edilenler gizlenir
       .order('created_at', { ascending: false });
     if (error) {
       console.warn('[quotesRepo.list]', error.message);
@@ -105,7 +106,11 @@ export const quotesRepo: Repository<Quote> = {
     }
     // Yerel-id (UUID değil) → DB'de yok, sessizce başarılı say
     if (!isUuid(id)) return;
-    const { error } = await supabase.from('quotes').delete().eq('id', id);
+    // Soft delete: hard DELETE yerine deleted_at damgalanır (geri alınabilir).
+    const { error } = await supabase
+      .from('quotes')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
     if (error) throw new Error(`[quotes.delete] ${error.message}`);
   },
 };

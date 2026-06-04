@@ -23,6 +23,7 @@ export const customersRepo: Repository<Customer> = {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
+      .is('deleted_at', null) // soft-delete edilenler gizlenir
       .order('short_name');
     if (error) {
       console.warn('[customersRepo.list]', error.message);
@@ -71,7 +72,11 @@ export const customersRepo: Repository<Customer> = {
       await enqueueSync({ id, table: 'customers', action: 'delete', payload: { id } });
       return;
     }
-    const { error } = await supabase.from('customers').delete().eq('id', id);
+    // Soft delete: hard DELETE yerine deleted_at damgalanır (geri alınabilir).
+    const { error } = await supabase
+      .from('customers')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
     if (error) throw new Error(`[customers.delete] ${error.message}`);
   },
 };
