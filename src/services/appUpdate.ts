@@ -10,6 +10,7 @@
 //     "mandatory": false
 //   }
 import { Linking, Platform } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // app.json sürüm bilgisi için
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -167,5 +168,5 @@ export async function startApkInstall(apkUrl: string): Promise<void> {
   if (can === false) {
     throw new Error('Bu cihazda indirme bağlantısı açılamadı.');
   }
-  await Linking.openURL(apkUrl);
+  await openUrlSafe(apkUrl);
 }

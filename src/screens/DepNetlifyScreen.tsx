@@ -1,6 +1,7 @@
 // Faz 51 — DepNetlifyScreen (POZ-DEV-214)
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -81,7 +82,7 @@ export default function DepNetlifyScreen() {
               <Text style={s.metaT}><Ionicons name="time" size={11} color={colors.text.muted} /> {fmtDate(d.createdAt)}</Text>
               <Text style={s.metaT}><Ionicons name="timer" size={11} color={colors.text.muted} /> {fmtDur(d.durationSec)}</Text>
               {d.publishUrl && (
-                <TouchableOpacity onPress={() => Linking.openURL(d.publishUrl!)} style={s.linkBtn}>
+                <TouchableOpacity onPress={() => openUrlSafe(d.publishUrl!)} style={s.linkBtn}>
                   <Ionicons name="open" size={11} color="#0ea5e9" />
                   <Text style={s.linkT}>Aç</Text>
                 </TouchableOpacity>

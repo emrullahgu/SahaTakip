@@ -6,6 +6,7 @@
 // ====================================================================
 
 import { Linking } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { isOnlineMode } from './data/repository';
 import { supabase } from './supabase';
 import type { Quote } from '../types';
@@ -57,7 +58,7 @@ export async function sendQuoteEmail(
   const url = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   const supported = await Linking.canOpenURL(url);
   if (supported) {
-    await Linking.openURL(url);
+    await openUrlSafe(url);
     return { ok: true, mode: 'mailto' };
   }
 

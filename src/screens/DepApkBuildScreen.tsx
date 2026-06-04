@@ -1,6 +1,7 @@
 // Faz 51 — DepApkBuildScreen (POZ-DEV-220)
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -38,7 +39,7 @@ export default function DepApkBuildScreen() {
               <Text style={s.prodMetaT}>{latestProd.buildNumber}</Text>
             </View>
             {latestProd.downloadUrl && (
-              <TouchableOpacity onPress={() => Linking.openURL(latestProd.downloadUrl!)} style={s.dlBtn}>
+              <TouchableOpacity onPress={() => openUrlSafe(latestProd.downloadUrl!)} style={s.dlBtn}>
                 <Ionicons name="cloud-download" size={16} color="#fff" />
                 <Text style={s.dlT}>APK İndir</Text>
               </TouchableOpacity>
@@ -74,7 +75,7 @@ export default function DepApkBuildScreen() {
             </View>
             {b.notes && <Text style={s.notes}>{b.notes}</Text>}
             {b.downloadUrl && b.status === 'completed' && (
-              <TouchableOpacity onPress={() => Linking.openURL(b.downloadUrl!)} style={s.linkBtn}>
+              <TouchableOpacity onPress={() => openUrlSafe(b.downloadUrl!)} style={s.linkBtn}>
                 <Ionicons name="open" size={12} color="#0ea5e9" />
                 <Text style={s.linkT}>İndirme Bağlantısı</Text>
               </TouchableOpacity>

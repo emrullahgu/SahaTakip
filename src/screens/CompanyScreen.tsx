@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography } from '../theme';
 import { BRAND } from '../config/brand';
@@ -16,14 +17,14 @@ const COMPANY_INFO = [
     label: 'E-posta',
     value: BRAND.company.email,
     color: colors.blue.default,
-    onPress: () => Linking.openURL(`mailto:${BRAND.company.email}`),
+    onPress: () => openUrlSafe(`mailto:${BRAND.company.email}`),
   },
   {
     icon: 'call-outline' as const,
     label: 'Telefon',
     value: BRAND.company.phone,
     color: colors.emerald.default,
-    onPress: () => Linking.openURL(`tel:${BRAND.company.phoneRaw}`),
+    onPress: () => openUrlSafe(`tel:${BRAND.company.phoneRaw}`),
   },
   {
     icon: 'location-outline' as const,
@@ -36,7 +37,7 @@ const COMPANY_INFO = [
     label: 'Web Sitesi',
     value: BRAND.company.website,
     color: colors.amber.default,
-    onPress: () => Linking.openURL(BRAND.company.websiteUrl),
+    onPress: () => openUrlSafe(BRAND.company.websiteUrl),
   },
   {
     icon: 'document-text-outline' as const,

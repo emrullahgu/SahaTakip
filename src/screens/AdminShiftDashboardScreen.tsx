@@ -10,9 +10,9 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Linking,
   Platform,
 } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -124,7 +124,7 @@ function AdminShiftDashboardInner() {
       Platform.OS === 'ios'
         ? `http://maps.apple.com/?q=${lat},${lng}`
         : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    Linking.openURL(url).catch(() => {});
+    openUrlSafe(url, { silent: true });
   }, []);
 
   const totalActive = items.length;

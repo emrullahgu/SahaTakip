@@ -1,6 +1,7 @@
 // QuoteEmailScreen — POZ-DEV-134 Teklifi e-posta ile gönder (mailto + PDF)
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Linking, Platform } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -47,7 +48,7 @@ export default function QuoteEmailScreen() {
     try {
       const can = await Linking.canOpenURL(url);
       if (!can && Platform.OS !== 'web') { Alert.alert('E-posta uygulaması yok', 'Cihazda bir e-posta uygulaması bulunamadı.'); return; }
-      await Linking.openURL(url);
+      await openUrlSafe(url);
       markSent();
     } catch (e: any) {
       Alert.alert('Hata', e?.message || 'E-posta açılamadı.');

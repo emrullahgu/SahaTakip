@@ -12,9 +12,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
   Platform,
 } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { deliverPdf, PDF_BRAND_CSS, pdfBrandHeader } from '../services/pdf';
@@ -187,7 +187,7 @@ function ShiftHistoryInner() {
       Platform.OS === 'ios'
         ? `http://maps.apple.com/?q=${lat},${lng}`
         : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    Linking.openURL(url).catch(() => {});
+    openUrlSafe(url, { silent: true });
   }, []);
 
   const monthLabel = new Date(year, month - 1, 1).toLocaleString('tr-TR', {

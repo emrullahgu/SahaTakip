@@ -11,8 +11,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Linking,
 } from 'react-native';
+import { openUrlSafe } from '../utils/urlGuard';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -109,7 +109,7 @@ export default function CustomerDocumentsScreen({ route }: Props) {
   const open = async (d: CustomerDocument) => {
     try {
       if (d.uri.startsWith('http')) {
-        await Linking.openURL(d.uri);
+        await openUrlSafe(d.uri);
       } else if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(d.uri);
       } else {
