@@ -1,6 +1,6 @@
 // AiRiskAlertsScreen — Faz 41
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,8 +11,19 @@ import { listRiskAlerts, dismissRisk, RISK_COLOR, RISK_LABEL, RISK_TYPE_LABEL } 
 export default function AiRiskAlertsScreen() {
   const [items, setItems] = useState<AiRiskAlert[]>([]);
   const [showDismissed, setShowDismissed] = useState(false);
-  const load = useCallback(async () => { setItems(await listRiskAlerts()); }, []);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await listRiskAlerts()); }
+    finally { setLoading(false); setLoaded(true); }
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const onDismiss = useCallback(async (id: string) => {
+    try { await dismissRisk(id); load(); }
+    catch (e: any) { Alert.alert('Hata', e?.message || 'Uyarı gizlenemedi.'); }
+  }, [load]);
 
   const filtered = showDismissed ? items : items.filter(i => !i.dismissed);
 
@@ -26,7 +37,8 @@ export default function AiRiskAlertsScreen() {
         data={filtered}
         keyExtractor={i => i.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
-        ListEmptyComponent={<Text style={s.empty}>Risk uyarısı yok.</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Risk uyarısı yok.</Text> : null}
         renderItem={({ item }) => (
           <View style={[s.card, { borderLeftColor: RISK_COLOR[item.level], opacity: item.dismissed ? 0.5 : 1 }]}>
             <View style={s.row}>
@@ -43,7 +55,7 @@ export default function AiRiskAlertsScreen() {
               </View>
             </View>
             {!item.dismissed && (
-              <TouchableOpacity style={s.dismiss} onPress={async () => { await dismissRisk(item.id); load(); }}>
+              <TouchableOpacity style={s.dismiss} onPress={() => onDismiss(item.id)} accessibilityRole="button" accessibilityLabel={`Uyarıyı gizle: ${item.title}`}>
                 <Text style={s.dismissT}>Gizle</Text>
               </TouchableOpacity>
             )}
