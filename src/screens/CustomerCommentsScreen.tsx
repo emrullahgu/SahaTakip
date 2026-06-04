@@ -1,10 +1,11 @@
 // CustomerCommentsScreen — POZ-DEV-407
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
+import { a11yButton } from '../utils/a11y';
 import type { RootStackParamList, CustomerComment } from '../types';
 import { listComments, saveComment, resolveComment, deleteComment } from '../services/customerExperience';
 
@@ -18,20 +19,34 @@ export default function CustomerCommentsScreen() {
   const [author, setAuthor] = useState('');
   const [body, setBody] = useState('');
   const [rating, setRating] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setComments(await listComments(customerFilter)); }, [customerFilter]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setComments(await listComments(customerFilter)); }
+    finally { setLoading(false); setLoaded(true); }
+  }, [customerFilter]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const add = async () => {
     if (!cid.trim() || !author.trim() || !body.trim()) { Alert.alert('Eksik', 'Müşteri ID, isim ve yorum gerekli.'); return; }
-    await saveComment({ customerId: cid.trim(), authorName: author.trim(), body: body.trim(), rating: rating || undefined });
-    setBody(''); setRating(0);
-    load();
+    try {
+      await saveComment({ customerId: cid.trim(), authorName: author.trim(), body: body.trim(), rating: rating || undefined });
+      setBody(''); setRating(0);
+      load();
+    } catch (e: any) { Alert.alert('Hata', e?.message || 'Yorum kaydedilemedi.'); }
   };
-  const toggle = async (c: CustomerComment) => { await resolveComment(c.id, !c.resolved); load(); };
+  const toggle = async (c: CustomerComment) => {
+    try { await resolveComment(c.id, !c.resolved); load(); }
+    catch (e: any) { Alert.alert('Hata', e?.message || 'Güncellenemedi.'); }
+  };
   const remove = (id: string) => Alert.alert('Sil?', '', [
     { text: 'Vazgeç', style: 'cancel' },
-    { text: 'Sil', style: 'destructive', onPress: async () => { await deleteComment(id); load(); } },
+    { text: 'Sil', style: 'destructive', onPress: async () => {
+      try { await deleteComment(id); load(); }
+      catch (e: any) { Alert.alert('Hata', e?.message || 'Yorum silinemedi.'); }
+    } },
   ]);
 
   return (
@@ -47,7 +62,7 @@ export default function CustomerCommentsScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={s.addBtn} onPress={add}>
+        <TouchableOpacity style={s.addBtn} onPress={add} {...a11yButton('Yorum ekle')}>
           <Ionicons name="add-circle-outline" size={16} color="#fff" /><Text style={s.addT}>Yorum Ekle</Text>
         </TouchableOpacity>
       </View>
@@ -55,7 +70,8 @@ export default function CustomerCommentsScreen() {
         data={comments}
         keyExtractor={c => c.id}
         contentContainerStyle={{ padding: spacing.md, gap: 6, paddingBottom: 80 }}
-        ListEmptyComponent={<Text style={s.empty}>Henüz yorum yok.</Text>}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
+        ListEmptyComponent={loaded ? <Text style={s.empty}>Henüz yorum yok.</Text> : null}
         renderItem={({ item }) => (
           <TouchableOpacity style={[s.card, item.resolved && { opacity: 0.5 }]} onLongPress={() => remove(item.id)} onPress={() => toggle(item)}>
             <Ionicons name={item.resolved ? 'checkmark-circle' : 'chatbubble-outline'} size={18} color={item.resolved ? '#22c55e' : '#0ea5e9'} />
