@@ -20,6 +20,11 @@ import { suggestionStore, type SuggestionSeverity } from './suggestionStore';
 import { WEB_TOOLS } from './webTools';
 import { INTEGRATION_TOOLS } from './integrationStubs';
 import { newUuid } from '../data/repository';
+// Sistem-farkındalığı read-tool'ları için servisler (gerçek veri — uydurma yok)
+import { listVehicles, listVehicleAlerts } from '../vehicles';
+import { lowStockAlerts, listBalances } from '../stock';
+import { listPayments, computeCustomerBalances, listByCustomer } from '../payments';
+import { listExpenses } from '../expenses';
 
 export interface AgentContext {
   app: AppContextType;
@@ -327,6 +332,143 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         },
         customers: ctx.app.customers.length,
         employees: ctx.app.employees.length,
+      };
+    },
+  },
+
+  // ===== SİSTEM-FARKINDALIĞI READ-TOOL'LARI (gerçek veri; uydurma yok) =====
+  get_fleet_status: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'get_fleet_status',
+        description: 'Araç filosu durumu: araçlar (plaka, marka/model, sürücü, km, yakıt) ve yaklaşan muayene/sigorta uyarıları.',
+        parameters: { type: 'object', properties: {} },
+      },
+    },
+    handler: async () => {
+      const [vehicles, alerts] = await Promise.all([listVehicles(), listVehicleAlerts(45)]);
+      return {
+        total: vehicles.length,
+        vehicles: vehicles.slice(0, 60).map(v =>
+          slim(v, ['id', 'plate', 'brand', 'model', 'driverName', 'kmTotal', 'fuelType', 'inspectionDueAt', 'insuranceDueAt'])),
+        upcomingAlerts: alerts.slice(0, 40).map(a => ({
+          plate: a.vehicle?.plate, kind: a.kind, dueAt: a.dueAt, daysLeft: a.daysLeft,
+        })),
+      };
+    },
+  },
+
+  get_inventory_status: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'get_inventory_status',
+        description: 'Stok durumu: düşük stok uyarıları (malzeme, mevcut miktar, eksik miktar) ve toplam bakiye kalem sayısı.',
+        parameters: { type: 'object', properties: {} },
+      },
+    },
+    handler: async () => {
+      const [low, balances] = await Promise.all([lowStockAlerts(), listBalances()]);
+      return {
+        balanceRecords: balances.length,
+        lowStockCount: low.length,
+        lowStock: low.slice(0, 50).map(r => ({
+          material: r.material?.name ?? r.material?.id, totalQty: r.totalQty, shortage: r.shortage, unit: (r.material as any)?.unit,
+        })),
+      };
+    },
+  },
+
+  get_finance_summary: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'get_finance_summary',
+        description: 'Finans özeti: toplam tahsilat, toplam masraf, net; en yüksek bakiyeli (borçlu) müşteriler.',
+        parameters: { type: 'object', properties: {} },
+      },
+    },
+    handler: async (_args, ctx) => {
+      const [payments, expenses, balances] = await Promise.all([
+        listPayments(),
+        listExpenses(),
+        computeCustomerBalances(ctx.app.customers, ctx.app.workOrders, ctx.app.quotes),
+      ]);
+      const collected = payments.filter(p => p.status === 'received')
+        .reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      const expenseTotal = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+      const debtors = balances
+        .filter(b => (b.balance || 0) > 0)
+        .sort((a, b) => b.balance - a.balance)
+        .slice(0, 15)
+        .map(b => ({ customer: b.customerName, balance: b.balance, invoiced: b.totalInvoiced, received: b.totalReceived }));
+      return {
+        paymentsCount: payments.length,
+        collected,
+        expenseTotal,
+        net: collected - expenseTotal,
+        topDebtors: debtors,
+      };
+    },
+  },
+
+  get_work_order_detail: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'get_work_order_detail',
+        description: 'Bir iş emrinin TÜM detayı: müşteri, hizmet, durum, atama, malzemeler, planlanan/gerçek süre, notlar.',
+        parameters: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'string', description: 'İş emri id veya numarası' } },
+        },
+      },
+    },
+    handler: async (args, ctx) => {
+      const id = String(args.id ?? '').trim();
+      const w = ctx.app.workOrders.find(x => x.id === id || (x as any).number === id);
+      if (!w) return { ok: false, error: `İş emri bulunamadı: ${id}` };
+      return {
+        ok: true,
+        workOrder: slim(w, ['id', 'client', 'serviceName', 'status', 'priority', 'date',
+          'plannedStart', 'plannedEnd', 'slaHours', 'assignedToName', 'assignmentStatus',
+          'engineer', 'quoteAmount', 'laborCost', 'materialCost', 'actualLaborMinutes', 'notes']),
+        materials: (w.materials ?? []).map((m: any) => ({ name: m.name, qty: m.qty, price: m.price })),
+      };
+    },
+  },
+
+  get_customer_detail: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'get_customer_detail',
+        description: 'Müşteri 360: bilgiler + teklifleri + iş emirleri + tahsilatları + güncel bakiye.',
+        parameters: {
+          type: 'object',
+          required: ['customerId'],
+          properties: { customerId: { type: 'string', description: 'Müşteri id (veya kısa ad)' } },
+        },
+      },
+    },
+    handler: async (args, ctx) => {
+      const key = String(args.customerId ?? '').trim();
+      const c = ctx.app.customers.find(x => x.id === key || x.shortName === key || x.title === key);
+      if (!c) return { ok: false, error: `Müşteri bulunamadı: ${key}` };
+      const quotes = ctx.app.quotes.filter(q => q.customerName === c.shortName || q.customerTitle === c.title);
+      const wos = ctx.app.workOrders.filter(w => w.client === c.shortName || w.client === c.title);
+      let payments: any[] = [];
+      try { payments = await listByCustomer(c.id); } catch { /* offline */ }
+      const collected = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+      return {
+        ok: true,
+        customer: slimCust(c),
+        quotes: quotes.slice(0, 30).map(slimQuote),
+        workOrders: wos.slice(0, 30).map(slimWO),
+        payments: payments.slice(0, 30).map(p => ({ amount: p.amount, method: p.method, status: p.status, receivedAt: p.receivedAt, receiptNo: p.receiptNo })),
+        totalCollected: collected,
       };
     },
   },

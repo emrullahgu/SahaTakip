@@ -87,6 +87,38 @@ describe('set_quote_status — geçersiz durum DB\'ye yazılmaz (Teklifler ekran
   });
 });
 
+describe('sistem-farkındalığı read-tool\'ları (agent tüm sistemi tanır)', () => {
+  it('beş yeni read-tool AGENT_TOOLS\'a kayıtlı', () => {
+    for (const name of ['get_fleet_status', 'get_inventory_status', 'get_finance_summary', 'get_work_order_detail', 'get_customer_detail']) {
+      expect(AGENT_TOOLS[name]).toBeTruthy();
+      expect(AGENT_TOOLS[name].schema.function.name).toBe(name);
+    }
+  });
+
+  it('get_work_order_detail id veya numara ile iş emrini bulur, yoksa hata döner', async () => {
+    const wo: any = { id: 'WO-1', client: 'ACME', serviceName: 'Bakım', status: 'Başladı', materials: [{ name: 'Kablo', qty: 2, price: 10 }], number: 'WO-1' };
+    const c: any = { ...ctx, app: { workOrders: [wo], quotes: [], customers: [] } };
+    const ok = await AGENT_TOOLS['get_work_order_detail'].handler({ id: 'WO-1' }, c);
+    expect(ok.ok).toBe(true);
+    expect(ok.workOrder.client).toBe('ACME');
+    expect(ok.materials).toHaveLength(1);
+    const miss = await AGENT_TOOLS['get_work_order_detail'].handler({ id: 'YOK' }, c);
+    expect(miss.ok).toBe(false);
+  });
+
+  it('get_customer_detail müşteriyi + tekliflerini + iş emirlerini döner (gerçek veri)', async () => {
+    const cust: any = { id: 'cu1', shortName: 'DİNÇER', title: 'Dinçer A.Ş.' };
+    const quote: any = { id: 'q1', number: 'QT-1', customerName: 'DİNÇER', title: 'T', status: 'Taslak', date: '2026-06-04', grandTotal: 100 };
+    const wo: any = { id: 'w1', client: 'DİNÇER', serviceName: 'S', status: 'Bekliyor' };
+    const c: any = { ...ctx, app: { customers: [cust], quotes: [quote], workOrders: [wo] } };
+    const res = await AGENT_TOOLS['get_customer_detail'].handler({ customerId: 'DİNÇER' }, c);
+    expect(res.ok).toBe(true);
+    expect(res.quotes).toHaveLength(1);
+    expect(res.workOrders).toHaveLength(1);
+    expect(Array.isArray(res.payments)).toBe(true); // servis offline → boş ama dizi
+  });
+});
+
 describe('create_quote_draft — fiyat uydurma YASAK (yalnız katalogtan)', () => {
   it('katalog dışı kaleme ajan fiyat verse bile 0 yazılır + manualPriceLines\'da işaretlenir', async () => {
     let saved: any = null;
