@@ -1,25 +1,20 @@
-// app.config.js — app.json'u baz alır, gizli/ortama özel değerleri env'den enjekte eder.
-// Expo otomatik olarak app.config.* dosyasını app.json'a tercih eder.
+// app.config.js — Expo, app.json değerlerini `config` parametresi olarak geçirir.
+// Biz bunları baz alıp yalnızca gizli/ortama özel değerleri (Google Maps key) env'den
+// enjekte ederiz. (Statik app.json korunur; burada üzerine yazılır.)
 
-const base = require('./app.json');
-
-module.exports = ({ config: _ }) => {
-  const expo = { ...base.expo };
+module.exports = ({ config }) => {
   const mapsKey = process.env.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
   if (mapsKey) {
-    expo.android = {
-      ...(expo.android || {}),
+    config.android = {
+      ...(config.android || {}),
       config: {
-        ...((expo.android && expo.android.config) || {}),
+        ...((config.android && config.android.config) || {}),
         googleMaps: { apiKey: mapsKey },
       },
     };
-  } else if (expo.android && expo.android.config && expo.android.config.googleMaps) {
-    // Env yoksa app.json'daki placeholder/boş değer kullanılır; yapı boş olmamalı.
-    // Build zamanında uyarı verelim.
-    if (!expo.android.config.googleMaps.apiKey) {
-      console.warn('[app.config] GOOGLE_MAPS_API_KEY tanımlı değil; harita modülü çalışmayabilir.');
-    }
+  } else if (config.android?.config?.googleMaps && !config.android.config.googleMaps.apiKey) {
+    // Env yoksa app.json'daki değer kullanılır; eksikse build zamanında uyar.
+    console.warn('[app.config] GOOGLE_MAPS_API_KEY tanımlı değil; harita modülü çalışmayabilir.');
   }
-  return expo;
+  return config;
 };
