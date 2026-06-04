@@ -82,9 +82,8 @@ export default function QuoteAcceptScreen({ route, navigation }: Props) {
         return (
           <View key={i} style={styles.lineRow}>
             <Text style={styles.linePoz}>
-              {i + 1}. {l.pozId}
+              {i + 1}. {l.pozName || 'Kalem'}
             </Text>
-            <Text style={styles.lineName}>{l.pozName}</Text>
             <Text style={styles.lineQty}>
               {l.quantity} {l.unit} · {calc.withProfit.toLocaleString('tr-TR')} ₺
             </Text>

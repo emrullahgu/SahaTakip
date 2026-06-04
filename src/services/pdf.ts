@@ -66,7 +66,7 @@ export function buildQuoteHtml(quote: Quote): string {
       return `
         <tr>
           <td class="center">${idx + 1}</td>
-          <td><strong>${escapeHtml(line.pozId)}</strong><br/><small>${escapeHtml(line.pozName)}</small></td>
+          <td>${escapeHtml(line.pozName || 'Kalem')}</td>
           <td class="center">${line.quantity} ${escapeHtml(line.unit)}</td>
           <td class="right">${fmt(line.materialPrice)} ₺</td>
           <td class="right">${fmt(line.installPrice)} ₺</td>
@@ -237,7 +237,7 @@ export function buildQuoteHtml(quote: Quote): string {
     <thead>
       <tr>
         <th style="width:30px">Sıra</th>
-        <th>Poz / İş Tanımı</th>
+        <th>İş / Malzeme Tanımı</th>
         <th style="width:70px">Miktar</th>
         <th style="width:80px">Malzeme B.F.</th>
         <th style="width:80px">Montaj B.F.</th>

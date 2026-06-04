@@ -159,8 +159,7 @@ export default function QuoteDetailScreen() {
                   <Text style={styles.lineNoText}>{line.lineNo}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.linePozId}>{line.pozId}</Text>
-                  <Text style={styles.linePozName}>{line.pozName}</Text>
+                  <Text style={styles.linePozId}>{line.pozName || 'Kalem'}</Text>
                 </View>
               </View>
               <View style={styles.lineMeta}>

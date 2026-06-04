@@ -38,4 +38,11 @@ describe('buildQuoteHtml — marka & yazdırma temizliği', () => {
   it('metin firma adı başlığı yerine logo kullanılır', () => {
     expect(html).not.toContain('<div class="name">');
   });
+
+  it('müşteriye giden teklifte iç POZ kodu (POZ-.../MANUAL-...) GÖRÜNMEZ, sadece iş tanımı', () => {
+    // quote.lines[0].pozId = 'POZ-1', pozName = 'Örnek'
+    expect(html).toContain('Örnek');          // iş tanımı görünür
+    expect(html).not.toContain('POZ-1');      // iç kod görünmez
+    expect(html).not.toMatch(/MANUAL-\d/);    // manuel kalem kodu görünmez
+  });
 });
