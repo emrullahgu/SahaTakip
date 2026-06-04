@@ -77,7 +77,17 @@ export default function NewWorkOrderScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <Text style={styles.label}>1. Müşteri</Text>
+        <View style={styles.labelRow}>
+          <Text style={[styles.label, { marginTop: 0, marginBottom: 0 }]}>1. Müşteri</Text>
+          <TouchableOpacity
+            style={styles.newCustomerBtn}
+            onPress={() => navigation.navigate('CustomerForm')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={14} color="#fff" />
+            <Text style={styles.newCustomerText}>Yeni Müşteri</Text>
+          </TouchableOpacity>
+        </View>
         <CustomerPicker
           customers={customers}
           selectedId={customer?.id}
@@ -192,6 +202,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },
   body: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   label: { fontSize: typography.sm, color: colors.text.secondary, fontWeight: '800', marginTop: spacing.lg, marginBottom: spacing.sm },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.lg, marginBottom: spacing.sm },
+  newCustomerBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.emerald.default, paddingHorizontal: spacing.sm, paddingVertical: 5, borderRadius: radius.full },
+  newCustomerText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
   input: { backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text.primary, fontSize: typography.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border.primary, backgroundColor: colors.bg.card },
