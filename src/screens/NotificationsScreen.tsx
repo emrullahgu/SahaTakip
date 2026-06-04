@@ -107,6 +107,7 @@ export default function NotificationsScreen() {
   const navigation = useNavigation<Nav>();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -114,6 +115,7 @@ export default function NotificationsScreen() {
       setItems(await listNotifications());
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -208,13 +210,13 @@ export default function NotificationsScreen() {
         keyExtractor={n => n.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
-        ListEmptyComponent={
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="notifications-off-outline"
             title="Bildirim yok"
             subtitle="Henüz bir bildirim almadınız."
           />
-        }
+        ) : null}
         renderItem={({ item: n }) => {
           const color = COLORS[n.type as keyof typeof COLORS] ?? colors.text.muted;
           const icon = ICONS[n.type as keyof typeof ICONS] ?? 'notifications-outline';

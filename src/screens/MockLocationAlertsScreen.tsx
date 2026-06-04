@@ -60,13 +60,13 @@ export default function MockLocationAlertsScreen() {
           keyExtractor={(r, i) => r.id ?? `${r.userId}-${r.recordedAt}-${i}`}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor="#ef4444" />}
-          ListEmptyComponent={
+          ListEmptyComponent={!loading ? (
             <View style={styles.empty}>
               <Ionicons name="shield-checkmark-outline" size={48} color="#22c55e" />
               <Text style={styles.emptyText}>Sahte konum kaydı yok.</Text>
               <Text style={styles.emptyHint}>Tüm konum bildirimleri güvenilir.</Text>
             </View>
-          }
+          ) : null}
           renderItem={({ item }) => (
             <View style={styles.row}>
               <View style={styles.iconBox}>

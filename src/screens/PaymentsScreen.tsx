@@ -71,6 +71,7 @@ function PaymentsScreenInner() {
 
   const [items, setItems] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Payment['status'] | 'all'>('all');
 
   const load = useCallback(async () => {
@@ -83,6 +84,7 @@ function PaymentsScreenInner() {
       setItems(filtered.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)));
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, [filterCustomerId, filterWorkOrderId]);
 
@@ -165,7 +167,7 @@ function PaymentsScreenInner() {
         keyExtractor={p => p.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
-        ListEmptyComponent={
+        ListEmptyComponent={loaded ? (
           <EmptyState
             icon="cash-outline"
             title="Tahsilat yok"
@@ -178,7 +180,7 @@ function PaymentsScreenInner() {
               })
             }
           />
-        }
+        ) : null}
         renderItem={({ item: p }) => {
           const m = PAYMENT_METHODS.find(x => x.value === p.method);
           return (
