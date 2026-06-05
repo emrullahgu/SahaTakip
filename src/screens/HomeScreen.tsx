@@ -5,9 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadPhoto } from '../services/photoUpload';
+import { getCurrentVersion } from '../services/appUpdate';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -31,8 +37,23 @@ type HomeNavProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNavProp>();
   const { workOrders, toast } = useAppContext();
-  const { profile, user, signOut, isDemoMode } = useAuth();
+  const { profile, user, signOut, isDemoMode, updateProfile } = useAuth();
   const { mode, setMode } = useTheme();
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+
+  // EG avatarına dokununca profil fotoğrafı yükle (her yerde görünür: mesajlar, başlık).
+  const pickAvatar = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.6 });
+      if (res.canceled || !res.assets?.[0]) return;
+      setUploadingAvatar(true);
+      const url = await uploadPhoto(res.assets[0].uri, 'avatars');
+      const { error } = await updateProfile({ avatar_url: url });
+      if (error) Alert.alert('Hata', error);
+    } catch (e: any) {
+      Alert.alert('Foto yüklenemedi', e?.message || 'Hata');
+    } finally { setUploadingAvatar(false); }
+  };
 
   // Rol bazlı görünürlük — saha personeli mali/yönetimsel kısımları görmez.
   // isDemoMode = admin (her şeyi görür). Profil yoksa "field" varsayılır (en kısıtlı).
@@ -77,7 +98,7 @@ export default function HomeScreen() {
             <Text style={styles.role}>
               SahaTakip · {profile?.role === 'admin' ? 'Yönetici' : profile?.role === 'manager' ? 'Müdür' : profile?.role === 'engineer' ? 'Mühendis' : profile?.role === 'field' ? 'Saha Personeli' : 'Servis Mühendisi'}
               {isDemoMode && '  ·  DEMO'}
-              {`  ·  v1.0.2  ·  Aktif tema: ${__activeThemeMode}  ·  Kayıtlı: ${mode}`}
+              {`  ·  v${getCurrentVersion()}  ·  Aktif tema: ${__activeThemeMode}  ·  Kayıtlı: ${mode}`}
             </Text>
           </View>
           <TouchableOpacity
@@ -97,9 +118,14 @@ export default function HomeScreen() {
           <TouchableOpacity onPress={signOut} style={styles.logoutBtn} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={22} color={colors.text.muted} />
           </TouchableOpacity>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <TouchableOpacity style={styles.avatarWrap} onPress={pickAvatar} activeOpacity={0.8} disabled={uploadingAvatar} accessibilityLabel="Profil fotoğrafı ekle">
+            {profile?.avatar_url
+              ? <Image source={{ uri: profile.avatar_url }} style={styles.avatar} resizeMode="cover" />
+              : <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>}
+            <View style={styles.avatarBadge}>
+              {uploadingAvatar ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={11} color="#fff" />}
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Stats Banner */}
@@ -460,6 +486,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: { color: colors.text.primary, fontWeight: '800', fontSize: typography.sm },
+  avatarWrap: { width: 46, height: 46 },
+  avatarBadge: { position: 'absolute', right: -2, bottom: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: colors.indigo.default, borderWidth: 2, borderColor: colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
   logoutBtn: {
     width: 36,
     height: 36,

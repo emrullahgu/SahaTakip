@@ -7,7 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { a11yButton } from '../utils/a11y';
 import type { EqAsset, EqAssetType, EqAssetStatus } from '../types';
-import { listEqAssets, createEqAsset, updateEqAssetStatus, EQ_TYPE_LABEL, EQ_TYPE_ICON, EQ_TYPE_COLOR, EQ_STATUS_LABEL, EQ_STATUS_COLOR } from '../services/equipment';
+import { listEqAssets, createEqAsset, updateEqAssetStatus, deleteEqAsset, EQ_TYPE_LABEL, EQ_TYPE_ICON, EQ_TYPE_COLOR, EQ_STATUS_LABEL, EQ_STATUS_COLOR } from '../services/equipment';
 
 const TYPES: EqAssetType[] = ['transformer', 'panel', 'meter', 'inverter', 'ups', 'generator', 'compensation', 'cable', 'other'];
 const STATUSES: EqAssetStatus[] = ['active', 'maintenance', 'broken', 'retired'];
@@ -41,6 +41,16 @@ export default function AssetListScreen() {
     } catch (e: any) { Alert.alert('Hata', e?.message || 'Varlık kaydedilemedi.'); }
   };
 
+  const confirmDelete = (item: EqAsset) => {
+    Alert.alert('Varlığı sil', `${item.code} · ${item.name} silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteEqAsset(item.id); load(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); }
+      } },
+    ]);
+  };
+
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.chips}>
@@ -61,7 +71,7 @@ export default function AssetListScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: 6 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.text.muted} />}
         renderItem={({ item }) => (
-          <TouchableOpacity style={[s.card, { borderLeftColor: EQ_TYPE_COLOR[item.type] }]} onPress={() => nav.navigate('ServiceCard', { assetId: item.id })}>
+          <TouchableOpacity style={[s.card, { borderLeftColor: EQ_TYPE_COLOR[item.type] }]} onPress={() => nav.navigate('ServiceCard', { assetId: item.id })} onLongPress={() => confirmDelete(item)} delayLongPress={350}>
             <View style={[s.icon, { backgroundColor: EQ_TYPE_COLOR[item.type] + '33' }]}>
               <Ionicons name={EQ_TYPE_ICON[item.type] as any} size={24} color={EQ_TYPE_COLOR[item.type]} />
             </View>
@@ -72,6 +82,9 @@ export default function AssetListScreen() {
             </View>
             <TouchableOpacity onPress={() => setStatusFor(item)} style={[s.status, { backgroundColor: EQ_STATUS_COLOR[item.status] }]}>
               <Text style={s.statusT}>{EQ_STATUS_LABEL[item.status]}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => confirmDelete(item)} style={s.delBtn} hitSlop={8} {...a11yButton('Varlığı sil')}>
+              <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
             </TouchableOpacity>
           </TouchableOpacity>
         )}
@@ -142,6 +155,7 @@ const s = StyleSheet.create({
   title: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '800' },
   meta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   status: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  delBtn: { padding: 4, marginLeft: 2 },
   statusT: { color: '#fff', fontSize: 10, fontWeight: '800' },
   empty: { color: colors.text.muted, textAlign: 'center', marginTop: 40 },
   fab: { position: 'absolute', bottom: 32, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#0ea5e9', alignItems: 'center', justifyContent: 'center', elevation: 4 },

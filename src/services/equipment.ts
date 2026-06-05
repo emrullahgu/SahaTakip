@@ -66,6 +66,12 @@ export const updateEqAssetStatus = async (id: string, status: EqAssetStatus) => 
   await saveEqAssets(next);
   return next;
 };
+export const deleteEqAsset = async (id: string) => {
+  const list = await listEqAssets();
+  const next = list.filter(x => x.id !== id);
+  await saveEqAssets(next);
+  return next;
+};
 
 const SEED_MAINT: EqMaintenanceRecord[] = [];
 

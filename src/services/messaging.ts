@@ -241,6 +241,27 @@ export async function deleteMessage(messageId: string): Promise<void> {
   if (error) throw new Error(`[chat.delete] ${error.message}`);
 }
 
+/**
+ * Sohbeti sil / sohbetten ayrıl. Kullanıcı kendi katılımını siler (sohbet
+ * listesinden kaybolur). Başka katılımcı kalmazsa sohbet + mesajlar tamamen
+ * silinir. RLS izin vermezse en azından "ayrılma" gerçekleşir.
+ */
+export async function deleteConversation(conversationId: string): Promise<void> {
+  const me = await getCurrentUser();
+  if (!me) throw new Error('Oturum yok');
+  const { error } = await supabase.from('conversation_participants').delete()
+    .eq('conversation_id', conversationId).eq('user_id', me.id);
+  if (error) throw new Error(`[chat.leave] ${error.message}`);
+  try {
+    const { count } = await supabase.from('conversation_participants')
+      .select('id', { count: 'exact', head: true }).eq('conversation_id', conversationId);
+    if (!count) {
+      await supabase.from('messages').delete().eq('conversation_id', conversationId);
+      await supabase.from('conversations').delete().eq('id', conversationId);
+    }
+  } catch { /* temizlik best-effort */ }
+}
+
 /** Sohbeti "okundu" işaretle (unread sayacı sıfırlanır). */
 export async function markConversationRead(conversationId: string): Promise<void> {
   const me = await getCurrentUser();

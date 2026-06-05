@@ -149,7 +149,10 @@ export default function ChatThreadScreen() {
         <TouchableOpacity onPress={() => nav.goBack()} hitSlop={8}>
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={styles.headerHint} numberOfLines={1}>Kendi mesajınıza basılı tutarak silebilirsiniz</Text>
+        </View>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -193,7 +196,8 @@ export default function ChatThreadScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border.primary },
-  title: { flex: 1, fontSize: typography.lg, color: colors.text.primary, fontWeight: '800' },
+  title: { fontSize: typography.lg, color: colors.text.primary, fontWeight: '800' },
+  headerHint: { fontSize: 10, color: colors.text.faint, marginTop: 1 },
   msgRow: { marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   msgAvatar: { width: 28, height: 28, borderRadius: 14, marginBottom: 2 },
   msgAvatarFallback: { backgroundColor: colors.indigo.default, alignItems: 'center', justifyContent: 'center' },

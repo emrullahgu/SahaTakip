@@ -10,7 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import EmptyState from '../components/EmptyState';
 import {
-  listConversations, listChatUsers, getOrCreateDirect, createGroup,
+  listConversations, listChatUsers, getOrCreateDirect, createGroup, deleteConversation,
   type Conversation, type ChatUser,
 } from '../services/messaging';
 import type { RootStackParamList } from '../types';
@@ -35,6 +35,20 @@ export default function MessagesScreen() {
     setGroupMode(false); setGroupTitle(''); setSelected(new Set());
     setShowNew(true);
     setUsers(await listChatUsers());
+  };
+
+  const confirmDeleteConv = (c: Conversation) => {
+    Alert.alert(
+      'Sohbeti sil',
+      `"${c.displayTitle || 'Sohbet'}" sohbeti silinsin mi? (Sizden kaldırılır; grupsa diğerleri görmeye devam eder.)`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        { text: 'Sil', style: 'destructive', onPress: async () => {
+          try { await deleteConversation(c.id); load(); }
+          catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); }
+        } },
+      ],
+    );
   };
 
   const startDirect = async (u: ChatUser) => {
@@ -77,6 +91,8 @@ export default function MessagesScreen() {
           <TouchableOpacity
             style={styles.row}
             onPress={() => nav.navigate('ChatThread', { conversationId: item.id, title: item.displayTitle || 'Sohbet' })}
+            onLongPress={() => confirmDeleteConv(item)}
+            delayLongPress={350}
             activeOpacity={0.8}
           >
             {!item.isGroup && item.avatarUrl ? (
@@ -92,11 +108,12 @@ export default function MessagesScreen() {
                 ? <Text style={[styles.rowSub, (item.unread || 0) > 0 && { color: colors.text.primary, fontWeight: '700' }]} numberOfLines={1}>{item.lastMessage}</Text>
                 : item.isGroup && <Text style={styles.rowSub} numberOfLines={1}>{(item.participantNames || []).join(', ')}</Text>}
             </View>
-            {(item.unread || 0) > 0 ? (
+            {(item.unread || 0) > 0 && (
               <View style={styles.unreadBadge}><Text style={styles.unreadText}>{item.unread}</Text></View>
-            ) : (
-              <Ionicons name="chevron-forward" size={18} color={colors.text.faint} />
             )}
+            <TouchableOpacity onPress={() => confirmDeleteConv(item)} hitSlop={8} style={styles.rowDelBtn}>
+              <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
         ListEmptyComponent={!loading ? (
@@ -163,6 +180,7 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },
   unreadBadge: { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: colors.emerald.default, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   unreadText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  rowDelBtn: { padding: 4 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: colors.bg.primary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },

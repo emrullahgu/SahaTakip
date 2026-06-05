@@ -79,6 +79,11 @@ export default function WorkOrdersScreen() {
       <View style={styles.container}>
         {/* Screen Header */}
         <View style={styles.header}>
+          {navigation.canGoBack() && (
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={8} {...a11yButton('Geri')}>
+              <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+            </TouchableOpacity>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>İş Emirlerim</Text>
             <Text style={styles.subtitle}>Tarafınıza atanan iş emirleri</Text>
@@ -249,6 +254,7 @@ export default function WorkOrdersScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   container: { flex: 1, paddingHorizontal: spacing.lg },
+  backBtn: { padding: 2 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
