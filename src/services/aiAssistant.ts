@@ -186,13 +186,45 @@ async function seedQuotes(): Promise<AiQuoteDraft[]> {
 export async function listQuoteDrafts() { return seedQuotes(); }
 export async function generateQuoteDraft(customerName: string, surveyText: string): Promise<AiQuoteDraft> {
   const list = await load<AiQuoteDraft>(K.quotes);
-  // Sahte hardcoded kalemler yerine GERÇEK POZ kataloğundan eşleştir.
-  let items: { pozCode: string; pozName: string; qty: number; unitPrice: number }[] = [];
+  // Çok daha iyi AI akışı:
+  //  1) Keşif notunu AYRI iş kalemlerine böl (miktar + birim çıkar).
+  //  2) Her kalemi tek tek POZ kataloğuyla eşleştir (tüm metni tek blok değil).
+  //  3) Gerçek miktarı kullan, eşleşme güvenini sakla.
+  //  4) POZ bulunamayanlar için FİYAT UYDURMA — needsPrice ile işaretle (price 0).
+  let items: AiQuoteDraft['items'] = [];
   try {
-    const { suggestPozFromDescription } = await import('./ai');
-    const matches = await suggestPozFromDescription(surveyText);
-    items = matches.slice(0, 5).map(m => ({ pozCode: m.pozId, pozName: m.name, qty: 1, unitPrice: m.unitPrice }));
+    const { decomposeSurveyToItems, suggestPozFromDescription } = await import('./ai');
+    const surveyItems = await decomposeSurveyToItems(surveyText);
+    const work = surveyItems.length > 0 ? surveyItems : [{ description: surveyText, quantity: 1 }];
+    for (const si of work.slice(0, 15)) {
+      let matches: Awaited<ReturnType<typeof suggestPozFromDescription>> = [];
+      try { matches = await suggestPozFromDescription(si.description); } catch { /* yerel boş */ }
+      const top = matches[0];
+      if (top && top.score >= 40) {
+        items.push({
+          pozCode: top.pozId,
+          pozName: top.name,
+          qty: si.quantity,
+          unitPrice: top.unitPrice,
+          unit: si.unit || top.unit,
+          confidence: Math.min(1, Math.max(0, top.score / 100)),
+          needsPrice: false,
+        });
+      } else {
+        // Güvenilir POZ yok → fiyat uydurma, kullanıcı girsin.
+        items.push({
+          pozCode: 'MANUEL',
+          pozName: si.description,
+          qty: si.quantity,
+          unitPrice: 0,
+          unit: si.unit,
+          confidence: top ? Math.min(1, Math.max(0, top.score / 100)) : 0,
+          needsPrice: true,
+        });
+      }
+    }
   } catch { /* katalog erişilemezse boş taslak */ }
+  // Toplam yalnız fiyatı belli (needsPrice=false) kalemlerden hesaplanır.
   const total = items.reduce((s, i) => s + i.qty * i.unitPrice, 0);
   const d: AiQuoteDraft = { id: uid(), customerName, surveyText, items, totalAmount: total, createdAt: now(), status: 'draft' };
   list.unshift(d); await save(K.quotes, list);

@@ -44,6 +44,7 @@ export default function NewQuoteScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<NewQuoteRoute>();
   const editingQuoteId = route.params?.quoteId;
+  const prefill = route.params?.prefill;
   const { customers, quotes, addQuote, updateQuote, generateQuoteNumber, toast } = useAppContext();
   const editingQuote = React.useMemo(
     () => (editingQuoteId ? quotes.find(q => q.id === editingQuoteId) : undefined),
@@ -57,16 +58,26 @@ export default function NewQuoteScreen() {
     'Saha';
 
   const [customer, setCustomer] = useState<Customer | null>(() => {
-    if (!editingQuote) return null;
-    return (
-      customers.find(
-        c => c.shortName === editingQuote.customerName || c.title === editingQuote.customerTitle,
-      ) ?? null
-    );
+    if (editingQuote) {
+      return (
+        customers.find(
+          c => c.shortName === editingQuote.customerName || c.title === editingQuote.customerTitle,
+        ) ?? null
+      );
+    }
+    // AI taslağından gelen müşteri adıyla mevcut kaydı eşle (varsa).
+    if (prefill?.customerName) {
+      const n = prefill.customerName.trim().toLocaleLowerCase('tr-TR');
+      return customers.find(c =>
+        (c.shortName || '').toLocaleLowerCase('tr-TR') === n ||
+        (c.title || '').toLocaleLowerCase('tr-TR') === n,
+      ) ?? null;
+    }
+    return null;
   });
-  const [title, setTitle] = useState(editingQuote?.title ?? '');
+  const [title, setTitle] = useState(editingQuote?.title ?? prefill?.title ?? '');
   const [notes, setNotes] = useState(editingQuote?.notes ?? '');
-  const [lines, setLines] = useState<QuoteLine[]>(editingQuote?.lines ?? []);
+  const [lines, setLines] = useState<QuoteLine[]>(editingQuote?.lines ?? prefill?.lines ?? []);
   const [recents, setRecents] = useState<RecentPoz[]>([]);
   const [showRecents, setShowRecents] = useState(false);
 

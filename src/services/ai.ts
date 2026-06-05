@@ -559,6 +559,74 @@ export async function suggestPozFromDescription(description: string): Promise<Po
   }
 }
 
+// ---------- Teklif keşif notu → ayrı iş kalemleri (miktar + birim) ----------
+export interface SurveyLineItem {
+  description: string; // tek bir iş tanımı
+  quantity: number;    // adet/miktar (belirtilmemişse 1)
+  unit?: string;       // Adet | Mt | m² | Kg | Saat ...
+}
+
+/**
+ * Bir keşif/saha notunu ayrı ayrı iş kalemlerine böler. Tek bir blok yerine
+ * her kalemi tek tek POZ ile eşleştirebilmek için kullanılır. AI yoksa veya
+ * başarısız olursa satır/cümle bazlı yerel ayrıştırmaya düşer.
+ */
+export async function decomposeSurveyToItems(surveyText: string): Promise<SurveyLineItem[]> {
+  const text = (surveyText || '').trim();
+  if (!text) return [];
+
+  // Yerel ayrıştırma (her zaman yedek): satır/madde/noktalı virgül böl.
+  const localSplit = (): SurveyLineItem[] => {
+    const parts = text
+      .split(/\n+|;|•|·|•|(?:^|\s)\d+[)\].-]\s+/g)
+      .map(s => s.trim())
+      .filter(s => s.length >= 3);
+    const src = parts.length > 0 ? parts : [text];
+    return src.slice(0, 20).map(p => {
+      // "3 adet ...", "x2 ...", "2x ..." gibi basit miktar yakala
+      const m = p.match(/(?:^|\b)(\d{1,4})\s*(?:adet|ad|x|adt)?\b/i) || p.match(/\bx\s*(\d{1,4})\b/i);
+      const qty = m ? Math.max(1, parseInt(m[1], 10) || 1) : 1;
+      return { description: p, quantity: qty };
+    });
+  };
+
+  const settings = await getAiSettings();
+  if (settings.provider === 'mock' || !settings.apiKey) return localSplit();
+
+  const prompt = `Aşağıdaki saha keşif notunu AYRI AYRI iş kalemlerine böl. Her kalem için:
+- "description": tek bir net iş tanımı (Türkçe, kısa)
+- "quantity": sayısal miktar (belirtilmemişse 1)
+- "unit": birim (Adet, Mt, m², Kg, Saat vb.; emin değilsen "Adet")
+
+KURALLAR:
+- Her farklı iş/malzeme ayrı kalem olsun (tek satıra sıkıştırma).
+- Miktar/birim notta geçiyorsa aynen kullan.
+- Yorum/uydurma ekleme; sadece notta yazanı kalemle.
+- SADECE JSON dizisi döndür, başka metin yok:
+[{"description":"...","quantity":1,"unit":"Adet"}]
+
+KEŞİF NOTU:
+${text}`;
+
+  try {
+    const out = await chat(prompt, settings, 'Sen Türkçe konuşan bir teklif uzmanısın. Keşif notunu kalemlere ayırırsın. SADECE geçerli JSON döndürürsün.');
+    const match = out.match(/\[[\s\S]*\]/);
+    if (!match) return localSplit();
+    const arr = JSON.parse(match[0]) as Array<{ description?: string; quantity?: number | string; unit?: string }>;
+    const items = arr
+      .map(a => ({
+        description: String(a.description || '').trim(),
+        quantity: Math.max(1, Math.round(Number(a.quantity) || 1)),
+        unit: a.unit ? String(a.unit).trim() : undefined,
+      }))
+      .filter(x => x.description.length >= 2)
+      .slice(0, 20);
+    return items.length > 0 ? items : localSplit();
+  } catch {
+    return localSplit();
+  }
+}
+
 // ---------- POZ-DEV-091: Photo damage analysis ----------
 function mockAnalyze(context?: string): DamageAnalysis {
   const lc = TR_LOWER(context || '');

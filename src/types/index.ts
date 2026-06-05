@@ -2202,7 +2202,15 @@ export interface AiQuoteDraft {
   id: string;
   customerName: string;
   surveyText: string;
-  items: { pozCode: string; pozName: string; qty: number; unitPrice: number }[];
+  items: {
+    pozCode: string;
+    pozName: string;
+    qty: number;
+    unitPrice: number;
+    unit?: string;          // Adet | Mt | m² ...
+    confidence?: number;    // 0–1 eşleşme güveni
+    needsPrice?: boolean;   // POZ eşleşmedi → fiyat manuel girilmeli (uydurma yok)
+  }[];
   totalAmount: number;
   createdAt: string;
   status: 'draft' | 'approved' | 'rejected';
@@ -3863,7 +3871,7 @@ export type RootStackParamList = {
   Services: undefined;
   Customers: undefined;
   CustomerForm: { customerId?: string } | undefined;
-  NewQuote: { quoteId?: string } | undefined;
+  NewQuote: { quoteId?: string; prefill?: { customerName?: string; title?: string; lines: QuoteLine[] } } | undefined;
   QuoteDetail: { quoteId: string };
   WorkOrderDetail: { workOrderId: string };
   NewWorkOrder: undefined;
