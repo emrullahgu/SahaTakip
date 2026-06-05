@@ -398,6 +398,16 @@ export default function HomeScreen() {
               <Text style={styles.gridLabel}>API Anahtarları</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('Todo')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.emerald.bg }]}>
+              <Ionicons name="checkbox-outline" size={26} color={colors.emerald.default} />
+            </View>
+            <Text style={styles.gridLabel}>Yapılacaklar</Text>
+          </TouchableOpacity>
         </View>
         </FadeInView>
 

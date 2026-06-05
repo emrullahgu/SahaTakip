@@ -17,6 +17,7 @@ import WorkOrdersScreen from '../screens/WorkOrdersScreen';
 import NewServiceScreen from '../screens/NewServiceScreen';
 import NewWorkOrderScreen from '../screens/NewWorkOrderScreen';
 import MessagesScreen from '../screens/MessagesScreen';
+import TodoScreen from '../screens/TodoScreen';
 import ChatThreadScreen from '../screens/ChatThreadScreen';
 import ApolloLeadsScreen from '../screens/ApolloLeadsScreen';
 import ServicesScreen from '../screens/ServicesScreen';
@@ -682,6 +683,7 @@ function MainStack() {
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen name="NewWorkOrder" component={NewWorkOrderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Todo" component={TodoScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ApolloLeads" component={ApolloLeadsScreen} options={{ headerShown: false }} />
       <Stack.Screen

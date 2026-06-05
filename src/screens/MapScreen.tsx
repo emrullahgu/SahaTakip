@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'react-native-maps';
@@ -48,9 +48,15 @@ export default function MapScreen() {
         700
       );
     } else {
+      // İzin uygulama içinden istenir; reddedildiyse tekrar dene veya ayarları aç.
       Alert.alert(
         'Konum izni gerekli',
-        'Haritada konumunuzu görmek için cihaz ayarlarından SahaTakip\'e konum izni veriniz.'
+        'Haritada konumunuzu göstermek için konum izni gerekiyor.',
+        [
+          { text: 'Vazgeç', style: 'cancel' },
+          { text: 'İzin Ver', onPress: () => { void ensureLocation(); } },
+          { text: 'Ayarları Aç', onPress: () => { Linking.openSettings().catch(() => {}); } },
+        ],
       );
     }
     setLoading(false);

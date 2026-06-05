@@ -3872,6 +3872,7 @@ export type RootStackParamList = {
   Customers: undefined;
   CustomerForm: { customerId?: string } | undefined;
   NewQuote: { quoteId?: string; prefill?: { customerName?: string; title?: string; lines: QuoteLine[] } } | undefined;
+  Todo: undefined;
   QuoteDetail: { quoteId: string };
   WorkOrderDetail: { workOrderId: string };
   NewWorkOrder: undefined;
