@@ -186,6 +186,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!SUPABASE_CONFIGURED) {
       return { error: 'Supabase yapılandırılmamış. Demo modda devam edin.' };
     }
+    // Aynı isimde tek kullanıcı: kayıt öncesi isim müsait mi? (security definer RPC)
+    try {
+      const { data: available, error: rpcErr } = await supabase.rpc('is_name_available', { p_name: fullName.trim() });
+      if (!rpcErr && available === false) {
+        return { error: 'Bu isimde bir kullanıcı zaten kayıtlı. Lütfen farklı bir ad girin.' };
+      }
+    } catch { /* RPC erişilemezse kaydı engelleme */ }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
