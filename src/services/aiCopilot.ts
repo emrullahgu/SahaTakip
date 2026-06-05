@@ -9,6 +9,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { chat as llmChat, chatWithFallback, getAiSettings, chatVision, pickVisionSettings, pickDocSettings } from './ai';
+import { recordAiCall } from './aiTelemetry';
 import { retrieveRelevant, KbDoc } from './aiKnowledgeBase';
 import { POZ_CATALOG } from '../data/pozCatalog';
 import type { WorkOrder, Customer, Quote, Employee } from '../types';
@@ -201,6 +202,7 @@ ${liveContext}
 ## Önceki Mesajlar
 ${historyText || '(yok)'}`;
 
+  const _t0 = Date.now();
   try {
     const reply = await chatVision(
       userMessage || (attachment.kind === 'pdf' ? 'Bu belgeyi oku ve özetle.' : 'Bu görseli incele ve özetle.'),
@@ -208,8 +210,10 @@ ${historyText || '(yok)'}`;
       picked,
       systemPrompt,
     );
+    void recordAiCall({ feature: 'vision', provider: picked.provider, model: picked.model, promptChars: systemPrompt.length + (userMessage?.length || 0), replyChars: reply.length, durationMs: Date.now() - _t0, success: true });
     return { reply: reply || '(boş yanıt)', provider: picked.provider };
   } catch (e: any) {
+    void recordAiCall({ feature: 'vision', provider: picked.provider, durationMs: Date.now() - _t0, success: false, errorMessage: e?.message || 'bilinmeyen' });
     return { reply: `Ek analizi başarısız: ${e?.message || 'bilinmeyen'}`, provider: picked.provider };
   }
 }

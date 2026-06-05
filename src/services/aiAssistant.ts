@@ -14,18 +14,20 @@ const K = {
 
 const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
-async function load<T>(k: string): Promise<T[]> { const r = await AsyncStorage.getItem(k); return r ? JSON.parse(r) : []; }
+async function load<T>(k: string): Promise<T[]> { try { const r = await AsyncStorage.getItem(k); return r ? JSON.parse(r) : []; } catch { return []; } }
 async function save<T>(k: string, v: T[]) { await AsyncStorage.setItem(k, JSON.stringify(v)); }
 
 export const FEATURE_LABEL: Record<AiFeature, string> = {
   chat: 'Sohbet', poz_suggest: 'POZ Öneri', quote_draft: 'Teklif Taslağı',
   workorder_summary: 'İş Emri Özeti', customer_summary: 'Müşteri Özeti',
   risk_analysis: 'Risk Analizi', daily_report: 'Günlük Rapor', logs: 'Loglar',
+  agent: 'Ajan', vision: 'Görsel/Belge',
 };
 export const FEATURE_ICON: Record<AiFeature, string> = {
   chat: 'chatbubbles-outline', poz_suggest: 'pricetag-outline', quote_draft: 'document-text-outline',
   workorder_summary: 'newspaper-outline', customer_summary: 'person-outline',
   risk_analysis: 'warning-outline', daily_report: 'calendar-outline', logs: 'list-outline',
+  agent: 'sparkles-outline', vision: 'image-outline',
 };
 export const ROLE_LABEL: Record<AiUserRole, string> = { admin: 'Yönetici', manager: 'Müdür', staff: 'Personel', sales: 'Satış' };
 export const ROLE_COLOR: Record<AiUserRole, string> = { admin: '#ef4444', manager: '#a855f7', staff: '#0ea5e9', sales: '#f59e0b' };
@@ -318,7 +320,9 @@ export async function generateDailyReport(): Promise<AiDailyReport> {
 async function seedUsage(): Promise<AiUsageLog[]> {
   return [];
 }
-export async function listUsageLogs() { return seedUsage(); }
+// Gerçek kayıtlı kullanım logunu döndürür (önceden seedUsage()=[] dönüp ekranı
+// hep boş bırakıyordu — çekirdek AI telemetrisi artık ai_usage_v1'e yazılır).
+export async function listUsageLogs(): Promise<AiUsageLog[]> { return load<AiUsageLog>(K.usage); }
 async function logUsage(feature: AiFeature, provider: AiAssistantProvider, pTok: number, cTok: number, success: boolean, errorMessage?: string) {
   const list = await load<AiUsageLog>(K.usage);
   list.unshift({

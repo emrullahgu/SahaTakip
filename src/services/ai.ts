@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { AiProvider, AiSettings, DamageAnalysis, DamageSeverity, PozSuggestion, VoiceReport } from '../types';
 import { POZ_CATALOG, PozItem } from '../data/pozCatalog';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { recordAiCall } from './aiTelemetry';
 
 const SETTINGS_KEY = '@SahaTakip:ai_settings';
 const SETTINGS_REMOTE_KEY = 'ai_settings'; // app_settings.key
@@ -465,6 +466,7 @@ export async function chatWithFallback(
   systemPrompt?: string,
 ): Promise<{ reply: string; usedProvider: AiProvider; usedModel?: string; attempts: { provider: AiProvider; error?: string }[] }> {
   const attempts: { provider: AiProvider; error?: string }[] = [];
+  const _t0 = Date.now();
 
   const tryOne = async (s: AiSettings) => {
     // Geçici hatada (503/429/timeout) aynı sağlayıcıyı kısa backoff'la 1 kez
@@ -490,6 +492,7 @@ export async function chatWithFallback(
     try {
       const reply = await tryOne(primary);
       attempts.push({ provider: primary.provider });
+      void recordAiCall({ feature: 'chat', provider: primary.provider, model: primary.model || DEFAULT_MODEL[primary.provider], promptChars: prompt.length, replyChars: reply.length, durationMs: Date.now() - _t0, success: true });
       return { reply, usedProvider: primary.provider, usedModel: primary.model || DEFAULT_MODEL[primary.provider], attempts };
     } catch (e: any) {
       attempts.push({ provider: primary.provider, error: e?.message || 'hata' });
@@ -505,6 +508,7 @@ export async function chatWithFallback(
     try {
       const reply = await tryOne(s);
       attempts.push({ provider: p });
+      void recordAiCall({ feature: 'chat', provider: p, model: DEFAULT_MODEL[p], promptChars: prompt.length, replyChars: reply.length, durationMs: Date.now() - _t0, success: true });
       return { reply, usedProvider: p, usedModel: DEFAULT_MODEL[p], attempts };
     } catch (e: any) {
       attempts.push({ provider: p, error: e?.message || 'hata' });
@@ -512,6 +516,7 @@ export async function chatWithFallback(
   }
 
   const summary = attempts.map(a => `${a.provider}: ${a.error || 'ok'}`).join(' | ');
+  void recordAiCall({ feature: 'chat', provider: primary.provider, promptChars: prompt.length, durationMs: Date.now() - _t0, success: false, errorMessage: summary });
   throw new Error(`Tüm AI sağlayıcıları başarısız oldu. ${summary}`);
 }
 
@@ -1167,10 +1172,14 @@ export async function chatWithToolsFallback(
     throw new Error('AI provider yapılandırılmamış (Agent için OpenAI/Groq/Gemini/Claude gerekli).');
   }
   let lastErr: any;
+  const _t0 = Date.now();
+  const _chars = messages.reduce((n, m) => n + (typeof m.content === 'string' ? m.content.length : 0), 0);
   for (const s of candidates) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        return await chatWithTools(messages, tools, s);
+        const res = await chatWithTools(messages, tools, s);
+        void recordAiCall({ feature: 'agent', provider: s.provider, model: s.model, promptChars: _chars, replyChars: (res.content || '').length, durationMs: Date.now() - _t0, success: true });
+        return res;
       } catch (e: any) {
         lastErr = e;
         // Aynı sağlayıcıyı geçici hatada bir kez daha dene (kısa backoff).
@@ -1182,5 +1191,6 @@ export async function chatWithToolsFallback(
       }
     }
   }
+  void recordAiCall({ feature: 'agent', provider: candidates[0]?.provider, promptChars: _chars, durationMs: Date.now() - _t0, success: false, errorMessage: String(lastErr?.message ?? lastErr) });
   throw lastErr ?? new Error('Tüm AI sağlayıcıları başarısız oldu.');
 }

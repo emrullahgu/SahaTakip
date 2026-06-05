@@ -2157,7 +2157,8 @@ export type AiRole = 'user' | 'assistant' | 'system';
 export type AiUserRole = 'admin' | 'manager' | 'staff' | 'sales';
 export type AiFeature =
   | 'chat' | 'poz_suggest' | 'quote_draft' | 'workorder_summary'
-  | 'customer_summary' | 'risk_analysis' | 'daily_report' | 'logs';
+  | 'customer_summary' | 'risk_analysis' | 'daily_report' | 'logs'
+  | 'agent' | 'vision';
 
 export interface AiPermission {
   id: string;
