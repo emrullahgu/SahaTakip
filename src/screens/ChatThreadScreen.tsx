@@ -66,7 +66,7 @@ export default function ChatThreadScreen() {
     Alert.alert('Mesajı sil', 'Bu mesaj silinsin mi?', [
       { text: 'Vazgeç', style: 'cancel' },
       { text: 'Sil', style: 'destructive', onPress: async () => {
-        try { await deleteMessage(m.id); setMessages(prev => prev.filter(x => x.id !== m.id)); }
+        try { await deleteMessage(m.id); setMessages(prev => prev.map(x => x.id === m.id ? { ...x, deleted: true, body: undefined, attachmentUrl: undefined, attachmentType: undefined, attachmentName: undefined } : x)); }
         catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi'); }
       } },
     ]);
@@ -98,6 +98,19 @@ export default function ChatThreadScreen() {
   const renderMsg = ({ item }: { item: ChatMessage }) => {
     const mine = item.senderId === meId;
     const url = item.attachmentUrl ? signed[item.attachmentUrl] : undefined;
+    if (item.deleted) {
+      return (
+        <View style={[styles.msgRow, mine ? styles.msgRight : styles.msgLeft]}>
+          {!mine && <View style={[styles.msgAvatar, styles.msgAvatarFallback, { opacity: 0.5 }]}><Ionicons name="person" size={14} color="#fff" /></View>}
+          <View style={[styles.bubble, styles.bubbleDeleted]}>
+            <View style={styles.deletedRow}>
+              <Ionicons name="ban-outline" size={13} color={colors.text.faint} />
+              <Text style={styles.deletedText}>Bu mesaj silindi</Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={[styles.msgRow, mine ? styles.msgRight : styles.msgLeft]}>
         {!mine && (
@@ -190,6 +203,9 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '78%', borderRadius: radius.lg, padding: spacing.sm, paddingHorizontal: spacing.md },
   bubbleMine: { backgroundColor: colors.indigo.default, borderBottomRightRadius: 4 },
   bubbleOther: { backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderBottomLeftRadius: 4 },
+  bubbleDeleted: { backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderStyle: 'dashed', opacity: 0.7 },
+  deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  deletedText: { fontSize: typography.xs, color: colors.text.faint, fontStyle: 'italic' },
   sender: { fontSize: 11, color: colors.emerald.default, fontWeight: '700', marginBottom: 2 },
   body: { fontSize: typography.sm, color: colors.text.primary, lineHeight: 19 },
   time: { fontSize: 10, color: colors.text.faint, alignSelf: 'flex-end', marginTop: 3 },

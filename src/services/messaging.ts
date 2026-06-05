@@ -34,6 +34,7 @@ export interface ChatMessage {
   attachmentType?: 'image' | 'pdf' | 'file';
   attachmentName?: string;
   createdAt: string;
+  deleted?: boolean;        // silinmiş mesaj → karşı tarafta "Bu mesaj silindi" izi
 }
 export interface ChatUser { id: string; fullName: string; avatarUrl?: string }
 
@@ -41,12 +42,19 @@ const convFromRow = (r: any): Conversation => ({
   id: r.id, title: r.title ?? undefined, isGroup: !!r.is_group,
   createdBy: r.created_by, lastMessageAt: r.last_message_at,
 });
-const msgFromRow = (r: any): ChatMessage => ({
-  id: r.id, conversationId: r.conversation_id, senderId: r.sender_id,
-  body: r.body ?? undefined, attachmentUrl: r.attachment_url ?? undefined,
-  attachmentType: r.attachment_type ?? undefined, attachmentName: r.attachment_name ?? undefined,
-  createdAt: r.created_at,
-});
+const msgFromRow = (r: any): ChatMessage => {
+  const deleted = !!r.deleted_at;
+  return {
+    id: r.id, conversationId: r.conversation_id, senderId: r.sender_id,
+    // Silinmişse içerik sızdırma — sadece "silindi" izi göster.
+    body: deleted ? undefined : (r.body ?? undefined),
+    attachmentUrl: deleted ? undefined : (r.attachment_url ?? undefined),
+    attachmentType: deleted ? undefined : (r.attachment_type ?? undefined),
+    attachmentName: deleted ? undefined : (r.attachment_name ?? undefined),
+    createdAt: r.created_at,
+    deleted,
+  };
+};
 
 /** Sohbet için seçilebilecek kullanıcılar (profiles). */
 export async function listChatUsers(): Promise<ChatUser[]> {
@@ -154,7 +162,7 @@ export async function listMessages(conversationId: string): Promise<ChatMessage[
   if (!SUPABASE_CONFIGURED) return [];
   const { data, error } = await supabase
     .from('messages').select('*').eq('conversation_id', conversationId)
-    .is('deleted_at', null)
+    // Silinen mesajlar da çekilir → karşı tarafta "Bu mesaj silindi" izi gösterilir.
     .order('created_at', { ascending: true }).limit(500);
   if (error) { console.warn('[chat.msgs]', error.message); return []; }
   const msgs = (data ?? []).map(msgFromRow);
