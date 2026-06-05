@@ -15,6 +15,7 @@ import {
   scanInboxAndSuggest, QUICK_PROMPTS, type CopilotMessage,
 } from '../services/aiCopilot';
 import type { RootStackParamList } from '../types';
+import MarkdownText from '../components/MarkdownText';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'CoPilot'>;
 
@@ -163,7 +164,9 @@ export default function CoPilotScreen() {
                   <Text style={s.botName}>Copilot</Text>
                 </View>
               )}
-              <Text style={item.role === 'user' ? s.userText : s.botText}>{item.content}</Text>
+              {item.role === 'user'
+                ? <Text style={s.userText}>{item.content}</Text>
+                : <MarkdownText content={item.content} color={colors.text.primary} size={typography.md} />}
             </View>
           )}
         />

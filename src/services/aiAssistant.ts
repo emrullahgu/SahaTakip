@@ -71,7 +71,11 @@ export async function listMessages(sessionId: string): Promise<AiMessage[]> {
   const all = await load<AiMessage>(K.messages);
   return all.filter(m => m.sessionId === sessionId);
 }
-export async function sendMessage(sessionId: string, content: string): Promise<AiMessage> {
+export async function sendMessage(
+  sessionId: string,
+  content: string,
+  snapshot?: import('./aiCopilot').CopilotSnapshot,
+): Promise<AiMessage> {
   const msgs = await load<AiMessage>(K.messages);
   const user: AiMessage = { id: uid(), sessionId, role: 'user', content, createdAt: now() };
   msgs.push(user);
@@ -80,8 +84,15 @@ export async function sendMessage(sessionId: string, content: string): Promise<A
   let tokens = 0;
   try {
     const { askCopilot } = await import('./aiCopilot');
-    // Bu katmanda canlı snapshot yok — boş snapshot ile gönderiyoruz; KB ve
-    // sistem promptu yine de zenginleştirme yapacak.
+    // Ekran canlı snapshot (iş emri/müşteri/teklif/personel) geçtiyse onu kullan;
+    // geçmediyse boş snapshot — KB ve sistem promptu yine zenginleştirme yapar.
+    const snap = snapshot ?? {
+      workOrders: [],
+      customers: [],
+      quotes: [],
+      employees: [],
+      currentUserName: 'Kullanıcı',
+    };
     const prevMsgs = msgs
       .filter(m => m.sessionId === sessionId)
       .slice(-8)
@@ -91,13 +102,7 @@ export async function sendMessage(sessionId: string, content: string): Promise<A
         content: m.content,
         createdAt: m.createdAt,
       }));
-    const res = await askCopilot(content, {
-      workOrders: [],
-      customers: [],
-      quotes: [],
-      employees: [],
-      currentUserName: 'Kullanıcı',
-    }, prevMsgs);
+    const res = await askCopilot(content, snap, prevMsgs);
     if (res.provider !== 'mock' && res.reply) {
       replyText = res.reply;
       tokens = Math.max(60, Math.floor(res.reply.length / 4));

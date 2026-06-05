@@ -12,6 +12,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { askCopilot, askCopilotWithAttachment, type CopilotMessage } from '../services/aiCopilot';
 import type { RootStackParamList } from '../types';
+import MarkdownText from './MarkdownText';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string }
 interface Pending { base64: string; mimeType: string; kind: 'image' | 'pdf'; name: string }
@@ -149,7 +150,9 @@ export default function ChatbotFAB() {
             <ScrollView ref={scrollRef} style={s.body} contentContainerStyle={{ padding: spacing.sm, gap: 6 }}>
               {msgs.map((m, i) => (
                 <View key={i} style={[s.bubble, m.role === 'user' ? s.userBubble : s.botBubble]}>
-                  <Text style={[s.bubbleText, m.role === 'user' && { color: '#fff' }]}>{m.text}</Text>
+                  {m.role === 'user'
+                    ? <Text style={[s.bubbleText, { color: '#fff' }]}>{m.text}</Text>
+                    : <MarkdownText content={m.text} color={colors.text.primary} size={typography.sm} />}
                 </View>
               ))}
             </ScrollView>
