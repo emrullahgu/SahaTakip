@@ -323,6 +323,34 @@ async function seedUsage(): Promise<AiUsageLog[]> {
 // Gerçek kayıtlı kullanım logunu döndürür (önceden seedUsage()=[] dönüp ekranı
 // hep boş bırakıyordu — çekirdek AI telemetrisi artık ai_usage_v1'e yazılır).
 export async function listUsageLogs(): Promise<AiUsageLog[]> { return load<AiUsageLog>(K.usage); }
+
+export interface AiUsageStats {
+  total: number;
+  successRate: number;       // 0..100
+  failures: number;
+  avgMs: number;             // ortalama gecikme
+  byProvider: { provider: AiAssistantProvider; count: number }[];
+  byFeature: { feature: AiFeature; count: number }[];
+}
+
+/** Kullanım loglarından AI sağlık özeti (saf fonksiyon — test edilebilir). */
+export function computeAiUsageStats(logs: AiUsageLog[]): AiUsageStats {
+  const total = logs.length;
+  const ok = logs.filter(l => l.success).length;
+  const failures = total - ok;
+  const successRate = total ? Math.round((ok / total) * 100) : 0;
+  const avgMs = total ? Math.round(logs.reduce((sum, l) => sum + (l.durationMs || 0), 0) / total) : 0;
+  const tally = <T,>(items: T[]): { key: T; count: number }[] => {
+    const m = new Map<T, number>();
+    for (const it of items) m.set(it, (m.get(it) ?? 0) + 1);
+    return Array.from(m, ([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count);
+  };
+  return {
+    total, successRate, failures, avgMs,
+    byProvider: tally(logs.map(l => l.provider)).map(x => ({ provider: x.key, count: x.count })),
+    byFeature: tally(logs.map(l => l.feature)).map(x => ({ feature: x.key, count: x.count })),
+  };
+}
 async function logUsage(feature: AiFeature, provider: AiAssistantProvider, pTok: number, cTok: number, success: boolean, errorMessage?: string) {
   const list = await load<AiUsageLog>(K.usage);
   list.unshift({

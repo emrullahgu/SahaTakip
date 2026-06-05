@@ -715,12 +715,19 @@ export async function analyzePhoto(imageUri: string, context?: string): Promise<
     const visionSettings = pickVisionSettings(settings);
     if (!visionSettings) return { ...mockAnalyze(context), imageUri };
     const base64 = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' as never });
-    const prompt = `Bu fotoğraftaki elektrik/mekanik hasarı analiz et. Türkçe SADECE şu JSON formatında cevap ver:\n{"severity":"low|medium|high|critical","findings":["..."],"recommendations":["..."],"estimatedCost":<TL sayı>,"confidence":<0-100>}\nBağlam: ${context || 'yok'}`;
+    const prompt = `Bu bir saha ekipmanı/tesisat fotoğrafı (elektrik/mekanik). Kıdemli saha mühendisi gibi incele:
+- findings: SOMUT gözlemler — ne görüyorsun (yanık izi, korozyon, gevşek/oksitli bağlantı, sızıntı, aşırı ısınma izi, çatlak, aşınma) ve NEREDE. Görsele dayan, uydurma.
+- recommendations: net AKSİYON adımları. Can güvenliği riski varsa İLK madde uyarı olsun (ör. "ACİL: enerjiyi kesin").
+- severity: low|medium|high|critical (görünen risk + aciliyet).
+- estimatedCost: kaba TL onarım tahmini (emin değilsen düşük tut).
+- confidence: 0-100 (görselin netliği + değerlendirme kesinliği).
+Türkçe. SADECE şu JSON: {"severity":"low|medium|high|critical","findings":["..."],"recommendations":["..."],"estimatedCost":<TL sayı>,"confidence":<0-100>}
+Bağlam: ${context || 'yok'}`;
     const text = await chatVision(
       prompt,
       { base64, mimeType: guessImageMime(imageUri) },
       visionSettings,
-      'Sen bir Türkçe konuşan saha hasar-tespit uzmanısın. SADECE geçerli JSON döndür.',
+      'Sen kıdemli bir Türkçe konuşan saha hasar-tespit mühendisisin. Gördüğünü dürüstçe değerlendir, görselde olmayanı uydurma; can güvenliği risklerini öne çıkar. SADECE geçerli JSON döndür.',
     );
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) throw new Error('parse');

@@ -1,7 +1,8 @@
 // aiTelemetry — gerçek AI gözlemlenebilirliği + listUsageLogs bug regresyonu.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { recordAiCall } from '../aiTelemetry';
-import { listUsageLogs } from '../aiAssistant';
+import { listUsageLogs, computeAiUsageStats } from '../aiAssistant';
+import type { AiUsageLog } from '../../types';
 
 beforeEach(async () => { try { await AsyncStorage.clear(); } catch { /* noop */ } });
 
@@ -42,5 +43,41 @@ describe('aiTelemetry.recordAiCall + listUsageLogs entegrasyonu', () => {
 
   it('telemetri ana akışı bozmaz (hata fırlatmaz)', async () => {
     await expect(recordAiCall({ feature: 'chat', durationMs: 0, success: true })).resolves.toBeUndefined();
+  });
+});
+
+describe('computeAiUsageStats — AI sağlık özeti', () => {
+  const mk = (over: Partial<AiUsageLog>): AiUsageLog => ({
+    id: Math.random().toString(36).slice(2), feature: 'chat', provider: 'openai',
+    promptTokens: 10, completionTokens: 10, costUsd: 0, durationMs: 1000,
+    createdAt: '2026-01-01T00:00:00Z', success: true, ...over,
+  });
+
+  it('boş logda güvenli sıfırlar', () => {
+    const s = computeAiUsageStats([]);
+    expect(s).toEqual({ total: 0, successRate: 0, failures: 0, avgMs: 0, byProvider: [], byFeature: [] });
+  });
+
+  it('başarı oranı + ortalama gecikme + hata sayısı doğru', () => {
+    const s = computeAiUsageStats([
+      mk({ success: true, durationMs: 1000 }),
+      mk({ success: true, durationMs: 2000 }),
+      mk({ success: false, durationMs: 3000, errorMessage: 'x' }),
+    ]);
+    expect(s.total).toBe(3);
+    expect(s.failures).toBe(1);
+    expect(s.successRate).toBe(67);   // 2/3
+    expect(s.avgMs).toBe(2000);       // (1000+2000+3000)/3
+  });
+
+  it('sağlayıcı/özellik dağılımı çoktan aza sıralı', () => {
+    const s = computeAiUsageStats([
+      mk({ provider: 'openai', feature: 'chat' }),
+      mk({ provider: 'openai', feature: 'agent' }),
+      mk({ provider: 'gemini', feature: 'vision' }),
+    ]);
+    expect(s.byProvider[0]).toEqual({ provider: 'openai', count: 2 });
+    expect(s.byProvider[1]).toEqual({ provider: 'gemini', count: 1 });
+    expect(s.byFeature[0].count).toBe(1); // hepsi farklı feature
   });
 });
