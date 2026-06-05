@@ -7,7 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { a11yButton } from '../utils/a11y';
 import type { SafetyChecklist, SafetyChecklistItem } from '../types';
-import { listChecklists, createChecklist } from '../services/quality';
+import { listChecklists, createChecklist, deleteChecklist } from '../services/quality';
 
 const TEMPLATES: { title: string; items: string[] }[] = [
   { title: 'Yüksekte Çalışma Öncesi', items: ['Emniyet kemeri kontrolü', 'İskele sağlamlığı', 'Hava koşulu uygunluğu', 'İlk yardım çantası', 'Ekipman muayene tarihi'] },
@@ -33,6 +33,13 @@ export default function SafetyChecklistsScreen() {
     finally { setLoading(false); setLoaded(true); }
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string, label: string) => {
+    Alert.alert('Kontrol listesini sil', `"${label}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteChecklist(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const openModal = () => {
     setTpl(0);
@@ -68,7 +75,7 @@ export default function SafetyChecklistsScreen() {
         renderItem={({ item }) => {
           const c = item.passed ? '#22c55e' : '#ef4444';
           return (
-            <TouchableOpacity style={[s.card, { borderLeftColor: c }]} onPress={() => setDetail(item)}>
+            <TouchableOpacity style={[s.card, { borderLeftColor: c }]} onPress={() => setDetail(item)} onLongPress={() => confirmDelete(item.id, item.title)} delayLongPress={350}>
               <View style={[s.scoreBadge, { backgroundColor: c }]}>
                 <Text style={s.scoreV}>{item.score}</Text>
               </View>
@@ -80,6 +87,9 @@ export default function SafetyChecklistsScreen() {
               <View style={[s.passBadge, { backgroundColor: c }]}>
                 <Text style={s.passT}>{item.passed ? 'GEÇTİ' : 'KALDI'}</Text>
               </View>
+              <TouchableOpacity onPress={() => confirmDelete(item.id, item.title)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+              </TouchableOpacity>
             </TouchableOpacity>
           );
         }}

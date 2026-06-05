@@ -87,6 +87,12 @@ export const createEqMaintenance = async (m: Omit<EqMaintenanceRecord, 'id'>) =>
   await AsyncStorage.setItem(K.maint, JSON.stringify(next));
   return fresh;
 };
+export const deleteEqMaintenance = async (id: string) => {
+  const list = await listEqMaintenance();
+  const next = list.filter(x => x.id !== id);
+  await AsyncStorage.setItem(K.maint, JSON.stringify(next));
+  return next;
+};
 
 const SEED_FAULT: EqFaultRecord[] = [];
 
@@ -102,6 +108,12 @@ export const createEqFault = async (f: Omit<EqFaultRecord, 'id'>) => {
   await AsyncStorage.setItem(K.fault, JSON.stringify(next));
   return fresh;
 };
+export const deleteEqFault = async (id: string) => {
+  const list = await listEqFaults();
+  const next = list.filter(x => x.id !== id);
+  await AsyncStorage.setItem(K.fault, JSON.stringify(next));
+  return next;
+};
 
 const SEED_PLANS: EqMaintenancePlan[] = [];
 
@@ -116,6 +128,12 @@ export const createEqPlan = async (p: Omit<EqMaintenancePlan, 'id'>) => {
   const next = [fresh, ...list];
   await AsyncStorage.setItem(K.plans, JSON.stringify(next));
   return fresh;
+};
+export const deleteEqPlan = async (id: string) => {
+  const list = await listEqPlans();
+  const next = list.filter(x => x.id !== id);
+  await AsyncStorage.setItem(K.plans, JSON.stringify(next));
+  return next;
 };
 
 export const upcomingEqPlans = async (withinDays = 30): Promise<EqMaintenancePlan[]> => {

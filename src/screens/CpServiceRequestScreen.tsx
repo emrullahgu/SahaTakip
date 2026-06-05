@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
-import { listCpRequests, createCpRequest, CP_URG_LABEL, CP_URG_COLOR, CP_REQ_STATUS_LABEL, CP_REQ_STATUS_COLOR } from '../services/customerPortal';
+import { listCpRequests, createCpRequest, deleteCpRequest, CP_URG_LABEL, CP_URG_COLOR, CP_REQ_STATUS_LABEL, CP_REQ_STATUS_COLOR } from '../services/customerPortal';
 import type { CpServiceRequest, CpRequestUrgency } from '../types';
 
 export default function CpServiceRequestScreen() {
@@ -17,6 +17,13 @@ export default function CpServiceRequestScreen() {
 
   const load = useCallback(async () => setList(await listCpRequests()), []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string, label: string) => {
+    Alert.alert('Talebi sil', `"${label}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteCpRequest(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const submit = async () => {
     if (!title.trim() || !desc.trim()) { Alert.alert('Eksik', 'Başlık ve açıklama gerekli.'); return; }
@@ -30,7 +37,7 @@ export default function CpServiceRequestScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll}>
         {list.map(r => (
-          <View key={r.id} style={[s.card, { borderLeftColor: CP_URG_COLOR[r.urgency] }]}>
+          <TouchableOpacity key={r.id} style={[s.card, { borderLeftColor: CP_URG_COLOR[r.urgency] }]} activeOpacity={0.85} onLongPress={() => confirmDelete(r.id, r.title)} delayLongPress={350}>
             <View style={s.row}>
               <View style={{ flex: 1 }}>
                 <Text style={s.title}>{r.title}</Text>
@@ -39,6 +46,9 @@ export default function CpServiceRequestScreen() {
               <View style={[s.urgPill, { backgroundColor: CP_URG_COLOR[r.urgency] + '33', borderColor: CP_URG_COLOR[r.urgency] }]}>
                 <Text style={[s.urgT, { color: CP_URG_COLOR[r.urgency] }]}>{CP_URG_LABEL[r.urgency]}</Text>
               </View>
+              <TouchableOpacity onPress={() => confirmDelete(r.id, r.title)} hitSlop={8} style={{ padding: 4, marginLeft: 4 }}>
+                <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+              </TouchableOpacity>
             </View>
             <View style={s.metaRow}>
               <View style={[s.statusPill, { backgroundColor: CP_REQ_STATUS_COLOR[r.status] + '33', borderColor: CP_REQ_STATUS_COLOR[r.status] }]}>
@@ -46,7 +56,7 @@ export default function CpServiceRequestScreen() {
               </View>
               <Text style={s.date}>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
 

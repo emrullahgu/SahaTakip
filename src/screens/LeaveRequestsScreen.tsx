@@ -10,7 +10,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import EmptyState from '../components/EmptyState';
 import {
-  listLeaveRequests, createLeaveRequest, decideLeaveRequest,
+  listLeaveRequests, createLeaveRequest, decideLeaveRequest, deleteLeaveRequest,
   LEAVE_TYPE_LABEL, LEAVE_STATUS_LABEL, type LeaveRequest,
 } from '../services/payrollHr';
 
@@ -54,6 +54,13 @@ export default function LeaveRequestsScreen() {
     catch (e: any) { Alert.alert('Hata', e?.message || 'İşlem başarısız'); }
   };
 
+  const confirmDelete = (id: string) => {
+    Alert.alert('İzin talebini sil', 'Bu talep silinsin mi?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteLeaveRequest(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -71,11 +78,16 @@ export default function LeaveRequestsScreen() {
         onRefresh={load}
         refreshing={loading}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity style={styles.card} activeOpacity={0.85} onLongPress={() => confirmDelete(item.id)} delayLongPress={350}>
             <View style={styles.cardTop}>
               <Text style={styles.cardName}>{nameOf(item.employeeId)}</Text>
-              <View style={[styles.statusPill, { backgroundColor: STATUS_COLOR[item.status] }]}>
-                <Text style={styles.statusText}>{LEAVE_STATUS_LABEL[item.status]}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.statusPill, { backgroundColor: STATUS_COLOR[item.status] }]}>
+                  <Text style={styles.statusText}>{LEAVE_STATUS_LABEL[item.status]}</Text>
+                </View>
+                <TouchableOpacity onPress={() => confirmDelete(item.id)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+                </TouchableOpacity>
               </View>
             </View>
             <Text style={styles.cardMeta}>{LEAVE_TYPE_LABEL[item.leaveType]} · {item.startDate} → {item.endDate}</Text>
@@ -90,7 +102,7 @@ export default function LeaveRequestsScreen() {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         )}
         ListEmptyComponent={!loading ? <EmptyState icon="airplane-outline" title="İzin talebi yok" subtitle="Sağ üstten 'Yeni' ile izin talebi oluşturun." /> : null}
       />

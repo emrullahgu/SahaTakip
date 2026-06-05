@@ -1,13 +1,13 @@
 // Faz 43 — SurveyFormsScreen
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import type { SurveyForm, RootStackParamList } from '../types';
-import { listSurveys, createSurvey, surveyTotal } from '../services/smartQuote';
+import { listSurveys, createSurvey, deleteSurvey, surveyTotal } from '../services/smartQuote';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -19,6 +19,13 @@ export default function SurveyFormsScreen() {
   const nav = useNavigation<Nav>();
   const load = useCallback(async () => { setItems(await listSurveys()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string, label: string) => {
+    Alert.alert('Keşfi sil', `"${label}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteSurvey(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const onAdd = async () => {
     if (!cust.trim() || !title.trim()) return;
@@ -36,7 +43,7 @@ export default function SurveyFormsScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: 6, paddingBottom: 90 }}
         ListEmptyComponent={<Text style={s.empty}>Keşif yok. FAB ile ekleyin.</Text>}
         renderItem={({ item }) => (
-          <TouchableOpacity style={s.card} onPress={() => nav.navigate('SurveyFormDetail', { surveyId: item.id })}>
+          <TouchableOpacity style={s.card} onPress={() => nav.navigate('SurveyFormDetail', { surveyId: item.id })} onLongPress={() => confirmDelete(item.id, item.title)} delayLongPress={350}>
             <Ionicons name="clipboard" size={22} color="#0ea5e9" />
             <View style={{ flex: 1 }}>
               <Text style={s.title}>{item.title}</Text>
@@ -44,6 +51,9 @@ export default function SurveyFormsScreen() {
               <Text style={s.tm}>{new Date(item.updatedAt).toLocaleString('tr-TR')}</Text>
             </View>
             <Text style={s.tot}>₺{surveyTotal(item).toLocaleString('tr-TR')}</Text>
+            <TouchableOpacity onPress={() => confirmDelete(item.id, item.title)} hitSlop={8} style={{ padding: 4 }}>
+              <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+            </TouchableOpacity>
           </TouchableOpacity>
         )}
       />

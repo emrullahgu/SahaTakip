@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { FieldEmergencyDispatch } from '../types';
-import { listEmergencies, dispatchEmergency, resolveEmergency, createEmergency, PRIORITY_COLOR, PRIORITY_LABEL } from '../services/fieldOps';
+import { listEmergencies, dispatchEmergency, resolveEmergency, createEmergency, deleteEmergency, PRIORITY_COLOR, PRIORITY_LABEL } from '../services/fieldOps';
 
 const STATUS_COLOR: Record<FieldEmergencyDispatch['status'], string> = { pending: '#ef4444', dispatched: '#f59e0b', arrived: '#06b6d4', resolved: '#22c55e', cancelled: '#64748b' };
 const STATUS_LABEL: Record<FieldEmergencyDispatch['status'], string> = { pending: 'Beklemede', dispatched: 'Yolda', arrived: 'Vardı', resolved: 'Çözüldü', cancelled: 'İptal' };
@@ -18,6 +18,13 @@ export default function FieldEmergencyScreen() {
   const [addr, setAddr] = useState('');
   const load = useCallback(async () => { setItems(await listEmergencies()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string, label: string) => {
+    Alert.alert('Acil kaydını sil', `"${label}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteEmergency(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const onCreate = async () => {
     if (!title.trim() || !addr.trim()) return;
@@ -41,11 +48,14 @@ export default function FieldEmergencyScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: 6, paddingBottom: 90 }}
         ListEmptyComponent={<Text style={s.empty}>Acil iş yok.</Text>}
         renderItem={({ item }) => (
-          <View style={[s.card, { borderLeftColor: STATUS_COLOR[item.status] }]}>
+          <TouchableOpacity style={[s.card, { borderLeftColor: STATUS_COLOR[item.status] }]} activeOpacity={0.9} onLongPress={() => confirmDelete(item.id, item.title)} delayLongPress={350}>
             <View style={s.head}>
               <Ionicons name="flash" size={22} color={STATUS_COLOR[item.status]} />
-              <Text style={s.title}>{item.title}</Text>
+              <Text style={[s.title, { flex: 1 }]}>{item.title}</Text>
               <View style={[s.chip, { backgroundColor: PRIORITY_COLOR[item.priority] }]}><Text style={s.chipT}>{PRIORITY_LABEL[item.priority]}</Text></View>
+              <TouchableOpacity onPress={() => confirmDelete(item.id, item.title)} hitSlop={8} style={{ padding: 2 }}>
+                <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+              </TouchableOpacity>
             </View>
             <Text style={s.addr}>📍 {item.address}</Text>
             <Text style={s.tm}>🕒 {new Date(item.createdAt).toLocaleString('tr-TR')}</Text>
@@ -64,7 +74,7 @@ export default function FieldEmergencyScreen() {
                 </TouchableOpacity>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
       <TouchableOpacity style={s.fab} onPress={() => setModal(true)}>

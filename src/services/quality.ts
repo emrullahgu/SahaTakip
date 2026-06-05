@@ -124,6 +124,10 @@ export const updateCapaStatus = async (id: string, status: CapaStatus, effective
 // ---------- Safety Checklists ----------
 const CHK_SEED: SafetyChecklist[] = [];
 export const listChecklists = async (): Promise<SafetyChecklist[]> => read(K_CHK, CHK_SEED);
+export const deleteChecklist = async (id: string) => {
+  const list = await read(K_CHK, CHK_SEED);
+  await write(K_CHK, list.filter(x => x.id !== id));
+};
 export const saveChecklist = async (c: SafetyChecklist) => {
   const list = await read(K_CHK, CHK_SEED);
   const i = list.findIndex(x => x.id === c.id);
@@ -144,6 +148,10 @@ export const createChecklist = async (title: string, location: string, performed
 // ---------- Risk Assessment ----------
 const RISK_SEED: RiskAssessment[] = [];
 export const listRisks = async (): Promise<RiskAssessment[]> => read(K_RISK, RISK_SEED);
+export const deleteRisk = async (id: string) => {
+  const list = await read(K_RISK, RISK_SEED);
+  await write(K_RISK, list.filter(x => x.id !== id));
+};
 export const saveRisk = async (r: RiskAssessment) => {
   const list = await read(K_RISK, RISK_SEED);
   const i = list.findIndex(x => x.id === r.id);

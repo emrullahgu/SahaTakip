@@ -42,6 +42,10 @@ export async function listSurveys(): Promise<SurveyForm[]> {
   const s = await seedSurveys(); await set(K.surveys, s); return s;
 }
 export async function getSurvey(id: string): Promise<SurveyForm | undefined> { return (await listSurveys()).find(s => s.id === id); }
+export async function deleteSurvey(id: string): Promise<void> {
+  const list = await listSurveys();
+  await set(K.surveys, list.filter(s => s.id !== id));
+}
 export async function createSurvey(customerName: string, title: string): Promise<SurveyForm> {
   const list = await listSurveys();
   const item: SurveyForm = { id: uid('sv'), customerName, title, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), items: [] };

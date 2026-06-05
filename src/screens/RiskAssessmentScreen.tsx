@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { RiskAssessment as RiskRec } from '../types';
-import { listRisks, createRisk, riskColor, riskLabel } from '../services/quality';
+import { listRisks, createRisk, deleteRisk, riskColor, riskLabel } from '../services/quality';
 
 export default function RiskAssessmentScreen() {
   const [items, setItems] = useState<RiskRec[]>([]);
@@ -22,6 +22,13 @@ export default function RiskAssessmentScreen() {
 
   const load = useCallback(async () => { setItems(await listRisks()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string, label: string) => {
+    Alert.alert('Risk değerlendirmesini sil', `"${label}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteRisk(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const onSave = async () => {
     if (!hazard.trim() || !location.trim() || !owner.trim()) { Alert.alert('Eksik', 'Tehlike, lokasyon ve sorumlu gerekli.'); return; }
@@ -40,13 +47,18 @@ export default function RiskAssessmentScreen() {
           const c = riskColor(item.score);
           const rc = riskColor(item.residualScore);
           return (
-            <View style={[s.card, { borderLeftColor: c }]}>
+            <TouchableOpacity style={[s.card, { borderLeftColor: c }]} activeOpacity={0.85} onLongPress={() => confirmDelete(item.id, item.hazard)} delayLongPress={350}>
               <View style={[s.scoreBadge, { backgroundColor: c }]}>
                 <Text style={s.scoreV}>{item.score}</Text>
                 <Text style={s.scoreL}>risk</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.title}>{item.hazard}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <Text style={[s.title, { flex: 1 }]}>{item.hazard}</Text>
+                  <TouchableOpacity onPress={() => confirmDelete(item.id, item.hazard)} hitSlop={8} style={{ padding: 2 }}>
+                    <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+                  </TouchableOpacity>
+                </View>
                 <Text style={s.meta}>{item.location} · {item.owner}</Text>
                 <Text style={s.formula}>O:{item.likelihood} × Ş:{item.severity} = {item.score} ({riskLabel(item.score)})</Text>
                 <Text style={s.ctl} numberOfLines={2}>Kontrol: {item.controls}</Text>
@@ -55,7 +67,7 @@ export default function RiskAssessmentScreen() {
                   <View style={[s.residBadge, { backgroundColor: rc }]}><Text style={s.residV}>{item.residualScore} · {riskLabel(item.residualScore)}</Text></View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
         ListEmptyComponent={<Text style={s.empty}>Risk değerlendirmesi yok.</Text>}

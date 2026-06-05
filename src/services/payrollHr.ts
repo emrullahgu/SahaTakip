@@ -106,6 +106,12 @@ export async function createLeaveRequest(input: {
   return lrFromRow(data);
 }
 
+/** İzin talebini sil (kendi bekleyen talebi veya yönetici — RLS). */
+export async function deleteLeaveRequest(id: string): Promise<void> {
+  const { error } = await supabase.from('leave_requests').delete().eq('id', id);
+  if (error) throw new Error(`[leave.delete] ${error.message}`);
+}
+
 /** İzin talebini onayla/reddet (yalnız yönetici — RLS). */
 export async function decideLeaveRequest(id: string, approve: boolean): Promise<void> {
   let approverId: string | undefined;

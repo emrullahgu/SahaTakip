@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { EqAsset, EqFaultRecord, EqFaultSeverity } from '../types';
-import { listEqAssets, listEqFaults, createEqFault, EQ_FAULT_COLOR } from '../services/equipment';
+import { listEqAssets, listEqFaults, createEqFault, deleteEqFault, EQ_FAULT_COLOR } from '../services/equipment';
 
 const SEVS: EqFaultSeverity[] = ['low', 'medium', 'high', 'critical'];
 const SEV_LABEL: Record<EqFaultSeverity, string> = { low: 'Düşük', medium: 'Orta', high: 'Yüksek', critical: 'Kritik' };
@@ -25,6 +25,13 @@ export default function AssetFaultHistoryScreen() {
     setAssets(a); setItems(f);
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string) => {
+    Alert.alert('Arıza kaydını sil', 'Bu kayıt silinsin mi?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteEqFault(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const list = useMemo(() => filterAsset === 'all' ? items : items.filter(i => i.assetId === filterAsset), [items, filterAsset]);
   const totalDown = useMemo(() => list.reduce((s, x) => s + x.downtimeHours, 0), [list]);
@@ -78,7 +85,12 @@ export default function AssetFaultHistoryScreen() {
           <View style={[s.card, { borderLeftColor: EQ_FAULT_COLOR[item.severity] }]}>
             <View style={s.row}>
               <Text style={[s.badge, { backgroundColor: EQ_FAULT_COLOR[item.severity] }]}>{SEV_LABEL[item.severity]}</Text>
-              <Text style={s.date}>{new Date(item.occurredAt).toLocaleDateString('tr-TR')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={s.date}>{new Date(item.occurredAt).toLocaleDateString('tr-TR')}</Text>
+                <TouchableOpacity onPress={() => confirmDelete(item.id)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+                </TouchableOpacity>
+              </View>
             </View>
             <Text style={s.title}>{assetName(item.assetId)}</Text>
             <Text style={s.desc}>{item.description}</Text>

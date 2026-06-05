@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { EqAsset, EqMaintenanceRecord, EqMaintenanceKind } from '../types';
-import { listEqAssets, listEqMaintenance, createEqMaintenance, EQ_MAINT_LABEL, EQ_MAINT_COLOR } from '../services/equipment';
+import { listEqAssets, listEqMaintenance, createEqMaintenance, deleteEqMaintenance, EQ_MAINT_LABEL, EQ_MAINT_COLOR } from '../services/equipment';
 
 const KINDS: EqMaintenanceKind[] = ['periodic', 'breakdown', 'inspection'];
 
@@ -24,6 +24,13 @@ export default function AssetMaintenanceHistoryScreen() {
     setAssets(a); setItems(m);
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const confirmDelete = (id: string) => {
+    Alert.alert('Bakım kaydını sil', 'Bu kayıt silinsin mi?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteEqMaintenance(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
+  };
 
   const list = useMemo(() => filterAsset === 'all' ? items : items.filter(i => i.assetId === filterAsset), [items, filterAsset]);
   const totalCost = useMemo(() => list.reduce((s, x) => s + x.cost, 0), [list]);
@@ -67,7 +74,12 @@ export default function AssetMaintenanceHistoryScreen() {
             <View style={{ flex: 1 }}>
               <View style={s.row}>
                 <Text style={[s.badge, { backgroundColor: EQ_MAINT_COLOR[item.kind] }]}>{EQ_MAINT_LABEL[item.kind]}</Text>
-                <Text style={s.date}>{new Date(item.performedAt).toLocaleDateString('tr-TR')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={s.date}>{new Date(item.performedAt).toLocaleDateString('tr-TR')}</Text>
+                  <TouchableOpacity onPress={() => confirmDelete(item.id)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+                  </TouchableOpacity>
+                </View>
               </View>
               <Text style={s.title}>{assetName(item.assetId)}</Text>
               <Text style={s.desc}>{item.description}</Text>

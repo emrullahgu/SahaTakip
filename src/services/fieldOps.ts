@@ -278,6 +278,10 @@ export async function resolveEmergency(id: string): Promise<void> {
   const list = await listEmergencies();
   await set(K.emerg, list.map(e => e.id === id ? { ...e, status: 'resolved' as const } : e));
 }
+export async function deleteEmergency(id: string): Promise<void> {
+  const list = await listEmergencies();
+  await set(K.emerg, list.filter(e => e.id !== id));
+}
 export async function createEmergency(title: string, address: string, priority: FieldPriority = 'urgent'): Promise<FieldEmergencyDispatch> {
   const list = await listEmergencies();
   const item: FieldEmergencyDispatch = { id: uid('ed'), title, address, createdAt: new Date().toISOString(), status: 'pending', priority };

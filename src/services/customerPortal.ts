@@ -50,6 +50,10 @@ export const createCpRequest = async (data: { title: string; description: string
   await AsyncStorage.setItem(K.req, JSON.stringify(next));
   return r;
 };
+export const deleteCpRequest = async (id: string): Promise<void> => {
+  const list = await listCpRequests();
+  await AsyncStorage.setItem(K.req, JSON.stringify(list.filter(r => r.id !== id)));
+};
 
 // ---------- Documents ----------
 export const listCpDocuments = async (): Promise<CpDocumentItem[]> => loadList<CpDocumentItem>(K.docs);

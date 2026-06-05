@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { EqAsset, EqMaintenancePlan } from '../types';
-import { listEqAssets, listEqPlans, createEqPlan } from '../services/equipment';
+import { listEqAssets, listEqPlans, createEqPlan, deleteEqPlan } from '../services/equipment';
 
 const dueColor = (dateStr: string) => {
   const d = Math.round((new Date(dateStr).getTime() - Date.now()) / 86400000);
@@ -32,6 +32,13 @@ export default function MaintenancePlanScreen() {
   const assetName = (id: string) => {
     const a = assets.find(x => x.id === id);
     return a ? `${a.code} · ${a.name}` : id;
+  };
+
+  const confirmDelete = (id: string, label: string) => {
+    Alert.alert('Planı sil', `"${label}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => { try { await deleteEqPlan(id); load(); } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); } } },
+    ]);
   };
 
   const submit = async () => {
@@ -70,6 +77,9 @@ export default function MaintenancePlanScreen() {
                 <Text style={s.meta}>Her {item.intervalDays} gün · Sorumlu: {item.owner}</Text>
                 {item.lastPerformedAt && <Text style={s.meta}>Son: {new Date(item.lastPerformedAt).toLocaleDateString('tr-TR')}</Text>}
               </View>
+              <TouchableOpacity onPress={() => confirmDelete(item.id, item.taskDescription)} hitSlop={8} style={{ padding: 4 }}>
+                <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
+              </TouchableOpacity>
             </View>
           );
         }}
