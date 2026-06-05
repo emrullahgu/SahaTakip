@@ -42,7 +42,9 @@ describe('buildQuoteHtml — markalama', () => {
   it('teklif içeriğini (no, müşteri, kalem, toplam) yansıtır', () => {
     expect(html).toContain('QT-2026-0001');
     expect(html).toContain('Demir Yapı İnşaat A.Ş.');
-    expect(html).toContain('POZ-EM-404');
+    // Müşteriye giden teklifte iç POZ kodu DEĞİL, iş tanımı (pozName) görünür.
+    expect(html).not.toContain('POZ-EM-404');
+    expect(html).toContain('Pano bakımı');
     expect(html).toContain('OG Pano Bakımı');
     // grandTotal 1.200,00 ₺ olarak formatlanır
     expect(html).toContain('1.200,00');

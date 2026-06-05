@@ -25,7 +25,8 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
-import { loadOverrides, applyOverrides, type OverrideMap } from '../services/catalogOverrides';
+import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } from '../services/catalogOverrides';
+import type { MaterialCatalogItem } from '../types';
 import { createApproval } from '../services/governance';
 import { newUuid } from '../services/data/repository';
 import { uploadPhoto } from '../services/photoUpload';
@@ -52,7 +53,11 @@ export default function NewServiceScreen() {
   );
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedMaterial[]>([]);
   const [catOverrides, setCatOverrides] = useState<OverrideMap>({});
-  React.useEffect(() => { loadOverrides().then(setCatOverrides); }, []);
+  const [customProds, setCustomProds] = useState<MaterialCatalogItem[]>([]);
+  React.useEffect(() => {
+    loadOverrides().then(setCatOverrides);
+    loadCustomProducts().then(setCustomProds);
+  }, []);
   const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
   const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
@@ -84,7 +89,7 @@ export default function NewServiceScreen() {
 
   const filteredMaterials = useMemo(() => {
     const q = materialSearch.trim().toLocaleLowerCase('tr-TR');
-    let base = applyOverrides(MATERIAL_CATALOG, catOverrides);
+    let base = [...customProds, ...applyOverrides(MATERIAL_CATALOG, catOverrides)];
     if (materialCategory) base = base.filter(m => m.category === materialCategory);
     if (materialBrand) base = base.filter(m => m.brand === materialBrand);
     if (q) {
@@ -97,7 +102,7 @@ export default function NewServiceScreen() {
     }
     // Performans: ilk 400 sonuç yeterli (FlatList zaten lazy render eder).
     return base.slice(0, 400);
-  }, [materialSearch, materialCategory, materialBrand, catOverrides]);
+  }, [materialSearch, materialCategory, materialBrand, catOverrides, customProds]);
 
   const handleCreateCustomer = () => {
     const shortName = newCustomer.shortName.trim();

@@ -12,9 +12,11 @@ import {
   applyPricingRules, countAffected, type BrandPricingRule, type PricingScope,
 } from '../services/productPricing';
 import {
-  loadOverrides, setProductPrice, setProductDeleted, applyOverrides,
+  loadOverrides, setProductPrice, setProductName, setProductDeleted, applyOverrides,
+  loadCustomProducts, addCustomProduct, updateCustomProduct, deleteCustomProduct, isCustomProduct,
   type OverrideMap,
 } from '../services/catalogOverrides';
+import type { MaterialCatalogItem } from '../types';
 
 export default function ProductCatalogScreen() {
   const [search, setSearch] = useState('');
@@ -25,17 +27,25 @@ export default function ProductCatalogScreen() {
   const [rules, setRules] = useState<BrandPricingRule[]>([]);
   const [showBulk, setShowBulk] = useState(false);
   const [overrides, setOverrides] = useState<OverrideMap>({});
+  const [custom, setCustom] = useState<MaterialCatalogItem[]>([]);
   const [editItem, setEditItem] = useState<{ id: string; name: string; price: number } | null>(null);
   const [editPrice, setEditPrice] = useState('');
+  const [editName, setEditName] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [addF, setAddF] = useState({ name: '', price: '', category: '', brand: '', code: '' });
 
   const loadRules = useCallback(async () => {
     setRules(await listPricingRules());
     setOverrides(await loadOverrides());
+    setCustom(await loadCustomProducts());
   }, []);
   useFocusEffect(useCallback(() => { loadRules(); }, [loadRules]));
 
-  // Önce paylaşımlı override'ları (fiyat/silme) base kataloga uygula.
-  const effectiveCatalog = useMemo(() => applyOverrides(MATERIAL_CATALOG, overrides), [overrides]);
+  // Elle eklenenler + paylaşımlı override'lı base katalog.
+  const effectiveCatalog = useMemo(
+    () => [...custom, ...applyOverrides(MATERIAL_CATALOG, overrides)],
+    [overrides, custom],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase('tr-TR');
@@ -54,13 +64,21 @@ export default function ProductCatalogScreen() {
     return applyPricingRules(base.slice(0, 500), rules);
   }, [search, category, brand, rules, effectiveCatalog]);
 
-  const saveEditPrice = async () => {
+  const saveEdit = async () => {
     if (!editItem) return;
     const p = parseFloat(editPrice.replace(',', '.'));
     if (!isFinite(p) || p < 0) { Alert.alert('Geçersiz', 'Geçerli bir fiyat girin.'); return; }
+    const name = editName.trim();
+    if (!name) { Alert.alert('Geçersiz', 'Ürün adı boş olamaz.'); return; }
     try {
-      await setProductPrice(editItem.id, p);
-      setOverrides(prev => ({ ...prev, [editItem.id]: { ...(prev[editItem.id] || { deleted: false }), price: p } }));
+      if (isCustomProduct(editItem.id)) {
+        await updateCustomProduct(editItem.id, { name, price: p });
+        setCustom(prev => prev.map(x => x.id === editItem.id ? { ...x, name, price: p, listPrice: p } : x));
+      } else {
+        await setProductPrice(editItem.id, p);
+        if (name !== editItem.name) await setProductName(editItem.id, name);
+        setOverrides(prev => ({ ...prev, [editItem.id]: { ...(prev[editItem.id] || { deleted: false }), price: p, name } }));
+      }
       setEditItem(null);
     } catch (e: any) { Alert.alert('Hata', e?.message || 'Kaydedilemedi'); }
   };
@@ -70,11 +88,28 @@ export default function ProductCatalogScreen() {
       { text: 'Vazgeç', style: 'cancel' },
       { text: 'Sil', style: 'destructive', onPress: async () => {
         try {
-          await setProductDeleted(id, true);
-          setOverrides(prev => ({ ...prev, [id]: { ...(prev[id] || {}), deleted: true } }));
+          if (isCustomProduct(id)) {
+            await deleteCustomProduct(id);
+            setCustom(prev => prev.filter(x => x.id !== id));
+          } else {
+            await setProductDeleted(id, true);
+            setOverrides(prev => ({ ...prev, [id]: { ...(prev[id] || {}), deleted: true } }));
+          }
         } catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi'); }
       } },
     ]);
+  };
+
+  const addProduct = async () => {
+    const p = parseFloat(addF.price.replace(',', '.'));
+    if (!addF.name.trim()) { Alert.alert('Eksik', 'Ürün adı girin.'); return; }
+    if (!isFinite(p) || p < 0) { Alert.alert('Eksik', 'Geçerli bir fiyat girin.'); return; }
+    try {
+      const item = await addCustomProduct({ name: addF.name, price: p, category: addF.category || undefined, brand: addF.brand || undefined, code: addF.code || undefined });
+      setCustom(prev => [item, ...prev]);
+      setShowAdd(false);
+      setAddF({ name: '', price: '', category: '', brand: '', code: '' });
+    } catch (e: any) { Alert.alert('Hata', e?.message || 'Eklenemedi'); }
   };
 
   return (
@@ -82,10 +117,16 @@ export default function ProductCatalogScreen() {
       <View style={s.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={s.headerTitle}>Ürün Kataloğu</Text>
-          <TouchableOpacity style={s.bulkBtn} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
-            <Ionicons name="pricetags-outline" size={14} color="#fff" />
-            <Text style={s.bulkBtnText}>Toplu Fiyat{rules.length ? ` (${rules.length})` : ''}</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={s.addBtn} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={s.bulkBtnText}>Yeni Ürün</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.bulkBtn} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
+              <Ionicons name="pricetags-outline" size={14} color="#fff" />
+              <Text style={s.bulkBtnText}>Toplu Fiyat{rules.length ? ` (${rules.length})` : ''}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={s.headerMeta}>
           {effectiveCatalog.length.toLocaleString('tr-TR')} ürün · {MATERIAL_CATEGORIES.length} kategori · {MATERIAL_BRANDS.length} marka
@@ -165,7 +206,7 @@ export default function ProductCatalogScreen() {
                 )}
               </View>
               <View style={s.rowActions}>
-                <TouchableOpacity onPress={() => { setEditItem({ id: item.id, name: item.name, price: item.price }); setEditPrice(String(item.price)); }} hitSlop={6}>
+                <TouchableOpacity onPress={() => { setEditItem({ id: item.id, name: item.name, price: item.price }); setEditPrice(String(item.price)); setEditName(item.name); }} hitSlop={6}>
                   <Ionicons name="pencil" size={17} color={colors.blue.default} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteProduct(item.id, item.name)} hitSlop={6}>
@@ -184,14 +225,22 @@ export default function ProductCatalogScreen() {
       <Modal visible={!!editItem} transparent animationType="fade" onRequestClose={() => setEditItem(null)}>
         <View style={s.editOverlay}>
           <View style={s.editBox}>
-            <Text style={s.editTitle} numberOfLines={2}>{editItem?.name}</Text>
-            <Text style={s.editLabel}>Yeni birim fiyat (₺)</Text>
+            <Text style={s.editTitle}>Ürünü Düzenle</Text>
+            <Text style={s.editLabel}>Ürün adı</Text>
+            <TextInput
+              style={[s.editInput, { fontSize: typography.sm }]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Ürün adı"
+              placeholderTextColor={colors.text.faint}
+              multiline
+            />
+            <Text style={s.editLabel}>Birim fiyat (₺)</Text>
             <TextInput
               style={s.editInput}
               value={editPrice}
               onChangeText={setEditPrice}
               keyboardType="decimal-pad"
-              autoFocus
               selectTextOnFocus
               placeholder="0"
               placeholderTextColor={colors.text.faint}
@@ -200,8 +249,33 @@ export default function ProductCatalogScreen() {
               <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.bg.card }]} onPress={() => setEditItem(null)}>
                 <Text style={[s.editBtnText, { color: colors.text.muted }]}>Vazgeç</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.emerald.default }]} onPress={saveEditPrice}>
+              <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.emerald.default }]} onPress={saveEdit}>
                 <Text style={s.editBtnText}>Kaydet</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Yeni ürün ekleme modalı */}
+      <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
+        <View style={s.editOverlay}>
+          <View style={s.editBox}>
+            <Text style={s.editTitle}>Yeni Ürün Ekle</Text>
+            <Text style={s.editLabel}>Ürün adı *</Text>
+            <TextInput style={[s.editInput, { fontSize: typography.sm }]} value={addF.name} onChangeText={t => setAddF(f => ({ ...f, name: t }))} placeholder="Ürün adı" placeholderTextColor={colors.text.faint} />
+            <Text style={s.editLabel}>Birim fiyat (₺) *</Text>
+            <TextInput style={s.editInput} value={addF.price} onChangeText={t => setAddF(f => ({ ...f, price: t }))} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.text.faint} />
+            <Text style={s.editLabel}>Kategori / Marka / Kod (opsiyonel)</Text>
+            <TextInput style={[s.editInput, { fontSize: typography.sm, marginBottom: 6 }]} value={addF.category} onChangeText={t => setAddF(f => ({ ...f, category: t }))} placeholder="Kategori" placeholderTextColor={colors.text.faint} />
+            <TextInput style={[s.editInput, { fontSize: typography.sm, marginBottom: 6 }]} value={addF.brand} onChangeText={t => setAddF(f => ({ ...f, brand: t }))} placeholder="Marka" placeholderTextColor={colors.text.faint} />
+            <TextInput style={[s.editInput, { fontSize: typography.sm }]} value={addF.code} onChangeText={t => setAddF(f => ({ ...f, code: t }))} placeholder="Kod" placeholderTextColor={colors.text.faint} />
+            <View style={s.editActions}>
+              <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.bg.card }]} onPress={() => setShowAdd(false)}>
+                <Text style={[s.editBtnText, { color: colors.text.muted }]}>Vazgeç</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.editBtn, { backgroundColor: colors.emerald.default }]} onPress={addProduct}>
+                <Text style={s.editBtnText}>Ekle</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -381,6 +455,7 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
   headerTitle: { color: colors.text.primary, fontWeight: '800', fontSize: typography.lg },
   headerMeta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.emerald.default, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full },
   bulkBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#f59e0b', paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.full },
   bulkBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.xs },
   searchRow: {

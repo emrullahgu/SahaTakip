@@ -21,6 +21,21 @@ describe('applyOverrides', () => {
     expect(out.find(x => x.id === 'b')).toBeUndefined();
   });
 
+  it('isim override uygular', () => {
+    const ovr: OverrideMap = { a: { name: 'Yeni Ad A', deleted: false } };
+    const out = applyOverrides(base, ovr);
+    expect(out.find(x => x.id === 'a')!.name).toBe('Yeni Ad A');
+    expect(out.find(x => x.id === 'a')!.price).toBe(100); // fiyat değişmedi
+  });
+
+  it('ad + fiyat birlikte override edilir', () => {
+    const ovr: OverrideMap = { b: { name: 'B2', price: 250, deleted: false } };
+    const out = applyOverrides(base, ovr);
+    const b = out.find(x => x.id === 'b')!;
+    expect(b.name).toBe('B2');
+    expect(b.price).toBe(250);
+  });
+
   it('deletedIds yalnız silinenleri verir', () => {
     const ovr: OverrideMap = { a: { deleted: false }, b: { deleted: true }, c: { deleted: true } };
     expect(deletedIds(ovr).sort()).toEqual(['b', 'c']);

@@ -19,7 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext, calcLineTotal, calcQuoteTotals } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { Quote, QuoteLine, Customer, RootStackParamList } from '../types';
+import { Quote, QuoteLine, Customer, RootStackParamList, MaterialCatalogItem } from '../types';
 import {
   POZ_CATALOG,
   POZ_CATEGORIES,
@@ -31,7 +31,7 @@ import {
 } from '../data/pozCatalog';
 import { listRecentPozes, recordQuoteLines, RecentPoz } from '../services/recentPozes';
 import { MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
-import { loadOverrides, applyOverrides, type OverrideMap } from '../services/catalogOverrides';
+import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } from '../services/catalogOverrides';
 import { newUuid } from '../services/data/repository';
 import { upsertMaterial } from '../services/materials';
 import { listPricingRules, applyPricingRules, type BrandPricingRule } from '../services/productPricing';
@@ -87,11 +87,13 @@ export default function NewQuoteScreen() {
   // Toplu fiyat/iskonto kuralları — ürün eklerken indirimli fiyatı yansıtmak için.
   const [productRules, setProductRules] = useState<BrandPricingRule[]>([]);
   const [catOverrides, setCatOverrides] = useState<OverrideMap>({});
+  const [customProds, setCustomProds] = useState<MaterialCatalogItem[]>([]);
 
   React.useEffect(() => {
     listRecentPozes().then(setRecents);
     listPricingRules().then(setProductRules);
     loadOverrides().then(setCatOverrides);
+    loadCustomProducts().then(setCustomProds);
   }, []);
 
   React.useLayoutEffect(() => {
@@ -207,7 +209,7 @@ export default function NewQuoteScreen() {
 
   const filteredProducts = useMemo(() => {
     const q = productSearch.trim().toLocaleLowerCase('tr-TR');
-    let base = applyOverrides(MATERIAL_CATALOG, catOverrides);
+    let base = [...customProds, ...applyOverrides(MATERIAL_CATALOG, catOverrides)];
     if (productCategory) base = base.filter(m => m.category === productCategory);
     if (productBrand) base = base.filter(m => m.brand === productBrand);
     if (q) {
@@ -220,7 +222,7 @@ export default function NewQuoteScreen() {
     }
     // Toplu fiyat/iskonto kurallarını uygula → eklenecek fiyat indirimli gelir.
     return applyPricingRules(base.slice(0, 400), productRules);
-  }, [productSearch, productCategory, productBrand, productRules, catOverrides]);
+  }, [productSearch, productCategory, productBrand, productRules, catOverrides, customProds]);
 
   const addProductLine = (p: typeof MATERIAL_CATALOG[number]) => {
     const newLine: QuoteLine = {
