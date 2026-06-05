@@ -117,7 +117,21 @@ async function pushRemoteAiSettings(s: AiSettings): Promise<void> {
   }
 }
 
+let _settingsCache: { value: AiSettings; at: number } | null = null;
+const SETTINGS_TTL_MS = 30000;
+/** Ayar bellek önbelleğini temizler (setAiSettings veya admin değişikliği sonrası). */
+export function clearAiSettingsCache(): void { _settingsCache = null; }
+
 export async function getAiSettings(): Promise<AiSettings> {
+  // Kısa-ömürlü bellek önbelleği: ajan döngüsü (12 iterasyon) ayarları tekrar
+  // tekrar AsyncStorage/Supabase'den okumasın diye → belirgin hız kazancı.
+  if (_settingsCache && Date.now() - _settingsCache.at < SETTINGS_TTL_MS) return _settingsCache.value;
+  const value = await resolveAiSettings();
+  _settingsCache = { value, at: Date.now() };
+  return value;
+}
+
+async function resolveAiSettings(): Promise<AiSettings> {
   // 1) Yerel cache (en hızlı)
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
@@ -155,6 +169,7 @@ export async function getAiSettings(): Promise<AiSettings> {
 
 export async function setAiSettings(s: AiSettings): Promise<void> {
   await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  clearAiSettingsCache(); // yeni ayar hemen geçerli olsun (bayat önbellek dönmesin)
   // Admin yazdıysa Supabase'e de gönder ki diğer kullanıcılar da kullansın.
   await pushRemoteAiSettings(s);
 }
@@ -164,6 +179,7 @@ export async function syncRemoteAiSettings(): Promise<void> {
   const remote = await fetchRemoteAiSettings();
   if (remote) {
     try { await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(remote)); } catch { /* ignore */ }
+    clearAiSettingsCache();
   }
 }
 

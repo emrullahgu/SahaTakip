@@ -3,7 +3,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getAiSettings, setAiSettings, chat, chatWithFallback, suggestPozFromDescription,
+  getAiSettings, setAiSettings, clearAiSettingsCache, chat, chatWithFallback, suggestPozFromDescription,
   chatVision, analyzePhoto, guessImageMime, isVisionCapable,
   chatWithTools, chatWithToolsFallback, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
   toClaudeTools, toClaudeMessages, parseClaudeToolResponse, fetchWithTimeout,
@@ -57,6 +57,7 @@ describe('AI Service', () => {
     jest.clearAllMocks();
     mockFetch = jest.fn();
     global.fetch = mockFetch;
+    clearAiSettingsCache(); // testler arası ayar önbelleği sızmasın
   });
 
   describe('getAiSettings', () => {
@@ -73,6 +74,22 @@ describe('AI Service', () => {
       expect(settings.provider).toBe('openai');
       expect(settings.apiKey).toBe('test-key');
       expect(settings.model).toBe('gpt-4o');
+    });
+
+    it('önbellek: TTL içinde 2. çağrı AsyncStorage\'ı TEKRAR okumaz (hız)', async () => {
+      const saved = JSON.stringify({ provider: 'openai', apiKey: 'k', model: 'gpt-4o-mini' });
+      clearAiSettingsCache();
+      // Once kullan ki kalıcı implementasyon sonraki testlere sızmasın.
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(saved);
+      const a = await getAiSettings();
+      const after1 = (AsyncStorage.getItem as jest.Mock).mock.calls.length;
+      const b = await getAiSettings(); // önbellekten gelmeli — okuma yok
+      expect(b).toEqual(a);
+      expect((AsyncStorage.getItem as jest.Mock).mock.calls.length).toBe(after1);
+      clearAiSettingsCache();
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(saved);
+      await getAiSettings(); // temizlikten sonra tekrar okur
+      expect((AsyncStorage.getItem as jest.Mock).mock.calls.length).toBeGreaterThan(after1);
     });
   });
 
