@@ -467,9 +467,22 @@ export async function chatWithFallback(
   const attempts: { provider: AiProvider; error?: string }[] = [];
 
   const tryOne = async (s: AiSettings) => {
-    const reply = await chat(prompt, s, systemPrompt);
-    if (!reply || !reply.trim()) throw new Error('Boş yanıt');
-    return reply;
+    // Geçici hatada (503/429/timeout) aynı sağlayıcıyı kısa backoff'la 1 kez
+    // daha dene; boş/kalıcı hatada beklemeden sonraki sağlayıcıya geç.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const reply = await chat(prompt, s, systemPrompt);
+        if (!reply || !reply.trim()) throw new Error('Boş yanıt');
+        return reply;
+      } catch (e: any) {
+        if (attempt === 0 && isTransientAiError(e)) {
+          await new Promise(r => setTimeout(r, 800));
+          continue;
+        }
+        throw e;
+      }
+    }
+    throw new Error('Boş yanıt');
   };
 
   // 1) Önce kullanıcının seçili sağlayıcısı

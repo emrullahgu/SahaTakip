@@ -247,6 +247,16 @@ describe('AI Service', () => {
       expect(res.reply).toBe('Primary OK');
       expect(res.usedProvider).toBe('openai');
     });
+
+    it('geçici hatada (503) aynı sağlayıcıyı retry eder (kopilot tek blip\'te düşmez)', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 503, text: () => Promise.resolve('high demand') })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ choices: [{ message: { content: 'Retry OK' } }] }) });
+      const res = await chatWithFallback('Test', { provider: 'openai', apiKey: 'op-key', model: 'gpt-4o-mini' });
+      expect(res.reply).toBe('Retry OK');
+      expect(res.usedProvider).toBe('openai');
+      expect(mockFetch).toHaveBeenCalledTimes(2); // 503 → retry → 200
+    });
   });
 
   describe('suggestPozFromDescription', () => {
