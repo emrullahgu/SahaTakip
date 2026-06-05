@@ -1,6 +1,6 @@
 // MessagesScreen — sohbet listesi + yeni birebir/grup sohbet başlatma.
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -79,9 +79,13 @@ export default function MessagesScreen() {
             onPress={() => nav.navigate('ChatThread', { conversationId: item.id, title: item.displayTitle || 'Sohbet' })}
             activeOpacity={0.8}
           >
-            <View style={[styles.avatar, item.isGroup && { backgroundColor: colors.indigo.bg }]}>
-              <Ionicons name={item.isGroup ? 'people' : 'person'} size={20} color={item.isGroup ? colors.indigo.default : colors.emerald.default} />
-            </View>
+            {!item.isGroup && item.avatarUrl ? (
+              <Image source={{ uri: item.avatarUrl }} style={styles.avatar} resizeMode="cover" />
+            ) : (
+              <View style={[styles.avatar, item.isGroup && { backgroundColor: colors.indigo.bg }]}>
+                <Ionicons name={item.isGroup ? 'people' : 'person'} size={20} color={item.isGroup ? colors.indigo.default : colors.emerald.default} />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle} numberOfLines={1}>{item.displayTitle || 'Sohbet'}</Text>
               {item.lastMessage

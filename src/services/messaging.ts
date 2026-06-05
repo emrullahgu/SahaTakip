@@ -21,19 +21,21 @@ export interface Conversation {
   displayTitle?: string;
   lastMessage?: string;
   unread?: number;
+  avatarUrl?: string; // birebir sohbette karşı kişinin profil fotoğrafı
 }
 export interface ChatMessage {
   id: string;
   conversationId: string;
   senderId: string;
   senderName?: string;
+  senderAvatar?: string;
   body?: string;
   attachmentUrl?: string;   // depolanan path
   attachmentType?: 'image' | 'pdf' | 'file';
   attachmentName?: string;
   createdAt: string;
 }
-export interface ChatUser { id: string; fullName: string }
+export interface ChatUser { id: string; fullName: string; avatarUrl?: string }
 
 const convFromRow = (r: any): Conversation => ({
   id: r.id, title: r.title ?? undefined, isGroup: !!r.is_group,
@@ -50,11 +52,11 @@ const msgFromRow = (r: any): ChatMessage => ({
 export async function listChatUsers(): Promise<ChatUser[]> {
   if (!SUPABASE_CONFIGURED) return [];
   const me = await getCurrentUser();
-  const { data, error } = await supabase.from('profiles').select('id, full_name').order('full_name');
+  const { data, error } = await supabase.from('profiles').select('id, full_name, avatar_url').order('full_name');
   if (error) { console.warn('[chat.users]', error.message); return []; }
   return (data ?? [])
     .filter((u: any) => u.id !== me?.id)
-    .map((u: any) => ({ id: u.id, fullName: u.full_name || 'Kullanıcı' }));
+    .map((u: any) => ({ id: u.id, fullName: u.full_name || 'Kullanıcı', avatarUrl: u.avatar_url ?? undefined }));
 }
 
 /** Kullanıcının dahil olduğu sohbetler (son mesaja göre sıralı). */
@@ -74,8 +76,9 @@ export async function listConversations(): Promise<Conversation[]> {
   // Katılımcı adlarını çek (başlık için)
   const { data: allParts } = await supabase
     .from('conversation_participants').select('conversation_id, user_id').in('conversation_id', ids);
-  const { data: profs } = await supabase.from('profiles').select('id, full_name');
+  const { data: profs } = await supabase.from('profiles').select('id, full_name, avatar_url');
   const nameById = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || 'Kullanıcı']));
+  const avatarById = new Map((profs ?? []).map((p: any) => [p.id, p.avatar_url ?? undefined]));
   // Son mesaj önizleme + okunmamış sayısı için: her sohbetin son mesajı + benim last_read_at'ım
   const { data: myParts } = await supabase
     .from('conversation_participants').select('conversation_id, last_read_at').eq('user_id', me.id).in('conversation_id', ids);
@@ -94,11 +97,11 @@ export async function listConversations(): Promise<Conversation[]> {
     }
   }
   for (const c of convs) {
-    const others = (allParts ?? [])
-      .filter((p: any) => p.conversation_id === c.id && p.user_id !== me.id)
-      .map((p: any) => nameById.get(p.user_id) || 'Kullanıcı');
+    const otherParts = (allParts ?? []).filter((p: any) => p.conversation_id === c.id && p.user_id !== me.id);
+    const others = otherParts.map((p: any) => nameById.get(p.user_id) || 'Kullanıcı');
     c.participantNames = others;
     c.displayTitle = c.isGroup ? (c.title || `Grup (${others.length + 1})`) : (others[0] || 'Sohbet');
+    if (!c.isGroup && otherParts[0]) c.avatarUrl = avatarById.get(otherParts[0].user_id) || undefined;
     const lm = lastByConv.get(c.id);
     c.lastMessage = lm ? (lm.body || (lm.attachment_name ? `📎 ${lm.attachment_name}` : '')) : '';
     c.unread = unreadByConv.get(c.id) || 0;
@@ -156,9 +159,10 @@ export async function listMessages(conversationId: string): Promise<ChatMessage[
   if (error) { console.warn('[chat.msgs]', error.message); return []; }
   const msgs = (data ?? []).map(msgFromRow);
   // Gönderen adları
-  const { data: profs } = await supabase.from('profiles').select('id, full_name');
+  const { data: profs } = await supabase.from('profiles').select('id, full_name, avatar_url');
   const nameById = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || 'Kullanıcı']));
-  for (const m of msgs) m.senderName = nameById.get(m.senderId) || 'Kullanıcı';
+  const avatarById = new Map((profs ?? []).map((p: any) => [p.id, p.avatar_url ?? undefined]));
+  for (const m of msgs) { m.senderName = nameById.get(m.senderId) || 'Kullanıcı'; m.senderAvatar = avatarById.get(m.senderId) || undefined; }
   return msgs;
 }
 

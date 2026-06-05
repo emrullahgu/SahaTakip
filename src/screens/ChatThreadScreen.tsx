@@ -100,6 +100,11 @@ export default function ChatThreadScreen() {
     const url = item.attachmentUrl ? signed[item.attachmentUrl] : undefined;
     return (
       <View style={[styles.msgRow, mine ? styles.msgRight : styles.msgLeft]}>
+        {!mine && (
+          item.senderAvatar
+            ? <Image source={{ uri: item.senderAvatar }} style={styles.msgAvatar} resizeMode="cover" />
+            : <View style={[styles.msgAvatar, styles.msgAvatarFallback]}><Text style={styles.msgAvatarText}>{(item.senderName || '?').slice(0, 1).toUpperCase()}</Text></View>
+        )}
         <TouchableOpacity
           style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
           activeOpacity={mine ? 0.7 : 1}
@@ -176,7 +181,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border.primary },
   title: { flex: 1, fontSize: typography.lg, color: colors.text.primary, fontWeight: '800' },
-  msgRow: { marginBottom: spacing.sm, flexDirection: 'row' },
+  msgRow: { marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  msgAvatar: { width: 28, height: 28, borderRadius: 14, marginBottom: 2 },
+  msgAvatarFallback: { backgroundColor: colors.indigo.default, alignItems: 'center', justifyContent: 'center' },
+  msgAvatarText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   msgLeft: { justifyContent: 'flex-start' },
   msgRight: { justifyContent: 'flex-end' },
   bubble: { maxWidth: '78%', borderRadius: radius.lg, padding: spacing.sm, paddingHorizontal: spacing.md },
