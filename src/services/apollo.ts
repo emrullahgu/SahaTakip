@@ -1,9 +1,17 @@
 // apollo.ts — Apollo.io entegrasyonu: lead/firma arama + kişi/firma zenginleştirme.
 // API anahtarı externalApiKeys (AsyncStorage) veya EXPO_PUBLIC_APOLLO_API_KEY'den gelir.
 // Kullanım: CRM (müşteri zenginleştir / yeni lead bul) + AI ajan araçları.
+//
+// CORS: Tarayıcıda (RN-web) api.apollo.io'ya doğrudan istek CORS ile "Failed to
+// fetch" verir. Bu yüzden web'de istek Supabase Edge Function (apollo-proxy)
+// üzerinden sunucu tarafında iletilir. Mobil (native) doğrudan çağırır.
+import { Platform } from 'react-native';
 import { getExternalApiKeys } from './externalApiKeys';
 
 const BASE = 'https://api.apollo.io/api/v1';
+const USE_PROXY = Platform.OS === 'web';
+const PROXY_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''}/functions/v1/apollo-proxy`;
+const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 export interface ApolloPerson {
   id?: string;
@@ -42,19 +50,44 @@ async function apolloFetch(path: string, method: 'GET' | 'POST', body?: any): Pr
   const key = await apolloKey();
   if (!key) throw new Error('Apollo API anahtarı tanımlı değil (Ayarlar → Harici API Anahtarları).');
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
+  const timer = setTimeout(() => ctrl.abort(), 25000);
   try {
-    const res = await fetch(`${BASE}${path}`, {
-      method,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Api-Key': key },
-      body: body ? JSON.stringify(body) : undefined,
-      signal: ctrl.signal,
-    });
+    let res: Response;
+    if (USE_PROXY && PROXY_URL.startsWith('http')) {
+      // Web: CORS'u aşmak için Supabase Edge Function proxy üzerinden git.
+      res = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          ...(SUPABASE_ANON ? { Authorization: `Bearer ${SUPABASE_ANON}`, apikey: SUPABASE_ANON } : {}),
+        },
+        body: JSON.stringify({ path, method, body, apiKey: key }),
+        signal: ctrl.signal,
+      });
+    } else {
+      // Native: doğrudan Apollo (CORS yok).
+      res = await fetch(`${BASE}${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Api-Key': key },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: ctrl.signal,
+      });
+    }
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      throw new Error(`Apollo HTTP ${res.status}: ${txt.slice(0, 160)}`);
+      const hint = USE_PROXY && res.status === 404
+        ? ' (apollo-proxy fonksiyonu deploy edilmemiş olabilir: supabase functions deploy apollo-proxy)'
+        : '';
+      throw new Error(`Apollo HTTP ${res.status}: ${txt.slice(0, 160)}${hint}`);
     }
     return await res.json();
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error('Apollo isteği zaman aşımına uğradı.');
+    if (/Failed to fetch|Network request failed/i.test(e?.message || '')) {
+      throw new Error('Apollo bağlantısı kurulamadı. Web tarayıcıda CORS engeli olabilir — apollo-proxy fonksiyonunu deploy edin; mobil uygulamada doğrudan çalışır.');
+    }
+    throw e;
   } finally { clearTimeout(timer); }
 }
 
