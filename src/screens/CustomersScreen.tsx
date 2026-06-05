@@ -71,6 +71,16 @@ export default function CustomersScreen() {
         </View>
         {canWrite && (
           <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: colors.indigo.default }]}
+            onPress={() => navigation.navigate('ApolloLeads')}
+            activeOpacity={0.85}
+            {...a11yButton('Apollo ile lead bul')}
+          >
+            <Ionicons name="planet-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
+        {canWrite && (
+          <TouchableOpacity
             style={styles.addBtn}
             onPress={() => navigation.navigate('CustomerForm')}
             activeOpacity={0.85}

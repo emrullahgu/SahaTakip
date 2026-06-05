@@ -3869,6 +3869,7 @@ export type RootStackParamList = {
   NewWorkOrder: undefined;
   Messages: undefined;
   ChatThread: { conversationId: string; title: string };
+  ApolloLeads: undefined;
   Map: undefined;
   Shift: undefined;
   EmployeeDetail: { employeeId: string };

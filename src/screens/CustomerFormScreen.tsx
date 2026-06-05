@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { useVisit } from '../context/VisitContext';
 import { useHasRole } from '../components/RoleGuard';
 import type { Customer, RootStackParamList } from '../types';
 import { newUuid } from '../services/data/repository';
+import { enrichOrganization, isApolloConfigured } from '../services/apollo';
 import { vergiNo, phoneTR, email as emailValidator } from '../utils/validators';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'CustomerForm'>;
@@ -54,6 +56,32 @@ export default function CustomerFormScreen() {
 
   const set = <K extends keyof Customer>(k: K, v: Customer[K]) =>
     setForm(prev => ({ ...prev, [k]: v }));
+
+  const [enriching, setEnriching] = useState(false);
+  const enrich = async () => {
+    const name = (form.title || form.shortName || '').trim();
+    if (!name) { Alert.alert('Apollo', 'Önce firma adını (kısa ad/ünvan) girin.'); return; }
+    if (!(await isApolloConfigured())) { Alert.alert('Apollo', 'API anahtarı yok. Ayarlar → Harici API Anahtarları → Apollo.'); return; }
+    // E-postadan domain çıkar (varsa daha güvenilir eşleşme)
+    const domain = form.email && form.email.includes('@') ? form.email.split('@')[1] : undefined;
+    setEnriching(true);
+    try {
+      const org = await enrichOrganization({ name, domain });
+      if (!org) { Alert.alert('Apollo', 'Eşleşme bulunamadı.'); return; }
+      // Yalnız BOŞ alanları doldur (kullanıcı verisini ezme).
+      setForm(prev => ({
+        ...prev,
+        phone: prev.phone || org.phone || '',
+        sector: prev.sector || org.industry || '',
+        address: prev.address || org.location || '',
+        city: prev.city || (org.location?.split(',')[0] || ''),
+        source: prev.source || 'Apollo',
+      }));
+      Alert.alert('Apollo', `Bilgiler eklendi: ${[org.industry, org.phone, org.location].filter(Boolean).join(' · ') || org.name}`);
+    } catch (e: any) {
+      Alert.alert('Apollo hatası', e?.message || 'Zenginleştirme başarısız.');
+    } finally { setEnriching(false); }
+  };
 
   const handleSave = () => {
     if (!form.shortName.trim() || !form.title.trim()) {
@@ -96,6 +124,11 @@ export default function CustomerFormScreen() {
 
           <Field label="Kısa Ad *" value={form.shortName} onChangeText={v => set('shortName', v)} placeholder="EGEBORU" />
           <Field label="Resmi Ünvan *" value={form.title} onChangeText={v => set('title', v)} placeholder="ABC SANAYİ VE TİCARET A.Ş." multiline />
+
+          <TouchableOpacity style={styles.enrichBtn} onPress={enrich} disabled={enriching} activeOpacity={0.85}>
+            {enriching ? <ActivityIndicator color={colors.indigo.default} size="small" /> : <Ionicons name="planet-outline" size={16} color={colors.indigo.default} />}
+            <Text style={styles.enrichText}>{enriching ? 'Apollo sorgulanıyor...' : "Apollo'dan Zenginleştir (telefon, sektör, adres)"}</Text>
+          </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <View style={{ flex: 1 }}>
@@ -301,6 +334,20 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   input: { flex: 1, color: colors.text.primary, fontSize: typography.sm, paddingVertical: 2 },
+  enrichBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.indigo.bg,
+    borderWidth: 1,
+    borderColor: colors.indigo.border,
+    borderStyle: 'dashed',
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  enrichText: { flex: 1, color: colors.indigo.default, fontSize: typography.xs, fontWeight: '700' },
   saveBtn: {
     flexDirection: 'row',
     gap: 8,
