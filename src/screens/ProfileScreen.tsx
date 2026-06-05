@@ -1,12 +1,14 @@
 // ProfileScreen — POZ-DEV-305 Kullanıcı profil yönetimi
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, typography } from '../theme';
 import { useAuth, UserRole } from '../context/AuthContext';
+import { uploadPhoto } from '../services/photoUpload';
 import type { RootStackParamList } from '../types';
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -24,6 +26,20 @@ export default function ProfileScreen() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const pickAvatar = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.6 });
+      if (res.canceled || !res.assets?.[0]) return;
+      setUploadingAvatar(true);
+      const url = await uploadPhoto(res.assets[0].uri, 'avatars');
+      const { error } = await updateProfile({ avatar_url: url });
+      if (error) Alert.alert('Hata', error);
+    } catch (e: any) {
+      Alert.alert('Foto yüklenemedi', e?.message || 'Hata');
+    } finally { setUploadingAvatar(false); }
+  };
 
   useEffect(() => {
     setFullName(profile?.full_name || '');
@@ -45,7 +61,14 @@ export default function ProfileScreen() {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.hero}>
-          <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>
+          <TouchableOpacity style={s.avatarWrap} onPress={pickAvatar} activeOpacity={0.8} disabled={uploadingAvatar}>
+            {profile?.avatar_url
+              ? <Image source={{ uri: profile.avatar_url }} style={s.avatar} resizeMode="cover" />
+              : <View style={s.avatar}><Text style={s.avatarText}>{initials}</Text></View>}
+            <View style={s.avatarBadge}>
+              {uploadingAvatar ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={14} color="#fff" />}
+            </View>
+          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={s.name}>{fullName || profile?.full_name || 'İsimsiz'}</Text>
             <Text style={s.email}>{user?.email || (isDemoMode ? 'Demo Kullanıcı' : '—')}</Text>
@@ -105,8 +128,10 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   content: { padding: spacing.md, gap: spacing.sm, paddingBottom: 80 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, backgroundColor: colors.bg.secondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary },
+  avatarWrap: { width: 64, height: 64 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: 24, fontWeight: '800' },
+  avatarBadge: { position: 'absolute', right: -2, bottom: -2, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.indigo.default, borderWidth: 2, borderColor: colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text.primary, fontSize: typography.md, fontWeight: '800' },
   email: { color: colors.text.muted, fontSize: typography.sm, marginTop: 2 },
   rolePill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.full, borderWidth: 1, marginTop: 6 },
