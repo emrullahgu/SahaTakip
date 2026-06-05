@@ -1,7 +1,7 @@
 // AssetsScreen — POZ-DEV-086 Cihaz/ekipman listesi
 import React, { useCallback, useState, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { a11yButton, a11yInput } from '../utils/a11y';
-import { listAssets, ASSET_TYPES, ASSET_TYPE_LABEL } from '../services/assets';
+import { listAssets, deleteAsset, ASSET_TYPES, ASSET_TYPE_LABEL } from '../services/assets';
 import { Asset, AssetType, RootStackParamList } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
@@ -30,6 +30,16 @@ export default function AssetsScreen() {
     setItems(await listAssets());
   }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+  const confirmDelete = (item: Asset) => {
+    Alert.alert('Cihazı sil', `"${item.name}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteAsset(item.id); refresh(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); }
+      } },
+    ]);
+  };
 
   const filtered = useMemo(() => {
     return items.filter(a => {
@@ -104,6 +114,8 @@ export default function AssetsScreen() {
             <TouchableOpacity
               style={styles.card}
               onPress={() => navigation.navigate('AssetDetail', { assetId: item.id })}
+              onLongPress={() => confirmDelete(item)}
+              delayLongPress={350}
             >
               <View style={styles.iconBox}>
                 <Ionicons name={(t?.icon as any) || 'cube-outline'} size={20} color={brand.green} />
@@ -124,6 +136,9 @@ export default function AssetsScreen() {
                   <Text style={styles.codeText}>{item.code}</Text>
                 </View>
               ) : null}
+              <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={8} style={styles.delBtn} {...a11yButton('Cihazı sil')}>
+                <Ionicons name="trash-outline" size={18} color={colors.rose.default} />
+              </TouchableOpacity>
             </TouchableOpacity>
           );
         }}
@@ -182,6 +197,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue.bg, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6,
   },
   codeText: { color: brand.blueLight, fontSize: 10, fontWeight: '700' },
+  delBtn: { padding: 4, marginLeft: 4 },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 10 },
   emptyText: { color: colors.text.muted },
 });

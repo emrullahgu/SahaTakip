@@ -1,6 +1,6 @@
 // FeedbackScreen — POZ-DEV-333 Geri bildirim listesi
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,7 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
 import { a11yButton } from '../utils/a11y';
 import type { RootStackParamList, FeedbackEntry, FeedbackStatus } from '../types';
-import { listFeedback, FEEDBACK_CATEGORY_COLOR, FEEDBACK_CATEGORY_LABEL, FEEDBACK_STATUS_COLOR, FEEDBACK_STATUS_LABEL } from '../services/feedback';
+import { listFeedback, deleteFeedback, FEEDBACK_CATEGORY_COLOR, FEEDBACK_CATEGORY_LABEL, FEEDBACK_STATUS_COLOR, FEEDBACK_STATUS_LABEL } from '../services/feedback';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Feedback'>;
 
@@ -27,6 +27,16 @@ export default function FeedbackScreen() {
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const filtered = useMemo(() => filter === 'all' ? items : items.filter(i => i.status === filter), [items, filter]);
+
+  const confirmDelete = (f: FeedbackEntry) => {
+    Alert.alert('Geri bildirimi sil', `"${f.title}" silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteFeedback(f.id); refresh(); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi.'); }
+      } },
+    ]);
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
@@ -51,13 +61,18 @@ export default function FeedbackScreen() {
       >
         {loaded && filtered.length === 0 && <Text style={s.empty}>Kayıt yok</Text>}
         {filtered.map(f => (
-          <TouchableOpacity key={f.id} style={[s.card, { borderLeftColor: FEEDBACK_CATEGORY_COLOR[f.category] }]} onPress={() => nav.navigate('FeedbackDetail', { entryId: f.id })}>
+          <TouchableOpacity key={f.id} style={[s.card, { borderLeftColor: FEEDBACK_CATEGORY_COLOR[f.category] }]} onPress={() => nav.navigate('FeedbackDetail', { entryId: f.id })} onLongPress={() => confirmDelete(f)} delayLongPress={350}>
             <View style={s.row}>
               <View style={[s.catPill, { backgroundColor: FEEDBACK_CATEGORY_COLOR[f.category] + '22', borderColor: FEEDBACK_CATEGORY_COLOR[f.category] }]}>
                 <Text style={[s.catT, { color: FEEDBACK_CATEGORY_COLOR[f.category] }]}>{FEEDBACK_CATEGORY_LABEL[f.category]}</Text>
               </View>
-              <View style={[s.statusPill, { backgroundColor: FEEDBACK_STATUS_COLOR[f.status] + '22', borderColor: FEEDBACK_STATUS_COLOR[f.status] }]}>
-                <Text style={[s.statusT, { color: FEEDBACK_STATUS_COLOR[f.status] }]}>{FEEDBACK_STATUS_LABEL[f.status]}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={[s.statusPill, { backgroundColor: FEEDBACK_STATUS_COLOR[f.status] + '22', borderColor: FEEDBACK_STATUS_COLOR[f.status] }]}>
+                  <Text style={[s.statusT, { color: FEEDBACK_STATUS_COLOR[f.status] }]}>{FEEDBACK_STATUS_LABEL[f.status]}</Text>
+                </View>
+                <TouchableOpacity onPress={() => confirmDelete(f)} hitSlop={8} {...a11yButton('Geri bildirimi sil')}>
+                  <Ionicons name="trash-outline" size={16} color={colors.rose.default} />
+                </TouchableOpacity>
               </View>
             </View>
             <Text style={s.title}>{f.title}</Text>
