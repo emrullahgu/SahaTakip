@@ -30,6 +30,9 @@ export interface ExternalApiKeys {
   erpApiKey?: string;
   erpBaseUrl?: string;
 
+  // Apollo.io (lead/firma zenginleştirme + arama)
+  apolloApiKey?: string;
+
   // Yedek / Storage
   s3AccessKey?: string;
   s3Secret?: string;
@@ -39,6 +42,7 @@ export interface ExternalApiKeys {
 
 const DEFAULTS: ExternalApiKeys = {
   googleMapsKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY,
+  apolloApiKey: process.env.EXPO_PUBLIC_APOLLO_API_KEY,
 };
 
 export async function getExternalApiKeys(): Promise<ExternalApiKeys> {

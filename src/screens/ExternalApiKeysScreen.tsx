@@ -93,6 +93,13 @@ const SECTIONS: SectionDef[] = [
     ],
   },
   {
+    title: 'Apollo.io (Lead / Zenginleştirme)',
+    icon: 'planet-outline',
+    color: '#7c3aed',
+    help: 'app.apollo.io → Settings → API → API Key. Lead/firma arama + müşteri zenginleştirme (CRM + AI ajan).',
+    fields: [{ key: 'apolloApiKey', label: 'API Key', placeholder: 'apollo...', secret: true }],
+  },
+  {
     title: 'AWS S3 / Yedek',
     icon: 'cloud-outline',
     color: '#475569',

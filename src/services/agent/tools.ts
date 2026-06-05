@@ -19,6 +19,7 @@ import { POZ_CATALOG, type PozItem } from '../../data/pozCatalog';
 import { suggestionStore, type SuggestionSeverity } from './suggestionStore';
 import { WEB_TOOLS } from './webTools';
 import { INTEGRATION_TOOLS } from './integrationStubs';
+import { APOLLO_TOOLS } from './apolloTools';
 import { newUuid } from '../data/repository';
 // Sistem-farkındalığı read-tool'ları için servisler (gerçek veri — uydurma yok)
 import { listVehicles, listVehicleAlerts } from '../vehicles';
@@ -1221,6 +1222,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   // ----- WEB & INTEGRATION TOOLS (merged) -----
   ...WEB_TOOLS,
   ...INTEGRATION_TOOLS,
+  ...APOLLO_TOOLS,
 };
 
 export function getAllToolSchemas(): ToolSchema[] {
