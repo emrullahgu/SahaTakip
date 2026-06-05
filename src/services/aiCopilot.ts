@@ -8,7 +8,7 @@
 // ve gerçek verilere dayalı yanıt üretir.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { chat as llmChat, chatWithFallback, getAiSettings } from './ai';
+import { chat as llmChat, chatWithFallback, getAiSettings, chatVision, pickVisionSettings, pickDocSettings } from './ai';
 import { retrieveRelevant, KbDoc } from './aiKnowledgeBase';
 import { POZ_CATALOG } from '../data/pozCatalog';
 import type { WorkOrder, Customer, Quote, Employee } from '../types';
@@ -156,6 +156,58 @@ export async function askCopilot(
     return { reply: out.reply || '(boş yanıt)', provider: out.usedProvider, model: out.usedModel };
   } catch (e: any) {
     return { reply: `Hata: ${e?.message || 'bilinmeyen'}`, provider: settings.provider };
+  }
+}
+
+/**
+ * Görsel veya PDF ekiyle Copilot'a sor. Görselleri OpenAI/Gemini/Claude vision
+ * ile, PDF'leri Gemini/Claude belge-okuma ile analiz eder. Sistem promptu +
+ * canlı veri bağlamıyla birlikte gönderir; AI eki gerçekten okuyup yanıtlar.
+ */
+export async function askCopilotWithAttachment(
+  userMessage: string,
+  attachment: { base64: string; mimeType: string; kind: 'image' | 'pdf'; name?: string },
+  snapshot: CopilotSnapshot,
+  history: CopilotMessage[] = [],
+): Promise<{ reply: string; provider: string }> {
+  const settings = await getAiSettings();
+  const picked = attachment.kind === 'pdf' ? pickDocSettings(settings) : pickVisionSettings(settings);
+  if (!picked) {
+    return {
+      reply: attachment.kind === 'pdf'
+        ? 'PDF okumak için **Gemini** veya **Claude** anahtarı gerekli (AI Ayarları). OpenAI bu modda PDF okumuyor.'
+        : 'Görsel okumak için **OpenAI**, **Gemini** veya **Claude** anahtarı gerekli (AI Ayarları).',
+      provider: 'mock',
+    };
+  }
+
+  const kbDocs = await retrieveRelevant(userMessage || 'ek analiz', 4);
+  const liveContext = summarizeSnapshot(snapshot, kbDocs);
+  const historyText = history.slice(-6).map(m =>
+    `[${m.role === 'user' ? 'Kullanıcı' : 'Asistan'}]: ${m.content}`
+  ).join('\n');
+  const kindLabel = attachment.kind === 'pdf' ? 'PDF belge' : 'görsel (fotoğraf/ekran görüntüsü)';
+  const systemPrompt = `${SYSTEM_PROMPT_BASE}
+
+Kullanıcı bir ${kindLabel} ekledi${attachment.name ? ` ("${attachment.name}")` : ''}. Eki DİKKATLE incele: içindeki metni, sayıları, teknik detayları, tabloları oku ve kullanıcının sorusunu buna göre yanıtla. Ekte ne gördüğünü kısaca özetle, sonra soruyu cevapla. Okuyamadığın yer varsa belirt — uydurma.
+
+---
+${liveContext}
+
+---
+## Önceki Mesajlar
+${historyText || '(yok)'}`;
+
+  try {
+    const reply = await chatVision(
+      userMessage || (attachment.kind === 'pdf' ? 'Bu belgeyi oku ve özetle.' : 'Bu görseli incele ve özetle.'),
+      { base64: attachment.base64, mimeType: attachment.mimeType },
+      picked,
+      systemPrompt,
+    );
+    return { reply: reply || '(boş yanıt)', provider: picked.provider };
+  } catch (e: any) {
+    return { reply: `Ek analizi başarısız: ${e?.message || 'bilinmeyen'}`, provider: picked.provider };
   }
 }
 

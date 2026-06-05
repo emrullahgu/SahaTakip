@@ -430,12 +430,15 @@ export async function chatVision(
     },
     body: JSON.stringify({
       model: normalizeClaudeModel(model),
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: mime, data: image.base64 } },
+          // PDF → document bloğu; görsel → image bloğu.
+          mime === 'application/pdf'
+            ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: image.base64 } }
+            : { type: 'image', source: { type: 'base64', media_type: mime, data: image.base64 } },
           { type: 'text', text: prompt },
         ],
       }],
@@ -663,9 +666,21 @@ function mockAnalyze(context?: string): DamageAnalysis {
 
 /** Seçili sağlayıcı vision yapamıyorsa, anahtarı olan vision-yetenekli ilk
  *  sağlayıcıya geçer (openai → gemini → claude). Hiçbiri yoksa null döner. */
-function pickVisionSettings(primary: AiSettings): AiSettings | null {
+export function pickVisionSettings(primary: AiSettings): AiSettings | null {
   if (isVisionCapable(primary.provider) && primary.apiKey) return primary;
   for (const p of ['openai', 'gemini', 'claude'] as AiProvider[]) {
+    const key = getBuiltinKey(p);
+    if (key) return { provider: p, apiKey: key, model: DEFAULT_MODEL[p] };
+  }
+  return null;
+}
+
+/** PDF/belge okumak için: yalnız Gemini ve Claude inline PDF destekler (OpenAI
+ *  chat/completions PDF almaz). Önce mevcut sağlayıcı uygunsa onu, değilse
+ *  anahtarı olan gemini → claude'u seçer. */
+export function pickDocSettings(primary: AiSettings): AiSettings | null {
+  if ((primary.provider === 'gemini' || primary.provider === 'claude') && primary.apiKey) return primary;
+  for (const p of ['gemini', 'claude'] as AiProvider[]) {
     const key = getBuiltinKey(p);
     if (key) return { provider: p, apiKey: key, model: DEFAULT_MODEL[p] };
   }

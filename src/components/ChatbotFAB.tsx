@@ -6,12 +6,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography } from '../theme';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { askCopilot, type CopilotMessage } from '../services/aiCopilot';
+import { askCopilot, askCopilotWithAttachment, type CopilotMessage } from '../services/aiCopilot';
 import type { RootStackParamList } from '../types';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string }
+interface Pending { base64: string; mimeType: string; kind: 'image' | 'pdf'; name: string }
+
+/** Bir uri'yi (web blob/data veya native dosya) base64'e çevirir. */
+async function uriToBase64(uri: string): Promise<string> {
+  if (Platform.OS === 'web' || uri.startsWith('data:') || uri.startsWith('blob:') || uri.startsWith('http')) {
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+  const FileSystem = await import('expo-file-system');
+  return await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+}
 
 const KNOWLEDGE: { trigger: RegExp; reply: string }[] = [
   { trigger: /müşter|customer/i, reply: 'Müşteri eklemek için: Müşteriler → + butonu. Mevcut müşteriyi düzenlemek için karta dokunun.' },
@@ -32,10 +51,11 @@ function getReply(text: string): string {
 export default function ChatbotFAB() {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: 'bot', text: 'Merhaba! Ben SahaTakip Asistanıyım. Sistemini biliyorum — iş emirleri, teklifler, müşteriler, POZ kataloğu, onay kuyruğu. Soru sor, özet iste, teklif taslağı hazırlat. Otonom işlem (oluştur/sil/gönder) için üstteki «Ajan» butonuna dokun.', ts: new Date().toISOString() },
+    { role: 'bot', text: 'Merhaba! Ben SahaTakip Asistanıyım. Sistemini biliyorum — iş emirleri, teklifler, müşteriler, POZ kataloğu. Soru sor, özet iste, teklif taslağı hazırlat. 📎 ile fotoğraf veya PDF ekleyebilirsin — okuyup yorumlarım. Otonom işlem (oluştur/sil/gönder) için «Ajan» butonuna dokun.', ts: new Date().toISOString() },
   ]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<Pending | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const { workOrders, customers, quotes, employees } = useAppContext();
@@ -55,27 +75,52 @@ export default function ChatbotFAB() {
     if (open) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [open, msgs.length]);
 
+  const pickImage = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, base64: true });
+      if (res.canceled || !res.assets?.[0]?.base64) return;
+      const a = res.assets[0];
+      setPending({ base64: a.base64!, mimeType: a.mimeType || 'image/jpeg', kind: 'image', name: a.fileName || 'foto.jpg' });
+    } catch { /* iptal */ }
+  };
+  const pickPdf = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      const base64 = await uriToBase64(a.uri);
+      if (!base64) return;
+      setPending({ base64, mimeType: 'application/pdf', kind: 'pdf', name: a.name || 'belge.pdf' });
+    } catch { /* iptal */ }
+  };
+
   const onSend = async () => {
     const t = input.trim();
-    if (!t || busy) return;
+    if ((!t && !pending) || busy) return;
     const ts = new Date().toISOString();
-    setMsgs(m => [...m, { role: 'user', text: t, ts }]);
+    const att = pending;
+    const shownText = [att ? (att.kind === 'pdf' ? `📄 ${att.name}` : `🖼️ ${att.name}`) : '', t].filter(Boolean).join('\n');
+    setMsgs(m => [...m, { role: 'user', text: shownText || (att ? att.name : ''), ts }]);
     setInput('');
+    setPending(null);
     setBusy(true);
     try {
-      // Bilgili konuşma asistanı (askCopilot): canlı sistem verisi + KB + geçmişle
-      // gerçek cevap üretir. Aksiyon (oluştur/sil) gerekiyorsa "Ajan" konsolu kullanılır.
       const history: CopilotMessage[] = msgs.map(m => ({
         id: m.ts, role: m.role === 'user' ? 'user' : 'assistant', content: m.text, createdAt: m.ts,
       }));
-      const { reply } = await askCopilot(
-        t,
-        { workOrders, customers, quotes, employees, currentUserName: userName },
-        [...history, { id: ts, role: 'user', content: t, createdAt: ts }],
-      );
+      const snap = { workOrders, customers, quotes, employees, currentUserName: userName };
+      let reply: string;
+      if (att) {
+        // Foto/PDF ekli → vision/belge analizi (OpenAI/Gemini/Claude).
+        const r = await askCopilotWithAttachment(t, att, snap, history);
+        reply = r.reply;
+      } else {
+        // Bilgili konuşma asistanı (canlı veri + KB + geçmiş).
+        const r = await askCopilot(t, snap, [...history, { id: ts, role: 'user', content: t, createdAt: ts }]);
+        reply = r.reply;
+      }
       setMsgs(m => [...m, { role: 'bot', text: reply || 'Tamamlandı.', ts: new Date().toISOString() }]);
     } catch (e: any) {
-      // AI sağlayıcı yapılandırılmamışsa kural tabanlı yardıma düş (yalan söyleme).
       setMsgs(m => [...m, { role: 'bot', text: getReply(t), ts: new Date().toISOString() }]);
     } finally {
       setBusy(false);
@@ -108,12 +153,25 @@ export default function ChatbotFAB() {
                 </View>
               ))}
             </ScrollView>
+            {pending && (
+              <View style={s.pendingBar}>
+                <Ionicons name={pending.kind === 'pdf' ? 'document-text' : 'image'} size={16} color="#a855f7" />
+                <Text style={s.pendingName} numberOfLines={1}>{pending.name}</Text>
+                <TouchableOpacity onPress={() => setPending(null)}><Ionicons name="close-circle" size={18} color={colors.rose.default} /></TouchableOpacity>
+              </View>
+            )}
             <View style={s.inputRow}>
+              <TouchableOpacity style={s.attachBtn} onPress={pickImage} disabled={busy} hitSlop={6}>
+                <Ionicons name="image-outline" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
+              <TouchableOpacity style={s.attachBtn} onPress={pickPdf} disabled={busy} hitSlop={6}>
+                <Ionicons name="document-attach-outline" size={22} color={colors.text.muted} />
+              </TouchableOpacity>
               <TextInput
                 style={s.input}
                 value={input}
                 onChangeText={setInput}
-                placeholder="Sorunuzu yazın..."
+                placeholder="Sorunuzu yazın veya 📎 ile foto/PDF ekleyin..."
                 placeholderTextColor={colors.text.faint}
                 onSubmitEditing={onSend}
                 editable={!busy}
@@ -141,7 +199,10 @@ const s = StyleSheet.create({
   userBubble: { alignSelf: 'flex-end', backgroundColor: '#0ea5e9' },
   botBubble: { alignSelf: 'flex-start', backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary },
   bubbleText: { color: colors.text.primary, fontSize: typography.sm },
-  inputRow: { flexDirection: 'row', gap: 6, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  attachBtn: { padding: 4 },
+  pendingBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: spacing.md, paddingVertical: 8, marginHorizontal: spacing.sm, marginTop: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary },
+  pendingName: { flex: 1, color: colors.text.primary, fontSize: typography.xs },
   input: { flex: 1, backgroundColor: colors.bg.primary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text.primary, fontSize: typography.sm },
   sendBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
   agentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#7c3aed', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.md },
