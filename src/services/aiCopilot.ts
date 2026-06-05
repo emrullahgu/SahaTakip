@@ -106,8 +106,23 @@ function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[]): string {
     `## POZ Kataloğu Örneği (toplam ${POZ_CATALOG.length} kalem)`,
     pozSample.map(p => `- ${p.code} | ${p.name} | ${p.unit} | ₺${p.price}`).join('\n'),
     ``,
-    kbDocs.length ? `## Bilgi Tabanı (kullanıcı yüklediği dokümanlar)\n${kbDocs.map(d => `### ${d.title}\n${d.content.slice(0, 1200)}`).join('\n\n')}` : '',
+    kbDocs.length ? `## Bilgi Tabanı (kullanıcı yüklediği dokümanlar)\n${formatKbContext(kbDocs)}` : '',
   ].filter(Boolean).join('\n');
+}
+
+/**
+ * KB dökümanlarını bütçe-farkında biçimler. Sabit 1200 karakter/doc yerine toplam
+ * bir bütçeyi dökümanlara paylaştırır: az/uzun döküman daha fazla içerik korur
+ * (eski kod uzun dökümanın 1200 sonrasını kaybediyordu). Saf fonksiyon → test edilebilir.
+ */
+export function formatKbContext(docs: { title: string; content: string }[], budget = 9000): string {
+  if (!docs.length) return '';
+  const per = Math.max(1500, Math.floor(budget / docs.length));
+  return docs.map(d => {
+    const c = d.content || '';
+    const body = c.length > per ? c.slice(0, per) + '\n…(kısaltıldı)' : c;
+    return `### ${d.title}\n${body}`;
+  }).join('\n\n');
 }
 
 const SYSTEM_PROMPT_BASE = `Sen "Saha Copilot"sun — KOBİNERJİ'nin saha hizmetleri ekibinin yanındaki kıdemli elektrik/enerji mühendisi ve akıllı asistan. Alan: elektrik bakım, OSOS, OG/AG trafo, pano, kompanzasyon, GES. Hem bu yönetim sistemini bilirsin hem de işin tekniğini sahadaki bir usta gibi bilirsin.
