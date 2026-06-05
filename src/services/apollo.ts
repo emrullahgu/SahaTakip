@@ -7,6 +7,7 @@
 // üzerinden sunucu tarafında iletilir. Mobil (native) doğrudan çağırır.
 import { Platform } from 'react-native';
 import { getExternalApiKeys } from './externalApiKeys';
+import { supabase } from './supabase';
 
 const BASE = 'https://api.apollo.io/api/v1';
 const USE_PROXY = Platform.OS === 'web';
@@ -55,12 +56,20 @@ async function apolloFetch(path: string, method: 'GET' | 'POST', body?: any): Pr
     let res: Response;
     if (USE_PROXY && PROXY_URL.startsWith('http')) {
       // Web: CORS'u aşmak için Supabase Edge Function proxy üzerinden git.
+      // verify_jwt açık kalır (güvenli) — giriş yapmış kullanıcının oturum
+      // token'ı Bearer olarak gönderilir; yoksa publishable anahtara düşülür.
+      let bearer = SUPABASE_ANON;
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) bearer = data.session.access_token;
+      } catch { /* oturum yoksa anon */ }
       res = await fetch(PROXY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          ...(SUPABASE_ANON ? { Authorization: `Bearer ${SUPABASE_ANON}`, apikey: SUPABASE_ANON } : {}),
+          ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+          ...(SUPABASE_ANON ? { apikey: SUPABASE_ANON } : {}),
         },
         body: JSON.stringify({ path, method, body, apiKey: key }),
         signal: ctrl.signal,
