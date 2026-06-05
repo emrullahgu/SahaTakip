@@ -130,7 +130,7 @@ export async function getOrCreateDirect(otherUserId: string): Promise<string | n
       .from('conversation_participants').select('conversation_id')
       .eq('user_id', otherUserId).in('conversation_id', myIds);
     for (const s of shared ?? []) {
-      const { data: c } = await supabase.from('conversations').select('id, is_group').eq('id', s.conversation_id).single();
+      const { data: c } = await supabase.from('conversations').select('id, is_group').eq('id', s.conversation_id).maybeSingle();
       if (c && !c.is_group) return c.id;
     }
   }
