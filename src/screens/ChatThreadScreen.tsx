@@ -13,6 +13,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radius, typography } from '../theme';
 import {
   listMessages, sendMessage, uploadChatAttachment, attachmentSignedUrl,
+  subscribeToMessages, deleteMessage, markConversationRead,
   type ChatMessage,
 } from '../services/messaging';
 import { getCurrentUser } from '../services/supabase';
@@ -51,10 +52,25 @@ export default function ChatThreadScreen() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 5000); // basit polling (realtime yerine)
-    return () => clearInterval(t);
+    void markConversationRead(conversationId);
+    // Realtime: yeni mesaj gelince anında yenile (polling yerine). Yedek olarak
+    // 15sn'de bir senkron (realtime bağlantısı koparsa kaçan mesaj olmasın).
+    const unsub = subscribeToMessages(conversationId, () => { load(); void markConversationRead(conversationId); });
+    const t = setInterval(load, 15000);
+    return () => { unsub(); clearInterval(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
+
+  const confirmDelete = (m: ChatMessage) => {
+    if (m.senderId !== meId) return;
+    Alert.alert('Mesajı sil', 'Bu mesaj silinsin mi?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        try { await deleteMessage(m.id); setMessages(prev => prev.filter(x => x.id !== m.id)); }
+        catch (e: any) { Alert.alert('Hata', e?.message || 'Silinemedi'); }
+      } },
+    ]);
+  };
 
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
@@ -84,7 +100,12 @@ export default function ChatThreadScreen() {
     const url = item.attachmentUrl ? signed[item.attachmentUrl] : undefined;
     return (
       <View style={[styles.msgRow, mine ? styles.msgRight : styles.msgLeft]}>
-        <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+        <TouchableOpacity
+          style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
+          activeOpacity={mine ? 0.7 : 1}
+          onLongPress={() => confirmDelete(item)}
+          delayLongPress={350}
+        >
           {!mine && <Text style={styles.sender}>{item.senderName}</Text>}
           {item.attachmentType === 'image' && url && (
             <TouchableOpacity onPress={() => openUrlSafe(url)} activeOpacity={0.9}>
@@ -99,7 +120,7 @@ export default function ChatThreadScreen() {
           )}
           {!!item.body && <Text style={[styles.body, mine && { color: '#fff' }]}>{item.body}</Text>}
           <Text style={[styles.time, mine && { color: 'rgba(255,255,255,0.7)' }]}>{item.createdAt.slice(11, 16)}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
     );
   };

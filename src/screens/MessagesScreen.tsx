@@ -84,9 +84,15 @@ export default function MessagesScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle} numberOfLines={1}>{item.displayTitle || 'Sohbet'}</Text>
-              {item.isGroup && <Text style={styles.rowSub} numberOfLines={1}>{(item.participantNames || []).join(', ')}</Text>}
+              {item.lastMessage
+                ? <Text style={[styles.rowSub, (item.unread || 0) > 0 && { color: colors.text.primary, fontWeight: '700' }]} numberOfLines={1}>{item.lastMessage}</Text>
+                : item.isGroup && <Text style={styles.rowSub} numberOfLines={1}>{(item.participantNames || []).join(', ')}</Text>}
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.text.faint} />
+            {(item.unread || 0) > 0 ? (
+              <View style={styles.unreadBadge}><Text style={styles.unreadText}>{item.unread}</Text></View>
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color={colors.text.faint} />
+            )}
           </TouchableOpacity>
         )}
         ListEmptyComponent={!loading ? (
@@ -151,6 +157,8 @@ const styles = StyleSheet.create({
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.emerald.bg, alignItems: 'center', justifyContent: 'center' },
   rowTitle: { fontSize: typography.md, color: colors.text.primary, fontWeight: '700' },
   rowSub: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },
+  unreadBadge: { minWidth: 22, height: 22, borderRadius: 11, backgroundColor: colors.emerald.default, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  unreadText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { backgroundColor: colors.bg.primary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },

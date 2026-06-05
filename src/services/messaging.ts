@@ -19,6 +19,8 @@ export interface Conversation {
   // türetilmiş (liste için)
   participantNames?: string[];
   displayTitle?: string;
+  lastMessage?: string;
+  unread?: number;
 }
 export interface ChatMessage {
   id: string;
@@ -74,12 +76,32 @@ export async function listConversations(): Promise<Conversation[]> {
     .from('conversation_participants').select('conversation_id, user_id').in('conversation_id', ids);
   const { data: profs } = await supabase.from('profiles').select('id, full_name');
   const nameById = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || 'Kullanıcı']));
+  // Son mesaj önizleme + okunmamış sayısı için: her sohbetin son mesajı + benim last_read_at'ım
+  const { data: myParts } = await supabase
+    .from('conversation_participants').select('conversation_id, last_read_at').eq('user_id', me.id).in('conversation_id', ids);
+  const lastReadById = new Map((myParts ?? []).map((p: any) => [p.conversation_id, p.last_read_at]));
+  // Son 1 mesaj (önizleme) — her sohbet için ayrı çekmek yerine hepsini çekip grupla
+  const { data: recentMsgs } = await supabase
+    .from('messages').select('conversation_id, sender_id, body, attachment_name, created_at')
+    .in('conversation_id', ids).is('deleted_at', null).order('created_at', { ascending: false }).limit(400);
+  const lastByConv = new Map<string, any>();
+  const unreadByConv = new Map<string, number>();
+  for (const m of recentMsgs ?? []) {
+    if (!lastByConv.has(m.conversation_id)) lastByConv.set(m.conversation_id, m);
+    const lr = lastReadById.get(m.conversation_id);
+    if (m.sender_id !== me.id && (!lr || new Date(m.created_at) > new Date(lr))) {
+      unreadByConv.set(m.conversation_id, (unreadByConv.get(m.conversation_id) || 0) + 1);
+    }
+  }
   for (const c of convs) {
     const others = (allParts ?? [])
       .filter((p: any) => p.conversation_id === c.id && p.user_id !== me.id)
       .map((p: any) => nameById.get(p.user_id) || 'Kullanıcı');
     c.participantNames = others;
     c.displayTitle = c.isGroup ? (c.title || `Grup (${others.length + 1})`) : (others[0] || 'Sohbet');
+    const lm = lastByConv.get(c.id);
+    c.lastMessage = lm ? (lm.body || (lm.attachment_name ? `📎 ${lm.attachment_name}` : '')) : '';
+    c.unread = unreadByConv.get(c.id) || 0;
   }
   return convs;
 }
@@ -129,6 +151,7 @@ export async function listMessages(conversationId: string): Promise<ChatMessage[
   if (!SUPABASE_CONFIGURED) return [];
   const { data, error } = await supabase
     .from('messages').select('*').eq('conversation_id', conversationId)
+    .is('deleted_at', null)
     .order('created_at', { ascending: true }).limit(500);
   if (error) { console.warn('[chat.msgs]', error.message); return []; }
   const msgs = (data ?? []).map(msgFromRow);
@@ -197,4 +220,39 @@ export async function sendMessage(
     }
   } catch { /* sessiz */ }
   return data ? msgFromRow(data) : null;
+}
+
+/** Kendi mesajını sil (soft). */
+export async function deleteMessage(messageId: string): Promise<void> {
+  const { error } = await supabase
+    .from('messages').update({ deleted_at: new Date().toISOString() }).eq('id', messageId);
+  if (error) throw new Error(`[chat.delete] ${error.message}`);
+}
+
+/** Sohbeti "okundu" işaretle (unread sayacı sıfırlanır). */
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const me = await getCurrentUser();
+  if (!me) return;
+  try {
+    await supabase.from('conversation_participants')
+      .update({ last_read_at: new Date().toISOString() })
+      .eq('conversation_id', conversationId).eq('user_id', me.id);
+  } catch { /* sessiz */ }
+}
+
+/**
+ * Realtime: bir sohbete gelen YENİ mesajları anlık dinler (polling yerine).
+ * Dönen fonksiyon ile abonelik iptal edilir.
+ */
+export function subscribeToMessages(conversationId: string, onChange: () => void): () => void {
+  if (!SUPABASE_CONFIGURED) return () => {};
+  const channel = supabase
+    .channel(`messages:${conversationId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => { try { supabase.removeChannel(channel); } catch { /* ignore */ } };
 }
