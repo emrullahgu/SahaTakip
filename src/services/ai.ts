@@ -128,10 +128,11 @@ export async function getAiSettings(): Promise<AiSettings> {
   if (envProv && envKey && envProv !== 'mock') {
     return { provider: envProv, apiKey: envKey, model: DEFAULT_MODEL[envProv] };
   }
-  // İkincil: hangi anahtar varsa onu kullan (öncelik: gemini > openai > claude).
-  if (process.env.EXPO_PUBLIC_GEMINI_KEY) return { provider: 'gemini', apiKey: process.env.EXPO_PUBLIC_GEMINI_KEY, model: DEFAULT_MODEL.gemini };
-  if (process.env.EXPO_PUBLIC_OPENAI_KEY) return { provider: 'openai', apiKey: process.env.EXPO_PUBLIC_OPENAI_KEY, model: DEFAULT_MODEL.openai };
+  // İkincil: hangi anahtar varsa onu kullan (TERCİH SIRASI: Claude → OpenAI → Gemini → Groq).
   if (process.env.EXPO_PUBLIC_CLAUDE_KEY) return { provider: 'claude', apiKey: process.env.EXPO_PUBLIC_CLAUDE_KEY, model: DEFAULT_MODEL.claude };
+  if (process.env.EXPO_PUBLIC_OPENAI_KEY) return { provider: 'openai', apiKey: process.env.EXPO_PUBLIC_OPENAI_KEY, model: DEFAULT_MODEL.openai };
+  if (process.env.EXPO_PUBLIC_GEMINI_KEY) return { provider: 'gemini', apiKey: process.env.EXPO_PUBLIC_GEMINI_KEY, model: DEFAULT_MODEL.gemini };
+  if (process.env.EXPO_PUBLIC_GROQ_KEY) return { provider: 'groq', apiKey: process.env.EXPO_PUBLIC_GROQ_KEY, model: DEFAULT_MODEL.groq };
 
   return { provider: 'mock' };
 }
@@ -434,10 +435,11 @@ export async function chatVision(
 }
 
 // ---------- Çoklu sağlayıcı otomatik fallback ----------
-// Yapılandırılmış birincil sağlayıcı çalışmazsa (404/429/quota/timeout vb.),
-// mevcut anahtarlara sahip diğer sağlayıcılara sırayla geçer. Yetenek sırasına göre:
-// openai → claude → gemini → groq. Aktif/seçili olan her zaman önce denenir.
-const FALLBACK_ORDER: AiProvider[] = ['openai', 'claude', 'gemini', 'groq'];
+// Tercih sırası: Claude (birincil) → OpenAI/ChatGPT → Gemini (Google) → Groq.
+// Yapılandırılmış birincil sağlayıcı çalışmazsa bu sırayla anahtarı olana geçilir.
+// Aktif/seçili olan her zaman önce denenir.
+export const PROVIDER_PRIORITY: AiProvider[] = ['claude', 'openai', 'gemini', 'groq'];
+const FALLBACK_ORDER: AiProvider[] = PROVIDER_PRIORITY;
 
 export async function chatWithFallback(
   prompt: string,
@@ -1044,7 +1046,8 @@ export async function chatWithToolsFallback(
   const p = primary ?? (await getAiSettings());
   const candidates: AiSettings[] = [];
   if (p.provider !== 'mock' && p.apiKey) candidates.push(p);
-  for (const prov of ['gemini', 'openai', 'claude', 'groq'] as AiProvider[]) {
+  // Tercih sırası: Claude → OpenAI → Gemini → Groq.
+  for (const prov of PROVIDER_PRIORITY) {
     if (prov === p.provider) continue;
     const key = getBuiltinKey(prov);
     if (key) candidates.push({ provider: prov, apiKey: key, model: DEFAULT_MODEL[prov] });
