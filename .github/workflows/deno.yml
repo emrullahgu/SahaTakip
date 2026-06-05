@@ -35,8 +35,10 @@ jobs:
       # - name: Verify formatting
       #   run: deno fmt --check
 
+      # Yalnız Supabase Edge Function'larını lint/test et (RN uygulama kodu Deno değil).
+      # Kapsam ve kural istisnaları kök deno.json'dan gelir.
       - name: Run linter
-        run: deno lint
+        run: deno lint supabase/functions/
 
       - name: Run tests
-        run: deno test -A
+        run: deno test -A supabase/functions/
