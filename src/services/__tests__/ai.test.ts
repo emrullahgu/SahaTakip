@@ -7,8 +7,25 @@ import {
   chatVision, analyzePhoto, guessImageMime, isVisionCapable,
   chatWithTools, chatWithToolsFallback, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
   toClaudeTools, toClaudeMessages, parseClaudeToolResponse, fetchWithTimeout,
+  normalizeClaudeModel,
   type ChatMessage, type ToolSchema,
 } from '../ai';
+
+describe('normalizeClaudeModel', () => {
+  it('güncel sonnet modelini olduğu gibi bırakır', () => {
+    expect(normalizeClaudeModel('claude-3-5-sonnet-20241022')).toBe('claude-3-5-sonnet-20241022');
+  });
+  it('emekli claude-2 / instant / ilk claude-3 modellerini güncele yükseltir', () => {
+    expect(normalizeClaudeModel('claude-2')).toBe('claude-3-5-sonnet-20241022');
+    expect(normalizeClaudeModel('claude-instant-1.2')).toBe('claude-3-5-sonnet-20241022');
+    expect(normalizeClaudeModel('claude-3-sonnet-20240229')).toBe('claude-3-5-sonnet-20241022');
+    expect(normalizeClaudeModel('claude-3-opus-20240229')).toBe('claude-3-5-sonnet-20241022');
+  });
+  it('boş/tanımsız → güvenli varsayılan', () => {
+    expect(normalizeClaudeModel('')).toBe('claude-3-5-sonnet-20241022');
+    expect(normalizeClaudeModel(undefined)).toBe('claude-3-5-sonnet-20241022');
+  });
+});
 
 // Mock Expo FileSystem
 jest.mock('expo-file-system/legacy', () => ({

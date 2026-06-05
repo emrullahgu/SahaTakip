@@ -17,6 +17,21 @@ const DEFAULT_MODEL: Record<AiProvider, string> = {
   mock: 'mock',
 };
 
+/**
+ * Eski/emekliye ayrılmış Claude model adlarını çalışan güncel modele yükseltir.
+ * (Gemini 1.5→2.5 yükseltmesinin Claude karşılığı.) Anthropic, claude-2/instant ve
+ * ilk claude-3 (sonnet/opus/haiku 2024-02/03) modellerini emekliye ayırıyor;
+ * bunlar 404 verir. Boş/bilinmeyen de güvenli varsayılana düşer.
+ */
+export function normalizeClaudeModel(m?: string): string {
+  const s = (m || '').trim();
+  if (!s) return DEFAULT_MODEL.claude;
+  // Emekli/eski aileler → güncel sonnet
+  if (/^claude-(2|instant|1)/i.test(s)) return DEFAULT_MODEL.claude;
+  if (/^claude-3-(sonnet|opus|haiku)-202(40229|40307|403)/i.test(s)) return DEFAULT_MODEL.claude;
+  return s;
+}
+
 // Sağlayıcı isteklerinde varsayılan zaman aşımı. Mobil ağlarda asılı kalan bir
 // fetch sonsuza dek "yükleniyor" gösterip ekranı kilitliyordu; AbortController ile
 // belirli süre sonra iptal edilir. Mesaj "timeout" içerir → isTransientAiError
@@ -238,7 +253,7 @@ export async function chat(prompt: string, settings: AiSettings, systemPrompt?: 
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model,
+        model: normalizeClaudeModel(model),
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: 'user', content: prompt }],
@@ -414,7 +429,7 @@ export async function chatVision(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model,
+      model: normalizeClaudeModel(model),
       max_tokens: 1024,
       system: systemPrompt,
       messages: [{
@@ -1001,7 +1016,7 @@ export async function chatWithTools(
   // Claude — tools ile native tool-calling
   if (s.provider === 'claude') {
     const { system, messages: cmsgs } = toClaudeMessages(messages);
-    const body: any = { model, max_tokens: 2048, system, messages: cmsgs };
+    const body: any = { model: normalizeClaudeModel(model), max_tokens: 4096, system, messages: cmsgs };
     if (tools.length) body.tools = toClaudeTools(tools);
     const res = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
