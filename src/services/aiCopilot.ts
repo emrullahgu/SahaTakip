@@ -51,8 +51,39 @@ export async function clearHistory(): Promise<void> {
   await AsyncStorage.removeItem(HIST_KEY);
 }
 
+const TR_LOWER = (s: string) => (s || '').toLocaleLowerCase('tr-TR');
+
+/** Sorgudan anlamlı arama token'ları çıkarır (Türkçe küçük harf, ≥3 karakter). */
+export function queryTokens(query: string): string[] {
+  return Array.from(new Set(
+    TR_LOWER(query)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(t => t.length >= 3),
+  ));
+}
+
+/**
+ * Kullanıcının sorusuyla EŞLEŞEN kayıtları seçer (basit token-örtüşme skoru).
+ * Snapshot körlemesine "ilk 10"u veriyordu; kullanıcı listede olmayan bir
+ * müşteriyi/işi sorunca asistan "göremiyorum" diyordu. Bu yardımcı, soruda
+ * geçen terimlere göre ilgili kaydı bağlama getirir. Saf fonksiyon → test edilebilir.
+ */
+export function pickRelevant<T>(items: T[], tokens: string[], fields: (it: T) => string, max = 6): T[] {
+  if (!tokens.length || !items.length) return [];
+  const scored: { it: T; score: number }[] = [];
+  for (const it of items) {
+    const hay = TR_LOWER(fields(it));
+    if (!hay) continue;
+    let score = 0;
+    for (const t of tokens) if (hay.includes(t)) score++;
+    if (score > 0) scored.push({ it, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, max).map(x => x.it);
+}
+
 /** Sistemden canlı snapshot al → AI promptu için kompakt JSON özet üret. */
-function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[]): string {
+function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[], query = ''): string {
   const today = todayKey();
   const pendingWO = snap.workOrders.filter(w => w.status === 'Onay Bekliyor');
   const inProgress = snap.workOrders.filter(w => w.status === 'Başladı');
@@ -83,6 +114,23 @@ function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[]): string {
     price: p.materialPrice + p.installPrice,
   }));
 
+  // Sorguyla ilgili kayıtlar: "ilk N" dışında kalsa bile soruda adı/kodu geçen
+  // müşteri / iş emri / teklifi bağlama getir (asistanın "göremiyorum" dememesi için).
+  const tokens = queryTokens(query);
+  const relCustomers = pickRelevant(snap.customers, tokens,
+    c => `${c.shortName} ${c.title} ${c.city || ''} ${c.contactPerson || ''} ${c.sector || ''} ${c.phone || ''} ${c.taxNumber || ''}`, 6);
+  const relWO = pickRelevant(snap.workOrders, tokens,
+    w => `${w.id} ${w.client} ${w.serviceName} ${w.engineer} ${w.status} ${w.notes || ''}`, 6);
+  const relQuotes = pickRelevant(snap.quotes, tokens,
+    q => `${q.id} ${q.number || ''} ${q.customerName} ${q.title || ''} ${q.engineer} ${q.status}`, 5);
+  const relevantBlock = (relCustomers.length || relWO.length || relQuotes.length) ? [
+    `## 🔎 Sorguyla İlgili Kayıtlar`,
+    relCustomers.length ? `### Müşteri\n${relCustomers.map(c => `- ${c.id} | ${c.shortName || c.title} | ${c.type || ''} | ${c.city || ''}${c.currentBalance != null ? ` | bakiye: ₺${c.currentBalance}` : ''}`).join('\n')}` : '',
+    relWO.length ? `### İş Emri\n${relWO.map(w => `- ${w.id} | ${w.client} | ${w.serviceName} | ${w.status} | müh: ${w.engineer}`).join('\n')}` : '',
+    relQuotes.length ? `### Teklif\n${relQuotes.map(q => `- ${q.id} | ${q.customerName} | ₺${q.grandTotal} | ${q.status}`).join('\n')}` : '',
+    ``,
+  ].filter(Boolean).join('\n') : '';
+
   return [
     `# Canlı Sistem Verisi (${new Date().toLocaleString('tr-TR')})`,
     `Bugün: ${today}`,
@@ -97,6 +145,7 @@ function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[]): string {
     overdueWO.length ? `### Geciken İşler\n${overdueWO.slice(0, 5).map(w => `- ${w.id} | ${w.client} | ${w.serviceName} | bitmesi gereken: ${w.plannedEnd}`).join('\n')}` : '',
     pendingWO.length ? `### Onay Bekleyen Servis Raporları\n${pendingWO.slice(0, 5).map(w => `- ${w.id} | ${w.client} | ${w.serviceName} | müh: ${w.engineer}`).join('\n')}` : '',
     ``,
+    relevantBlock,
     `## Son Müşteriler (örnek)`,
     recentCustomers.map(c => `- ${c.id} | ${c.name} | ${c.type || ''} | ${c.city || ''}`).join('\n'),
     ``,
@@ -161,7 +210,7 @@ export async function askCopilot(
 
   // KB'den ilgili dokümanları getir
   const kbDocs = await retrieveRelevant(userMessage, 5);
-  const liveContext = summarizeSnapshot(snapshot, kbDocs);
+  const liveContext = summarizeSnapshot(snapshot, kbDocs, userMessage);
 
   // Son 8 mesajı geçmişten ekle
   const historyText = history.slice(-8).map(m =>
@@ -201,7 +250,7 @@ export async function askCopilotWithAttachment(
   }
 
   const kbDocs = await retrieveRelevant(userMessage || 'ek analiz', 4);
-  const liveContext = summarizeSnapshot(snapshot, kbDocs);
+  const liveContext = summarizeSnapshot(snapshot, kbDocs, userMessage);
   const historyText = history.slice(-6).map(m =>
     `[${m.role === 'user' ? 'Kullanıcı' : 'Asistan'}]: ${m.content}`
   ).join('\n');
