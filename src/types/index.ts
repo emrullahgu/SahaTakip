@@ -5,6 +5,12 @@ export interface SelectedMaterial {
   qty: number;
   // Satır bazında iskonto yüzdesi (0–100). Boş ise 0 kabul edilir.
   discountPct?: number;
+  // Görsel/izlenebilirlik için (katalogdan gelen): orijinal döviz, liste fiyatı,
+  // tedarikçi iskontosu ve fiyatı hesaplarken kullanılan canlı kur.
+  currency?: string;
+  listPrice?: number;
+  supplierDiscount?: number;
+  fxRate?: number;
 }
 
 // FAZ 3 — İş Emri akışı

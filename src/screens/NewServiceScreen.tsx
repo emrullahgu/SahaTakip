@@ -26,6 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } from '../services/catalogOverrides';
+import { getFxRates, liveUnitPriceTry, FX_FALLBACK, type FxRates } from '../services/fx';
 import type { MaterialCatalogItem } from '../types';
 import { createApproval } from '../services/governance';
 import { newUuid } from '../services/data/repository';
@@ -54,9 +55,12 @@ export default function NewServiceScreen() {
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedMaterial[]>([]);
   const [catOverrides, setCatOverrides] = useState<OverrideMap>({});
   const [customProds, setCustomProds] = useState<MaterialCatalogItem[]>([]);
+  // Canlı TCMB kuru — yabancı para (EUR/USD) ürünleri bugünün kuruyla TL'ye çevirmek için.
+  const [fx, setFx] = useState<FxRates>(FX_FALLBACK);
   React.useEffect(() => {
     loadOverrides().then(setCatOverrides);
     loadCustomProducts().then(setCustomProds);
+    getFxRates().then(setFx).catch(() => { /* fallback zaten yüklü */ });
   }, []);
   const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
   const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
@@ -139,6 +143,13 @@ export default function NewServiceScreen() {
     });
   };
 
+  // Miktarı doğrudan yaz (ör. 300 mt) — tek tek +/- ile artırmaya gerek kalmadan.
+  // Düzenleme sırasında 0/boşa izin verilir; satır silinmez (çöp kutusu siler).
+  const setMaterialQty = (id: string, raw: string) => {
+    const n = Math.max(0, Math.floor(Number(String(raw).replace(/[^0-9]/g, '')) || 0));
+    setSelectedMaterials(prev => prev.map(m => (m.id === id ? { ...m, qty: n } : m)));
+  };
+
   const updateMaterialDiscount = (id: string, pct: number) => {
     const safe = Math.max(0, Math.min(100, isFinite(pct) ? pct : 0));
     setSelectedMaterials(prev =>
@@ -160,6 +171,11 @@ export default function NewServiceScreen() {
 
   const lineTotal = (m: SelectedMaterial) =>
     m.price * m.qty * (1 - (m.discountPct ?? 0) / 100);
+
+  // Para biçimi: 2 ondalık (₺ önekli). Yuvarlama yerine kuruş gösterilir ki
+  // birim/iskonto farkı net görünsün (ör. ₺13,57 — eski "₺14" karışıklığı düzeldi).
+  const fmtTL = (n: number) =>
+    `₺${(isFinite(n) ? n : 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const pickPhoto = async (type: 'before' | 'after' | 'form') => {
     try {
@@ -236,9 +252,20 @@ export default function NewServiceScreen() {
       if (existing) {
         return prev.map(m => m.id === mat.id ? { ...m, qty: m.qty + 1 } : m);
       }
-      // Katalog ürününde varsa varsayılan iskontoyu sat\u0131ra ta\u015f\u0131
-      const defaultDisc = typeof mat.discountRate === 'number' ? mat.discountRate : 0;
-      return [...prev, { id: mat.id, name: mat.name, price: mat.price, qty: 1, discountPct: defaultDisc }];
+      // NOT: Katalog `price` zaten tedarikçi iskontosu uygulanmış (yabancı parada
+      // TL'ye çevrilmiş) NET fiyattır. Tedarikçi iskontosunu satıra TEKRAR uygulama
+      // (eski sürüm çift-iskonto yapıyordu). Satır iskontosu mühendisin EK indirimi
+      // içindir → 0'dan başlar. Yabancı para fiyatını BUGÜNÜN TCMB kuruyla hesapla.
+      const cur = (mat.currency || 'TL').toUpperCase();
+      const isForeign = cur !== 'TL' && cur !== 'TRY';
+      const unit = liveUnitPriceTry(mat, fx);
+      return [...prev, {
+        id: mat.id, name: mat.name, price: unit, qty: 1, discountPct: 0,
+        currency: mat.currency,
+        listPrice: mat.listPrice,
+        supplierDiscount: typeof mat.discountRate === 'number' ? mat.discountRate : undefined,
+        fxRate: isForeign ? (cur === 'EUR' ? fx.EUR : cur === 'USD' ? fx.USD : undefined) : undefined,
+      }];
     });
   };
 
@@ -299,7 +326,7 @@ export default function NewServiceScreen() {
       date: new Date().toISOString().split('T')[0],
       engineer: engineerName,
       // Boş bırakılmış manuel kalemleri (ad girilmemiş) ele.
-      materials: selectedMaterials.filter(m => !isManualMat(m.id) || (m.name || '').trim().length > 0),
+      materials: selectedMaterials.filter(m => m.qty > 0 && (!isManualMat(m.id) || (m.name || '').trim().length > 0)),
       otherCost: extraCost,
       laborCost,
       materialCost,
@@ -413,6 +440,12 @@ export default function NewServiceScreen() {
 
         {/* Step 4: Materials */}
         <Text style={styles.stepLabel}>4. Kullanılan Sarf Malzemeler</Text>
+        <View style={styles.fxBanner}>
+          <Ionicons name="swap-horizontal" size={12} color={colors.text.muted} />
+          <Text style={styles.fxBannerText}>
+            {`Kur: € ${fx.EUR.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} · $ ${fx.USD.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} · ${fx.source === 'TCMB' ? `TCMB ${fx.date}` : fx.source === 'cache' ? `TCMB ${fx.date} (önbellek)` : 'varsayılan kur'}`}
+          </Text>
+        </View>
         <TouchableOpacity
           style={styles.addMaterialBtn}
           onPress={() => { setMaterialSearch(''); setShowMaterialPicker(true); }}
@@ -440,6 +473,19 @@ export default function NewServiceScreen() {
               const disc = m.discountPct ?? 0;
               const unitNet = m.price * (1 - disc / 100);
               const line = lineTotal(m);
+              // Fiyatın nereden geldiğini şeffaf göster ("şu ne oluyor?" sorusuna cevap):
+              // yabancı parada kaynak döviz + tedarikçi iskontosu + kullanılan TCMB kuru;
+              // TL'de liste fiyatı + tedarikçi iskontosu.
+              const curU = (m.currency || 'TL').toUpperCase();
+              const isForeign = curU !== 'TL' && curU !== 'TRY';
+              let originInfo = '';
+              if (isForeign && m.listPrice) {
+                const net = m.listPrice * (1 - (m.supplierDiscount ?? 0) / 100);
+                const rate = (m.fxRate ?? 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+                originInfo = `Kaynak: ${m.listPrice} ${curU}${m.supplierDiscount ? ` −%${m.supplierDiscount}` : ''} × kur ${rate} (TCMB)`;
+              } else if (m.supplierDiscount && m.listPrice) {
+                originInfo = `Liste ₺${m.listPrice} · tedarikçi ind. %${m.supplierDiscount}`;
+              }
               return (
                 <View key={m.id} style={styles.matRow}>
                   <View style={{ flex: 1 }}>
@@ -463,24 +509,23 @@ export default function NewServiceScreen() {
                             placeholderTextColor={colors.text.faint}
                             selectTextOnFocus
                           />
-                          <Text style={[styles.matPrice, { marginLeft: 8 }]}>= ₺{Math.round(line).toLocaleString('tr-TR')}</Text>
+                          <Text style={[styles.matPrice, { marginLeft: 8 }]}>= {fmtTL(line)}</Text>
                         </View>
                       </>
                     ) : (
                     <>
                     <Text style={styles.matName} numberOfLines={2}>{m.name}</Text>
                     <Text style={styles.matPrice}>
-                      ₺{Math.round(line).toLocaleString('tr-TR')}
-                      {disc > 0 && (
-                        <Text style={styles.matPriceMuted}>
-                          {'  '}(birim ₺{Math.round(unitNet).toLocaleString('tr-TR')} · „kat: ₺{m.price.toLocaleString('tr-TR')})
-                        </Text>
-                      )}
+                      {fmtTL(line)}
+                      <Text style={styles.matPriceMuted}>
+                        {`  (birim ${fmtTL(unitNet)}${disc > 0 ? ` · ek ind. %${disc}` : ''})`}
+                      </Text>
                     </Text>
+                    {!!originInfo && <Text style={styles.matOrigin}>{originInfo}</Text>}
                     </>
                     )}
                     <View style={styles.discRow}>
-                      <Text style={styles.discLabel}>İskonto %</Text>
+                      <Text style={styles.discLabel}>{isManualMat(m.id) ? 'İskonto %' : 'Ek İskonto %'}</Text>
                       <TextInput
                         style={styles.discInput}
                         value={String(disc)}
@@ -495,7 +540,15 @@ export default function NewServiceScreen() {
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, -1)}>
                       <Ionicons name="remove" size={16} color={colors.text.primary} />
                     </TouchableOpacity>
-                    <Text style={styles.qtyVal}>{m.qty}</Text>
+                    <TextInput
+                      style={styles.qtyVal}
+                      value={String(m.qty)}
+                      onChangeText={v => setMaterialQty(m.id, v)}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                      maxLength={6}
+                      textAlign="center"
+                    />
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => updateMaterialQty(m.id, 1)}>
                       <Ionicons name="add" size={16} color={colors.text.primary} />
                     </TouchableOpacity>
@@ -885,9 +938,11 @@ export default function NewServiceScreen() {
               renderItem={({ item: m }) => {
                 const inList = selectedMaterials.find(x => x.id === m.id);
                 const tags = [m.brand, m.category].filter(Boolean).join(' · ');
+                // Yabancı parada CANLI TCMB kuruyla TL fiyatı göster (bayat baked fiyat değil).
+                const livePrice = liveUnitPriceTry(m, fx);
                 const priceLabel = m.currency && m.currency !== 'TL' && m.currency !== 'TRY' && m.listPrice
-                  ? `₺${m.price.toLocaleString('tr-TR')}  (${m.listPrice} ${m.currency})`
-                  : `₺${m.price.toLocaleString('tr-TR')}`;
+                  ? `${fmtTL(livePrice)}  (${m.listPrice} ${m.currency})`
+                  : fmtTL(livePrice);
                 return (
                   <View style={styles.modalItem}>
                     <TouchableOpacity
@@ -1056,6 +1111,9 @@ const styles = StyleSheet.create({
   matName: { flex: 1, fontSize: typography.xs, color: colors.text.secondary, fontWeight: '600' },
   matPrice: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '700', marginTop: 2 },
   matPriceMuted: { fontSize: 10, color: colors.text.muted, fontWeight: '500' },
+  matOrigin: { fontSize: 10, color: colors.text.faint, fontWeight: '500', marginTop: 1 },
+  fxBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: colors.bg.card, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 4, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border.primary },
+  fxBannerText: { fontSize: 10, color: colors.text.muted, fontWeight: '600' },
   discRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1243,7 +1301,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   qtyVal: {
-    minWidth: 24,
+    minWidth: 44,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
     textAlign: 'center',
     color: colors.text.primary,
     fontSize: typography.sm,
