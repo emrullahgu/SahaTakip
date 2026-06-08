@@ -1,7 +1,7 @@
 // VehicleFormScreen — POZ-DEV-060, 061
 // Araç oluştur/düzenle: plaka, marka/model, sürücü, vade tarihleri.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +45,9 @@ export default function VehicleFormScreen() {
   const isEdit = !!editingId;
 
   const [form, setForm] = useState<Vehicle>(newVehicle());
+  // Kaydet geri bildirimi: idle → saving → saved. Çift-basımı da engeller.
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const savingRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -62,8 +66,19 @@ export default function VehicleFormScreen() {
       Alert.alert('Eksik', 'Plaka girin.');
       return;
     }
-    await upsertVehicle({ ...form, plate: form.plate.toUpperCase().replace(/\s+/g, ' ').trim() });
-    navigation.goBack();
+    if (savingRef.current) return; // çift kayıt koruması
+    savingRef.current = true;
+    setStatus('saving');
+    try {
+      await upsertVehicle({ ...form, plate: form.plate.toUpperCase().replace(/\s+/g, ' ').trim() });
+      // Net "Kaydedildi" geri bildirimi göster, sonra geri dön.
+      setStatus('saved');
+      setTimeout(() => navigation.goBack(), 700);
+    } catch (e: any) {
+      savingRef.current = false;
+      setStatus('idle');
+      Alert.alert('Kaydedilemedi', e?.message || 'Bilinmeyen hata');
+    }
   };
 
   return (
@@ -237,9 +252,20 @@ export default function VehicleFormScreen() {
             multiline
           />
 
-          <TouchableOpacity style={styles.saveBtn} onPress={save} activeOpacity={0.85}>
-            <Ionicons name="save-outline" size={18} color="#fff" />
-            <Text style={styles.saveText}>{isEdit ? 'Güncelle' : 'Kaydet'}</Text>
+          <TouchableOpacity
+            style={[styles.saveBtn, status === 'saved' && styles.saveBtnDone, status === 'saving' && { opacity: 0.7 }]}
+            onPress={save}
+            activeOpacity={0.85}
+            disabled={status !== 'idle'}
+          >
+            {status === 'saving' ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name={status === 'saved' ? 'checkmark-circle' : 'save-outline'} size={18} color="#fff" />
+            )}
+            <Text style={styles.saveText}>
+              {status === 'saving' ? 'Kaydediliyor…' : status === 'saved' ? 'Kaydedildi' : isEdit ? 'Güncelle' : 'Kaydet'}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -296,5 +322,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: spacing.lg,
   },
+  saveBtnDone: { backgroundColor: colors.emerald.default },
   saveText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
 });
