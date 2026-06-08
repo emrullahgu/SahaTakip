@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { askCopilot, askCopilotWithAttachment, type CopilotMessage } from '../services/aiCopilot';
 import type { RootStackParamList } from '../types';
 import MarkdownText from './MarkdownText';
+import { resizeForUpload } from '../utils/image';
 
 interface Msg { role: 'user' | 'bot'; text: string; ts: string }
 interface Pending { base64: string; mimeType: string; kind: 'image' | 'pdf'; name: string }
@@ -78,10 +79,13 @@ export default function ChatbotFAB() {
 
   const pickImage = async () => {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, base64: true });
-      if (res.canceled || !res.assets?.[0]?.base64) return;
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
       const a = res.assets[0];
-      setPending({ base64: a.base64!, mimeType: a.mimeType || 'image/jpeg', kind: 'image', name: a.fileName || 'foto.jpg' });
+      // Küçült + base64'e çevir (bellek/veri tasarrufu).
+      const { base64 } = await resizeForUpload(a.uri, { maxWidth: 1280, compress: 0.6, base64: true });
+      if (!base64) return;
+      setPending({ base64, mimeType: 'image/jpeg', kind: 'image', name: a.fileName || 'foto.jpg' });
     } catch { /* iptal */ }
   };
   const pickPdf = async () => {

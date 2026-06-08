@@ -14,6 +14,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import MarkdownText from '../components/MarkdownText';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { resizeForUpload } from '../utils/image';
 
 /** Bir uri'yi (web blob/data veya native dosya) base64'e çevirir. */
 async function uriToBase64(uri: string): Promise<string> {
@@ -51,10 +52,13 @@ export default function AiChatScreen() {
 
   const pickImage = useCallback(async () => {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, base64: true });
-      if (res.canceled || !res.assets?.[0]?.base64) return;
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
       const a = res.assets[0];
-      setPending({ base64: a.base64!, mimeType: a.mimeType || 'image/jpeg', kind: 'image', name: a.fileName || 'foto.jpg' });
+      // Küçült + base64'e çevir (bellek/veri tasarrufu).
+      const { base64 } = await resizeForUpload(a.uri, { maxWidth: 1280, compress: 0.6, base64: true });
+      if (!base64) return;
+      setPending({ base64, mimeType: 'image/jpeg', kind: 'image', name: a.fileName || 'foto.jpg' });
     } catch { /* iptal */ }
   }, []);
 

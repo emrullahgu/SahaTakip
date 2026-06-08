@@ -29,6 +29,7 @@ import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } f
 import { getFxRates, liveUnitPriceTry, FX_FALLBACK, type FxRates } from '../services/fx';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { localDateISO } from '../utils/date';
+import { resizeForUpload } from '../utils/image';
 import type { MaterialCatalogItem } from '../types';
 import { createApproval } from '../services/governance';
 import { newUuid } from '../services/data/repository';
@@ -217,7 +218,8 @@ export default function NewServiceScreen() {
         allowsEditing: false,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
+        // Yüklemeden önce küçült (bellek + mobil veri tasarrufu).
+        const { uri } = await resizeForUpload(result.assets[0].uri, { maxWidth: 1600, compress: 0.7 });
         if (type === 'before') setBeforePhoto(uri);
         else if (type === 'after') setAfterPhoto(uri);
         else setFormPhoto(uri);
@@ -247,7 +249,8 @@ export default function NewServiceScreen() {
         quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
+        // Yüklemeden önce küçült (bellek + mobil veri tasarrufu).
+        const { uri } = await resizeForUpload(result.assets[0].uri, { maxWidth: 1600, compress: 0.7 });
         if (type === 'before') setBeforePhoto(uri);
         else if (type === 'after') setAfterPhoto(uri);
         else setFormPhoto(uri);
