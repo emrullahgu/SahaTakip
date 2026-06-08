@@ -111,7 +111,6 @@ export default function QuotesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {toast && <Toast toast={toast} />}
 
       {/* Header */}
       <View style={styles.header}>

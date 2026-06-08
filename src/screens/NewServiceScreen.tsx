@@ -389,7 +389,6 @@ export default function NewServiceScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {toast && <Toast toast={toast} />}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

@@ -277,7 +277,6 @@ export default function NewQuoteScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {toast && <Toast toast={toast} />}
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* === MÜŞTERİ === */}

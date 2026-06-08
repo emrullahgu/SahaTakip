@@ -75,7 +75,6 @@ export default function WorkOrdersScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {toast && <Toast toast={toast} />}
       <View style={styles.container}>
         {/* Screen Header */}
         <View style={styles.header}>

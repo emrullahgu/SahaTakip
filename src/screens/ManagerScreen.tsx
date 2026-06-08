@@ -139,7 +139,6 @@ export default function ManagerScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {toast && <Toast toast={toast} />}
 
       {/* Tab Bar */}
       <View style={styles.tabBar}>

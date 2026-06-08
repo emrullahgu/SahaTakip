@@ -79,7 +79,6 @@ export default function ExpensesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {toast && <Toast toast={toast} />}
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>

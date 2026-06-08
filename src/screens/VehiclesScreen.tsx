@@ -17,6 +17,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { useAppContext } from '../context/AppContext';
 import { a11yButton, a11yInput } from '../utils/a11y';
 import {
   listVehicles,
@@ -34,6 +35,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'Vehicles'>;
 
 export default function VehiclesScreen() {
   const navigation = useNavigation<Nav>();
+  const { showToast } = useAppContext();
   const [items, setItems] = useState<Vehicle[]>([]);
   const [alerts, setAlerts] = useState<VehicleAlert[]>([]);
   const [search, setSearch] = useState('');
@@ -68,6 +70,7 @@ export default function VehiclesScreen() {
         style: 'destructive',
         onPress: async () => {
           await deleteVehicle(v.id);
+          showToast(`${v.plate} silindi.`);
           load();
         },
       },
@@ -152,7 +155,7 @@ export default function VehiclesScreen() {
                   items={[
                     { label: 'Detay', icon: 'eye-outline', onPress: () => navigation.navigate('VehicleDetail', { vehicleId: item.id }) },
                     { label: 'Düzenle', icon: 'create-outline', onPress: () => navigation.navigate('VehicleForm', { vehicleId: item.id }) },
-                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: `"${item.plate}" silinsin mi?`, confirmTitle: 'Aracı Sil', onPress: async () => { await deleteVehicle(item.id); load(); } },
+                    { label: 'Sil', icon: 'trash-outline', destructive: true, confirm: `"${item.plate}" silinsin mi?`, confirmTitle: 'Aracı Sil', onPress: async () => { await deleteVehicle(item.id); showToast(`${item.plate} silindi.`); load(); } },
                   ]}
                 />
               </View>

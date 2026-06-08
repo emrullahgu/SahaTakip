@@ -84,7 +84,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {toast && <Toast toast={toast} />}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}

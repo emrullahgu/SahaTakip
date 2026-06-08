@@ -118,7 +118,6 @@ export default function QuoteDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {toast && <Toast toast={toast} />}
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}

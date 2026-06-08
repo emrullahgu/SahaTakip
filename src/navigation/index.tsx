@@ -211,6 +211,7 @@ import CalendarScreen from '../screens/CalendarScreen';
 import CalendarEventFormScreen from '../screens/CalendarEventFormScreen';
 import CalendarEventDetailScreen from '../screens/CalendarEventDetailScreen';
 import ChatbotFAB from '../components/ChatbotFAB';
+import GlobalToast from '../components/GlobalToast';
 // FAZ 34 — Kalite, Test ve Yayına Hazırlık
 import QualityHubScreen from '../screens/QualityHubScreen';
 import CrashReportsScreen from '../screens/CrashReportsScreen';
@@ -669,6 +670,7 @@ export default function AppNavigator() {
         <>
           <MainStack />
           <ChatbotFAB />
+          <GlobalToast />
         </>
       ) : (
         <AuthFlow />

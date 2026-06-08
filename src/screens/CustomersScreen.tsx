@@ -48,7 +48,6 @@ export default function CustomersScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      {toast && <Toast toast={toast} />}
 
       <View style={styles.headerBar}>
         <View style={styles.search}>
