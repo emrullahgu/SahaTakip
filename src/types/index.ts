@@ -138,6 +138,7 @@ export interface ToastMessage {
 // TEKLİFLENDİRME (Quoting) — Poz numaralı, 4 sütunlu yapı
 // =============================================================
 export interface QuoteLine {
+  id?: string;                // Stabil istemci anahtarı (satır silinince remount olmasın)
   lineNo: number;             // Sıra no
   pozId: string;              // POZ-EM-404 vb.
   pozName: string;            // İş tanımı (snapshot)

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   FlatList,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +29,9 @@ type NavProp = NativeStackNavigationProp<RootStackParamList, 'Customers'>;
 
 export default function CustomersScreen() {
   const navigation = useNavigation<NavProp>();
-  const { customers, deleteCustomer, toast } = useAppContext();
+  const { customers, deleteCustomer, refresh } = useAppContext();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => { setRefreshing(true); try { await refresh(); } finally { setRefreshing(false); } };
   const { hasPermission } = useAuth();
   const [query, setQuery] = useState('');
 
@@ -97,6 +100,7 @@ export default function CustomersScreen() {
         data={filtered}
         keyExtractor={c => c.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text.muted} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         renderItem={({ item }) => (
           <PressableScale

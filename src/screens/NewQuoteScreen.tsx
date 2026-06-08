@@ -115,6 +115,7 @@ export default function NewQuoteScreen() {
 
   const addPozLine = (poz: PozItem) => {
     const newLine: QuoteLine = {
+      id: newUuid(),
       lineNo: lines.length + 1,
       pozId: poz.id,
       pozName: poz.name,
@@ -237,6 +238,7 @@ export default function NewQuoteScreen() {
 
   const addProductLine = (p: typeof MATERIAL_CATALOG[number]) => {
     const newLine: QuoteLine = {
+      id: newUuid(),
       lineNo: lines.length + 1,
       pozId: p.code ? `PRD-${p.code}` : `PRD-${p.id}`,
       pozName: p.name,
@@ -258,6 +260,7 @@ export default function NewQuoteScreen() {
 
   const addManualLine = () => {
     const newLine: QuoteLine = {
+      id: newUuid(),
       lineNo: lines.length + 1,
       pozId: `MANUAL-${newUuid().slice(0, 8)}`,
       pozName: '',
@@ -370,6 +373,7 @@ export default function NewQuoteScreen() {
                   style={styles.recentItem}
                   onPress={() => {
                     const newLine: QuoteLine = {
+                      id: newUuid(),
                       lineNo: lines.length + 1,
                       pozId: r.pozId,
                       pozName: r.pozName,
@@ -407,7 +411,7 @@ export default function NewQuoteScreen() {
           ) : (
             lines.map((line, idx) => (
               <LineCard
-                key={`${line.pozId}-${idx}`}
+                key={line.id ?? `${line.pozId}-${line.lineNo}`}
                 line={line}
                 onUpdate={patch => updateLine(idx, patch)}
                 onRemove={() => removeLine(idx)}

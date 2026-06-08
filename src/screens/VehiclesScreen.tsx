@@ -10,7 +10,8 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
- FlatList,} from 'react-native';
+ FlatList,
+  RefreshControl,} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -39,11 +40,17 @@ export default function VehiclesScreen() {
   const [items, setItems] = useState<Vehicle[]>([]);
   const [alerts, setAlerts] = useState<VehicleAlert[]>([]);
   const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setItems(await listVehicles());
     setAlerts(await listVehicleAlerts(30));
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await load(); } finally { setRefreshing(false); }
+  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -119,6 +126,7 @@ export default function VehiclesScreen() {
         data={filtered}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text.muted} />}
         renderItem={({ item }) => {
           const vAlerts = alerts.filter(a => a.vehicle.id === item.id);
           return (

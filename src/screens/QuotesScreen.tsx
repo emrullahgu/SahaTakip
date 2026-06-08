@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +44,9 @@ const STATUS_COLORS: Record<QuoteStatus, { bg: string; fg: string; border: strin
 
 export default function QuotesScreen() {
   const navigation = useNavigation<NavProp>();
-  const { quotes, toast, deleteQuote, addQuote, showToast } = useAppContext();
+  const { quotes, deleteQuote, addQuote, showToast, refresh } = useAppContext();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => { setRefreshing(true); try { await refresh(); } finally { setRefreshing(false); } };
   const [filter, setFilter] = useState<QuoteStatus | 'Tümü'>('Tümü');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -217,6 +220,7 @@ export default function QuotesScreen() {
         keyExtractor={q => q.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text.muted} />}
         renderItem={({ item }) => (
           <QuoteCard
             quote={item}

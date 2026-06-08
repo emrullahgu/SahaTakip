@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TextInput,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,7 +38,9 @@ const FILTERS = ['Tümü', 'Bekliyor', 'Tamamlandı', 'Gecikti'];
 // Mock work orders assigned to field worker
 export default function WorkOrdersScreen() {
   const navigation = useNavigation<WorkOrdersNavProp>();
-  const { toast, workOrders, deleteWorkOrder } = useAppContext();
+  const { workOrders, deleteWorkOrder, refresh } = useAppContext();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => { setRefreshing(true); try { await refresh(); } finally { setRefreshing(false); } };
   const [activeFilter, setActiveFilter] = useState('Tümü');
   const [searchText, setSearchText] = useState('');
 
@@ -165,6 +168,7 @@ export default function WorkOrdersScreen() {
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text.muted} />}
           renderItem={({ item }) => (
             <PressableScale
               onPress={() =>
