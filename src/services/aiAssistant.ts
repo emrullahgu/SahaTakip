@@ -130,6 +130,61 @@ export async function sendMessage(
   await logUsage('chat', 'openai', Math.floor(content.length / 4), reply.tokens || 0, true);
   return reply;
 }
+export interface ChatAttachment {
+  base64: string;
+  mimeType: string;
+  kind: 'image' | 'pdf';
+  name?: string;
+}
+
+/**
+ * Foto/PDF ekli mesaj gönderir. Eki OpenAI/Gemini/Claude vision/belge-okuma ile
+ * analiz eder (askCopilotWithAttachment) ve hem kullanıcı hem asistan mesajını
+ * oturuma kalıcı yazar. Sohbet ekranı düz metin sendMessage'a benzer kullanır.
+ */
+export async function sendMessageWithAttachment(
+  sessionId: string,
+  content: string,
+  attachment: ChatAttachment,
+  snapshot?: import('./aiCopilot').CopilotSnapshot,
+): Promise<AiMessage> {
+  const msgs = await load<AiMessage>(K.messages);
+  const label = attachment.kind === 'pdf' ? `📄 ${attachment.name || 'belge.pdf'}` : `🖼️ ${attachment.name || 'foto.jpg'}`;
+  const userContent = [label, content].filter(Boolean).join('\n');
+  const user: AiMessage = { id: uid(), sessionId, role: 'user', content: userContent, createdAt: now() };
+  msgs.push(user);
+
+  let replyText = '';
+  let provider = 'mock';
+  try {
+    const { askCopilotWithAttachment } = await import('./aiCopilot');
+    const snap = snapshot ?? { workOrders: [], customers: [], quotes: [], employees: [], currentUserName: 'Kullanıcı' };
+    const prevMsgs = msgs
+      .filter(m => m.sessionId === sessionId)
+      .slice(-8)
+      .map(m => ({ id: m.id, role: (m.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.content, createdAt: m.createdAt }));
+    const res = await askCopilotWithAttachment(content, attachment, snap, prevMsgs);
+    replyText = res.reply;
+    provider = res.provider;
+  } catch (e: any) {
+    replyText = `Ek analizi başarısız: ${e?.message || 'bilinmeyen hata'}`;
+  }
+  const tokens = Math.max(60, Math.floor((replyText || '').length / 4));
+  const reply: AiMessage = {
+    id: uid(), sessionId, role: 'assistant',
+    content: replyText || '(boş yanıt)',
+    createdAt: now(),
+    tokens,
+    sources: [attachment.kind === 'pdf' ? 'PDF analizi' : 'Görsel analizi'],
+  };
+  msgs.push(reply); await save(K.messages, msgs);
+  const sess = await load<AiSession>(K.sessions);
+  const i = sess.findIndex(s => s.id === sessionId);
+  if (i >= 0) { sess[i].messageCount += 2; sess[i].tokenTotal += reply.tokens || 0; sess[i].updatedAt = now(); await save(K.sessions, sess); }
+  await logUsage('vision', provider === 'anthropic' ? 'anthropic' : provider === 'gemini' ? 'gemini' : 'openai', Math.floor(content.length / 4), reply.tokens || 0, provider !== 'mock');
+  return reply;
+}
+
 export async function approveMessage(id: string) {
   const msgs = await load<AiMessage>(K.messages);
   const i = msgs.findIndex(m => m.id === id);

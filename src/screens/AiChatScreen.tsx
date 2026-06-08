@@ -6,11 +6,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import type { AiMessage, RootStackParamList } from '../types';
-import { listMessages, sendMessage, approveMessage, createSession } from '../services/aiAssistant';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { listMessages, sendMessage, sendMessageWithAttachment, approveMessage, createSession, type ChatAttachment } from '../services/aiAssistant';
 import { QUICK_PROMPTS } from '../services/aiCopilot';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import MarkdownText from '../components/MarkdownText';
+
+/** Bir uri'yi (web blob/data veya native dosya) base64'e çevirir. */
+async function uriToBase64(uri: string): Promise<string> {
+  if (Platform.OS === 'web' || uri.startsWith('data:') || uri.startsWith('blob:') || uri.startsWith('http')) {
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+  const FileSystem = await import('expo-file-system');
+  return await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
+}
 
 type R = RouteProp<RootStackParamList, 'AiChat'>;
 
@@ -27,7 +45,28 @@ export default function AiChatScreen() {
   const [items, setItems] = useState<AiMessage[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<ChatAttachment | null>(null);
   const ref = useRef<FlatList>(null);
+
+  const pickImage = useCallback(async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, base64: true });
+      if (res.canceled || !res.assets?.[0]?.base64) return;
+      const a = res.assets[0];
+      setPending({ base64: a.base64!, mimeType: a.mimeType || 'image/jpeg', kind: 'image', name: a.fileName || 'foto.jpg' });
+    } catch { /* iptal */ }
+  }, []);
+
+  const pickPdf = useCallback(async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      const base64 = await uriToBase64(a.uri);
+      if (!base64) return;
+      setPending({ base64, mimeType: 'application/pdf', kind: 'pdf', name: a.name || 'belge.pdf' });
+    } catch { /* iptal */ }
+  }, []);
 
   const load = useCallback(async (id: string) => {
     const msgs = await listMessages(id);
@@ -45,15 +84,25 @@ export default function AiChatScreen() {
 
   const submit = useCallback(async (raw: string) => {
     const content = raw.trim();
-    if (!content || !sessionId || busy) return;
+    const att = pending;
+    if ((!content && !att) || !sessionId || busy) return;
     setBusy(true);
     setText('');
-    // Optimistic user msg
-    const userMsg: AiMessage = { id: Math.random().toString(), sessionId, role: 'user', content, createdAt: new Date().toISOString() };
+    setPending(null);
+    const snap = { workOrders, customers, quotes, employees, currentUserName: userName };
+    // Optimistic user msg (ek varsa etiketle).
+    const shown = att
+      ? [att.kind === 'pdf' ? `📄 ${att.name}` : `🖼️ ${att.name}`, content].filter(Boolean).join('\n')
+      : content;
+    const userMsg: AiMessage = { id: Math.random().toString(), sessionId, role: 'user', content: shown, createdAt: new Date().toISOString() };
     setItems(prev => [...prev, userMsg]);
     setTimeout(() => ref.current?.scrollToEnd({ animated: true }), 50);
     try {
-      await sendMessage(sessionId, content, { workOrders, customers, quotes, employees, currentUserName: userName });
+      if (att) {
+        await sendMessageWithAttachment(sessionId, content, att, snap);
+      } else {
+        await sendMessage(sessionId, content, snap);
+      }
       await load(sessionId);
     } catch (e: any) {
       // Hata sessizce yutulmasın — kullanıcıya baloncukla göster.
@@ -63,7 +112,7 @@ export default function AiChatScreen() {
         createdAt: new Date().toISOString(),
       }]);
     } finally { setBusy(false); }
-  }, [sessionId, busy, workOrders, customers, quotes, employees, userName, load]);
+  }, [sessionId, busy, pending, workOrders, customers, quotes, employees, userName, load]);
 
   const empty = items.length === 0;
 
@@ -128,9 +177,22 @@ export default function AiChatScreen() {
             ) : null}
           />
         )}
+        {pending && (
+          <View style={s.pendingBar}>
+            <Ionicons name={pending.kind === 'pdf' ? 'document-text' : 'image'} size={16} color="#06b6d4" />
+            <Text style={s.pendingName} numberOfLines={1}>{pending.name}</Text>
+            <TouchableOpacity onPress={() => setPending(null)}><Ionicons name="close-circle" size={18} color={colors.rose.default} /></TouchableOpacity>
+          </View>
+        )}
         <View style={s.inputRow}>
-          <TextInput style={s.input} value={text} onChangeText={setText} placeholder="Mesaj yazın..." placeholderTextColor={colors.text.faint} multiline editable={!busy} />
-          <TouchableOpacity style={[s.send, (busy || !text.trim()) && { opacity: 0.5 }]} onPress={() => submit(text)} disabled={busy || !text.trim()}>
+          <TouchableOpacity style={s.attachBtn} onPress={pickImage} disabled={busy} hitSlop={6}>
+            <Ionicons name="image-outline" size={22} color={colors.text.muted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.attachBtn} onPress={pickPdf} disabled={busy} hitSlop={6}>
+            <Ionicons name="document-attach-outline" size={22} color={colors.text.muted} />
+          </TouchableOpacity>
+          <TextInput style={s.input} value={text} onChangeText={setText} placeholder="Mesaj yazın veya 📎 ekleyin..." placeholderTextColor={colors.text.faint} multiline editable={!busy} />
+          <TouchableOpacity style={[s.send, (busy || (!text.trim() && !pending)) && { opacity: 0.5 }]} onPress={() => submit(text)} disabled={busy || (!text.trim() && !pending)}>
             {busy ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={20} color="#fff" />}
           </TouchableOpacity>
         </View>
@@ -161,7 +223,10 @@ const s = StyleSheet.create({
   apprT: { color: '#22c55e', fontSize: 10, fontWeight: '700' },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   typingT: { color: colors.text.muted, fontSize: typography.sm },
-  inputRow: { flexDirection: 'row', padding: spacing.sm, gap: 6, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  inputRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: 6, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  attachBtn: { padding: 4 },
+  pendingBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: spacing.md, paddingVertical: 8, marginHorizontal: spacing.sm, marginBottom: spacing.xs, backgroundColor: colors.bg.secondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary },
+  pendingName: { flex: 1, color: colors.text.primary, fontSize: typography.xs },
   input: { flex: 1, backgroundColor: colors.bg.primary, color: colors.text.primary, padding: spacing.sm, borderRadius: radius.sm, maxHeight: 100 },
   send: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#06b6d4', alignItems: 'center', justifyContent: 'center' },
 });
