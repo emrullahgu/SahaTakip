@@ -382,9 +382,11 @@ export default function NewQuoteScreen() {
                       installPrice: r.installPrice,
                       dismantlePrice: r.dismantlePrice,
                       withDismantle: false,
-                      overheadPct: 5,
-                      profitPct: 10,
-                      vatPct: 20,
+                      // Katalog varsayılanlarıyla tutarlı (önceden 5/10/20 sabitti →
+                      // aynı POZ recents'ten eklenince farklı toplam çıkıyordu).
+                      overheadPct: DEFAULT_OVERHEAD,
+                      profitPct: DEFAULT_PROFIT,
+                      vatPct: DEFAULT_VAT,
                       discountPct: 0,
                     };
                     setLines(prev => [...prev, newLine]);
