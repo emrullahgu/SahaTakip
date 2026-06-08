@@ -132,6 +132,15 @@ export async function getAiSettings(): Promise<AiSettings> {
 }
 
 async function resolveAiSettings(): Promise<AiSettings> {
+  // 0) Proxy modu: anahtar cihazda gerekmez. Üst katman gate'leri (provider!=='mock'
+  //    && apiKey) geçsin diye yapılandırılmış-görünen sentinel döndür; gerçek anahtar
+  //    sunucuda. chat() shouldUseProxy() görünce zaten proxy'ye yönlenir.
+  if (shouldUseProxy()) {
+    const envProv = (process.env.EXPO_PUBLIC_AI_DEFAULT_PROVIDER || 'openai').toLowerCase() as AiProvider;
+    const provider: AiProvider = envProv === 'claude' || envProv === 'gemini' ? envProv : 'openai';
+    return { provider, apiKey: PROXY_SENTINEL, model: DEFAULT_MODEL[provider] };
+  }
+
   // 1) Yerel cache (en hızlı)
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
@@ -209,8 +218,46 @@ export async function pingAi(s: AiSettings): Promise<{ ok: boolean; message: str
   }
 }
 
+// ---------- Sunucu-tarafı proxy (güvenlik) ----------
+// EXPO_PUBLIC_AI_USE_PROXY=true iken metin AI çağrıları cihazdan API anahtarı
+// GÖNDERMEDEN supabase/functions/ai-proxy üzerinden yapılır (anahtarlar sunucu
+// ortam değişkeninde: OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY).
+// Varsayılan KAPALI → mevcut doğrudan-çağrı davranışı korunur (geriye dönük uyumlu).
+export const PROXY_SENTINEL = 'via-proxy';
+
+export function shouldUseProxy(): boolean {
+  const v = (process.env.EXPO_PUBLIC_AI_USE_PROXY || '').trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+}
+
+/** ai-proxy edge function'ı üzerinden metin tamamlama (anahtar cihaza inmez). */
+export async function chatViaProxy(
+  prompt: string,
+  systemPrompt: string | undefined,
+  provider: AiProvider,
+): Promise<string> {
+  if (!SUPABASE_CONFIGURED) throw new Error('AI proxy için Supabase yapılandırılmalı.');
+  // Proxy yalnız openai/claude/gemini biliyor; groq/mock → otomatik seçim.
+  const proxyProvider = provider === 'openai' || provider === 'claude' || provider === 'gemini' ? provider : 'auto';
+  const messages = [
+    ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+    { role: 'user', content: prompt },
+  ];
+  const { data, error } = await supabase.functions.invoke('ai-proxy', {
+    body: { provider: proxyProvider, messages, temperature: 0.3, max_tokens: 1024 },
+  });
+  if (error) throw new Error(`AI proxy hatası: ${error.message || error}`);
+  const content = (data as any)?.content;
+  if (typeof content !== 'string' || !content.trim()) throw new Error('AI proxy boş yanıt döndü.');
+  return content;
+}
+
 // ---------- Provider-agnostic chat call ----------
 export async function chat(prompt: string, settings: AiSettings, systemPrompt?: string): Promise<string> {
+  // Proxy modu açıksa anahtar gerektirmeden sunucu üzerinden çağır.
+  if (shouldUseProxy()) {
+    return chatViaProxy(prompt, systemPrompt, settings.provider);
+  }
   if (settings.provider === 'mock' || !settings.apiKey) {
     throw new Error('AI provider yapılandırılmamış. Demo modda çalışılıyor.');
   }
@@ -368,6 +415,9 @@ export async function chatVision(
   settings: AiSettings,
   systemPrompt?: string,
 ): Promise<string> {
+  if (shouldUseProxy()) {
+    throw new Error('Proxy modunda görsel/PDF analizi henüz desteklenmiyor (ai-proxy yalnız metin). Görsel için sağlayıcı anahtarı gerekir.');
+  }
   if (settings.provider === 'mock' || !settings.apiKey) {
     throw new Error('AI provider yapılandırılmamış.');
   }
@@ -1059,6 +1109,9 @@ export async function chatWithTools(
   settings?: AiSettings,
 ): Promise<ChatWithToolsResult> {
   const s = settings ?? (await getAiSettings());
+  if (shouldUseProxy()) {
+    throw new Error('Proxy modunda araç-çağırma (Agent) henüz desteklenmiyor (ai-proxy yalnız metin). Agent için sağlayıcı anahtarı gerekir.');
+  }
   if (s.provider === 'mock' || !s.apiKey) {
     throw new Error('AI provider yapılandırılmamış (Agent için OpenAI/Groq/Gemini/Claude gerekli).');
   }

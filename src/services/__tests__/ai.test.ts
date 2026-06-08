@@ -8,6 +8,7 @@ import {
   chatWithTools, chatWithToolsFallback, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
   toClaudeTools, toClaudeMessages, parseClaudeToolResponse, fetchWithTimeout,
   normalizeClaudeModel,
+  shouldUseProxy, PROXY_SENTINEL,
   type ChatMessage, type ToolSchema,
 } from '../ai';
 
@@ -549,5 +550,50 @@ describe('AI Service', () => {
         delete process.env.EXPO_PUBLIC_CLAUDE_KEY;
       }
     });
+  });
+});
+
+describe('AI proxy modu (EXPO_PUBLIC_AI_USE_PROXY)', () => {
+  const KEY = 'EXPO_PUBLIC_AI_USE_PROXY';
+  afterEach(() => { delete process.env[KEY]; clearAiSettingsCache(); });
+
+  it('shouldUseProxy çeşitli truthy değerleri tanır', () => {
+    for (const v of ['true', '1', 'yes', 'on', 'TRUE', ' On ']) {
+      process.env[KEY] = v;
+      expect(shouldUseProxy()).toBe(true);
+    }
+    for (const v of ['', 'false', '0', 'no', 'off']) {
+      process.env[KEY] = v;
+      expect(shouldUseProxy()).toBe(false);
+    }
+    delete process.env[KEY];
+    expect(shouldUseProxy()).toBe(false);
+  });
+
+  it('proxy modunda getAiSettings yapılandırılmış sentinel döndürür (anahtar gerekmez)', async () => {
+    process.env[KEY] = 'true';
+    clearAiSettingsCache();
+    const s = await getAiSettings();
+    expect(s.provider).not.toBe('mock');
+    expect(s.apiKey).toBe(PROXY_SENTINEL);
+  });
+
+  it('proxy modunda chat() proxy yoluna gider (Supabase yoksa proxy hatası verir, doğrudan fetch DEĞİL)', async () => {
+    process.env[KEY] = 'true';
+    await expect(chat('merhaba', { provider: 'openai', apiKey: '' })).rejects.toThrow(/proxy/i);
+  });
+
+  it('proxy modunda görsel çağrısı net "desteklenmiyor" hatası verir', async () => {
+    process.env[KEY] = 'true';
+    await expect(
+      chatVision('oku', { base64: 'x' }, { provider: 'openai', apiKey: 'k' }),
+    ).rejects.toThrow(/desteklenmiyor/i);
+  });
+
+  it('proxy modunda araç-çağırma net "desteklenmiyor" hatası verir', async () => {
+    process.env[KEY] = 'true';
+    await expect(
+      chatWithTools([{ role: 'user', content: 'x' }], [], { provider: 'openai', apiKey: 'k' }),
+    ).rejects.toThrow(/desteklenmiyor/i);
   });
 });
