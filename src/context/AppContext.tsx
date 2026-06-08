@@ -42,6 +42,11 @@ import { localDateISO } from '../utils/date';
 import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotifications';
 import { Notify } from '../services/notifications';
 
+// Bordroda günlük ücret = aylık ücret / standart iş günü. TR uygulamasında
+// genelde 30 (yasal) ya da ~22 (fiili çalışma günü) kullanılır; tek yerden
+// yönetilsin diye sabit. Gerekirse resmi tatil/ay farkına göre güncellenebilir.
+const STANDARD_WORK_DAYS_PER_MONTH = 22;
+
 // ======================================================
 // QUOTE — Hesaplama yardımcıları
 // ======================================================
@@ -282,7 +287,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setEmployees(prev => {
       const updated = prev.map(emp =>
         emp.id === empId
-          ? { ...emp, monthlyWage: newWage, dailyRate: Math.round(newWage / 22) }
+          ? { ...emp, monthlyWage: newWage, dailyRate: Math.round(newWage / STANDARD_WORK_DAYS_PER_MONTH) }
           : emp
       );
       const target = updated.find(e => e.id === empId);

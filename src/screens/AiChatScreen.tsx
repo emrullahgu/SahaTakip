@@ -8,7 +8,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import type { AiMessage, RootStackParamList } from '../types';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { listMessages, sendMessage, sendMessageWithAttachment, approveMessage, createSession, type ChatAttachment } from '../services/aiAssistant';
+import { listMessages, sendMessage, sendMessageWithAttachment, createSession, type ChatAttachment } from '../services/aiAssistant';
 import { QUICK_PROMPTS } from '../services/aiCopilot';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -155,17 +155,6 @@ export default function AiChatScreen() {
                       {item.sources.map((src: string) => (
                         <View key={src} style={s.src}><Text style={s.srcT}>{src}</Text></View>
                       ))}
-                    </View>
-                  )}
-                  {!isUser && (
-                    <View style={s.aRow}>
-                      {item.tokens !== undefined && <Text style={s.meta}>{item.tokens} token</Text>}
-                      {!item.approved ? (
-                        <TouchableOpacity style={s.appr} onPress={async () => { await approveMessage(item.id); sessionId && load(sessionId); }}>
-                          <Ionicons name="checkmark" size={12} color="#22c55e" />
-                          <Text style={s.apprT}>Onayla</Text>
-                        </TouchableOpacity>
-                      ) : <View style={s.apprDone}><Ionicons name="checkmark-circle" size={12} color="#22c55e" /><Text style={s.apprT}>Onaylı</Text></View>}
                     </View>
                   )}
                 </View>

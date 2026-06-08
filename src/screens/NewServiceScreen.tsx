@@ -40,6 +40,10 @@ type NavProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
+// Malzeme satış marjı: teklif tutarında malzeme maliyeti bu katsayıyla çarpılır
+// (maliyet × 1.25 = satış). Tek yerden yönetilsin diye sabit (sihirli sayı değil).
+const MATERIAL_MARKUP = 1.25;
+
 export default function NewServiceScreen() {
   const navigation = useNavigation<NavProp>();
   const { addWorkOrder, addCustomer, customers, toast } = useAppContext();
@@ -318,7 +322,7 @@ export default function NewServiceScreen() {
     const materialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
     const laborCost = selectedService.estCost;
     const extraCost = parseFloat(otherCost) || 0;
-    const calculatedQuote = selectedService.price + materialCost * 1.25 + extraCost;
+    const calculatedQuote = selectedService.price + materialCost * MATERIAL_MARKUP + extraCost;
     const totalCost = laborCost + materialCost + extraCost;
     const profit = calculatedQuote - totalCost;
 
@@ -676,7 +680,7 @@ export default function NewServiceScreen() {
               <Text style={styles.summaryLabel}>Malzeme (+%25 marj)</Text>
               <Text style={styles.summaryVal}>
                 ₺{Math.round(
-                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * 1.25
+                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * MATERIAL_MARKUP
                 ).toLocaleString('tr-TR')}
               </Text>
             </View>
@@ -691,7 +695,7 @@ export default function NewServiceScreen() {
               <Text style={styles.summaryTotalVal}>
                 ₺{Math.round(
                   selectedService.price +
-                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * 1.25 +
+                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * MATERIAL_MARKUP +
                   (parseFloat(otherCost) || 0)
                 ).toLocaleString('tr-TR')}
               </Text>
