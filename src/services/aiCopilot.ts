@@ -123,6 +123,11 @@ function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[], query = ''): 
     w => `${w.id} ${w.client} ${w.serviceName} ${w.engineer} ${w.status} ${w.notes || ''}`, 6);
   const relQuotes = pickRelevant(snap.quotes, tokens,
     q => `${q.id} ${q.number || ''} ${q.customerName} ${q.title || ''} ${q.engineer} ${q.status}`, 5);
+  // POZ kataloğunu da sorguya göre seç — teklif istendiğinde (ör. "ev elektrik
+  // tesisatı") asistan sadece sabit 12 kalemi değil, GERÇEK eşleşen kalemleri
+  // ve fiyatlarını görsün → fiyat uydurmadan doğru teklif kurar.
+  const relPoz = pickRelevant(POZ_CATALOG, tokens,
+    p => `${p.id} ${p.name} ${p.description || ''} ${p.category}`, 14);
   const relevantBlock = (relCustomers.length || relWO.length || relQuotes.length) ? [
     `## 🔎 Sorguyla İlgili Kayıtlar`,
     relCustomers.length ? `### Müşteri\n${relCustomers.map(c => `- ${c.id} | ${c.shortName || c.title} | ${c.type || ''} | ${c.city || ''}${c.currentBalance != null ? ` | bakiye: ₺${c.currentBalance}` : ''}`).join('\n')}` : '',
@@ -130,6 +135,11 @@ function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[], query = ''): 
     relQuotes.length ? `### Teklif\n${relQuotes.map(q => `- ${q.id} | ${q.customerName} | ₺${q.grandTotal} | ${q.status}`).join('\n')}` : '',
     ``,
   ].filter(Boolean).join('\n') : '';
+
+  // Sorguyla eşleşen POZ kalemleri (fiyatlı) — teklif kurarken doğru fiyat için.
+  const relPozBlock = relPoz.length
+    ? `## 🧾 Sorguyla İlgili POZ Kalemleri (gerçek fiyatlı — teklifte BUNLARI kullan)\n${relPoz.map(p => `- ${p.id} | ${p.name} | ${p.unit} | ₺${p.materialPrice + p.installPrice} (KDV %${p.vatRate})`).join('\n')}\n`
+    : '';
 
   return [
     `# Canlı Sistem Verisi (${new Date().toLocaleString('tr-TR')})`,
@@ -152,6 +162,7 @@ function summarizeSnapshot(snap: CopilotSnapshot, kbDocs: KbDoc[], query = ''): 
     `## Son Teklifler`,
     recentQuotes.length ? recentQuotes.map(q => `- ${q.id} | ${q.customer} | ₺${q.total} | ${q.status}`).join('\n') : '(yok)',
     ``,
+    relPozBlock,
     `## POZ Kataloğu Örneği (toplam ${POZ_CATALOG.length} kalem)`,
     pozSample.map(p => `- ${p.code} | ${p.name} | ${p.unit} | ₺${p.price}`).join('\n'),
     ``,
