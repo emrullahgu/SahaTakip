@@ -13,6 +13,7 @@ import { QUICK_PROMPTS } from '../services/aiCopilot';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import MarkdownText from '../components/MarkdownText';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
 
 /** Bir uri'yi (web blob/data veya native dosya) base64'e çevirir. */
 async function uriToBase64(uri: string): Promise<string> {
@@ -137,6 +138,7 @@ export default function AiChatScreen() {
           </ScrollView>
         ) : (
           <FlatList
+            {...FLATLIST_DEFAULTS}
             ref={ref}
             data={items}
             keyExtractor={i => i.id}

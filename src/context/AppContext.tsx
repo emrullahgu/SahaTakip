@@ -230,20 +230,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addWorkOrder = (order: WorkOrder) => {
-    setWorkOrders(prev => [order, ...prev]);
+    setWorkOrders(prev => [order, ...prev]); // optimistik: UI hemen güncellenir
+    // Başarı/hata toast'ı GERÇEK kayıt sonucuna göre — önceden koşulsuz "gönderildi"
+    // toast'ı atılıyordu; bulut kaydı başarısız olsa bile kullanıcı başarı görüyordu.
     workOrdersRepo.insert(order)
       .then(() => {
-        if (order.status === 'Onay Bekliyor') {
-          showToast('Onay havuzuna gönderildi ✓');
-        }
+        showToast(order.status === 'Onay Bekliyor'
+          ? 'Rapor gönderildi! Yönetici onay havuzuna eklendi.'
+          : 'İş emri kaydedildi.');
       })
       .catch(e => {
         console.warn('[wo.insert]', e);
-        showToast('⚠️ Bulutta kayıt başarısız: ' + (e?.message || 'bilinmeyen hata'));
+        showToast('⚠️ İş emri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
       });
     auditRepo.log(userId, { action: 'work_order.create', tableName: 'work_orders', refId: order.id });
     void Notify.workOrderCreated(order.client, order.serviceName, order.id);
-    showToast('Rapor gönderildi! Yönetici onay havuzuna eklendi.');
   };
 
   // ===== ATTENDANCE / WAGE =====

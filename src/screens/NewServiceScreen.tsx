@@ -28,6 +28,8 @@ import Toast from '../components/Toast';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } from '../services/catalogOverrides';
 import { getFxRates, liveUnitPriceTry, FX_FALLBACK, type FxRates } from '../services/fx';
+import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { localDateISO } from '../utils/date';
 import type { MaterialCatalogItem } from '../types';
 import { createApproval } from '../services/governance';
 import { newUuid } from '../services/data/repository';
@@ -78,7 +80,14 @@ export default function NewServiceScreen() {
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [showMaterialPicker, setShowMaterialPicker] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  // Arama: TextInput'a bağlı anlık `searchInput`, 250ms debounce ile `materialSearch`'e
+  // düşer. Önceden her tuş basışı 13k+ kalemi filtreleyip UI'ı bloke ediyordu.
+  const [searchInput, setSearchInput] = useState('');
   const [materialSearch, setMaterialSearch] = useState('');
+  React.useEffect(() => {
+    const t = setTimeout(() => setMaterialSearch(searchInput.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [materialCategory, setMaterialCategory] = useState<string | null>(null);
   const [materialBrand, setMaterialBrand] = useState<string | null>(null);
   const [showAllMatCats, setShowAllMatCats] = useState(false);
@@ -167,7 +176,7 @@ export default function NewServiceScreen() {
   // istemezse adı + fiyatı kendi yazar.
   const isManualMat = (id: string) => id.startsWith('MANUAL-');
   const addManualMaterial = () => {
-    const id = 'MANUAL-' + Date.now().toString(36);
+    const id = 'MANUAL-' + newUuid();
     setSelectedMaterials(prev => [...prev, { id, name: '', price: 0, qty: 1, discountPct: 0 }]);
   };
   const updateMaterialName = (id: string, name: string) =>
@@ -177,6 +186,13 @@ export default function NewServiceScreen() {
 
   const lineTotal = (m: SelectedMaterial) =>
     m.price * m.qty * (1 - (m.discountPct ?? 0) / 100);
+
+  // Seçili malzemeleri id→kalem Map'ine al — katalog seçicide her satırda O(n)
+  // `.find` yerine O(1) erişim (400 kalemlik listede belirgin fark).
+  const selectedById = useMemo(
+    () => new Map(selectedMaterials.map(m => [m.id, m])),
+    [selectedMaterials],
+  );
 
   // Para biçimi: 2 ondalık (₺ önekli). Yuvarlama yerine kuruş gösterilir ki
   // birim/iskonto farkı net görünsün (ör. ₺13,57 — eski "₺14" karışıklığı düzeldi).
@@ -334,7 +350,7 @@ export default function NewServiceScreen() {
       id: workOrderId,
       client: selectedClient,
       serviceName: selectedService.name,
-      date: new Date().toISOString().split('T')[0],
+      date: localDateISO(),
       engineer: engineerName,
       // Boş bırakılmış manuel kalemleri (ad girilmemiş) ele.
       materials: selectedMaterials.filter(m => m.qty > 0 && (!isManualMat(m.id) || (m.name || '').trim().length > 0)),
@@ -371,7 +387,8 @@ export default function NewServiceScreen() {
       console.warn('[approval.create]', e);
     }
 
-    Alert.alert('Gönderildi', 'Servis raporu yönetici onay havuzuna düştü.');
+    // Başarı/hata bildirimi addWorkOrder içindeki toast'tan gelir (gerçek kayıt
+    // sonucuna göre) — burada koşulsuz "Gönderildi" Alert'i kaldırıldı.
 
     // Reset form
     setBeforePhoto(null);
@@ -462,7 +479,7 @@ export default function NewServiceScreen() {
         </View>
         <TouchableOpacity
           style={styles.addMaterialBtn}
-          onPress={() => { setMaterialSearch(''); setShowMaterialPicker(true); }}
+          onPress={() => { setSearchInput(''); setMaterialSearch(''); setShowMaterialPicker(true); }}
           activeOpacity={0.85}
         >
           <Ionicons name="add-circle-outline" size={20} color={colors.emerald.default} />
@@ -772,9 +789,9 @@ export default function NewServiceScreen() {
             </View>
 
             <FlatList
+              {...FLATLIST_DEFAULTS}
               data={filteredCustomers}
               keyExtractor={c => c.id}
-              keyboardShouldPersistTaps="handled"
               style={{ maxHeight: 320 }}
               ListEmptyComponent={
                 <Text style={[styles.modalItemSub, { textAlign: 'center', marginVertical: spacing.lg }]}>
@@ -877,12 +894,12 @@ export default function NewServiceScreen() {
                 style={styles.searchInputInline}
                 placeholder="Ad, kod, marka veya kategori"
                 placeholderTextColor={colors.text.faint}
-                value={materialSearch}
-                onChangeText={setMaterialSearch}
+                value={searchInput}
+                onChangeText={setSearchInput}
                 autoCapitalize="none"
               />
-              {materialSearch.length > 0 && (
-                <TouchableOpacity onPress={() => setMaterialSearch('')}>
+              {searchInput.length > 0 && (
+                <TouchableOpacity onPress={() => { setSearchInput(''); setMaterialSearch(''); }}>
                   <Ionicons name="close-circle" size={16} color={colors.text.muted} />
                 </TouchableOpacity>
               )}
@@ -943,9 +960,9 @@ export default function NewServiceScreen() {
             </View>
 
             <FlatList
+              {...FLATLIST_DEFAULTS}
               data={filteredMaterials}
               keyExtractor={m => m.id}
-              keyboardShouldPersistTaps="handled"
               style={{ maxHeight: 420 }}
               ListEmptyComponent={
                 <Text style={[styles.modalItemSub, { textAlign: 'center', marginVertical: spacing.lg }]}>
@@ -953,7 +970,7 @@ export default function NewServiceScreen() {
                 </Text>
               }
               renderItem={({ item: m }) => {
-                const inList = selectedMaterials.find(x => x.id === m.id);
+                const inList = selectedById.get(m.id);
                 const tags = [m.brand, m.category].filter(Boolean).join(' · ');
                 // Yabancı parada CANLI TCMB kuruyla TL fiyatı göster (bayat baked fiyat değil).
                 const livePrice = liveUnitPriceTry(m, fx);
