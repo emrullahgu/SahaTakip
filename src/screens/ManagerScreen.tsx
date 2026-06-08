@@ -18,7 +18,6 @@ import { colors, spacing, radius, typography } from '../theme';
 import type { RootStackParamList } from '../types';
 import { useAppContext } from '../context/AppContext';
 import StatusBadge from '../components/StatusBadge';
-import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import SearchFilterBar, { FilterChip } from '../components/SearchFilterBar';
 import RoleGuard from '../components/RoleGuard';

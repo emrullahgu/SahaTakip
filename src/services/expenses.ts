@@ -59,7 +59,10 @@ async function getCache(): Promise<Expense[]> {
   catch { return []; }
 }
 async function setCache(list: Expense[]) {
-  try { await AsyncStorage.setItem(KEY, JSON.stringify(list)); } catch {}
+  // Yerel yazım hatası GERÇEK veri kaybıdır (bulut da başarısızsa) — sessizce
+  // yutma; en azından logla ki teşhis edilebilsin.
+  try { await AsyncStorage.setItem(KEY, JSON.stringify(list)); }
+  catch (e: any) { console.warn('[expenses.setCache] yerel kayıt başarısız:', e?.message ?? e); }
 }
 
 export async function listExpenses(): Promise<Expense[]> {

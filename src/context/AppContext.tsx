@@ -38,6 +38,7 @@ import {
   clearSyncQueue,
 } from '../services/data';
 import { useAuth } from './AuthContext';
+import { localDateISO } from '../utils/date';
 import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotifications';
 import { Notify } from '../services/notifications';
 
@@ -66,8 +67,15 @@ export const calcLineTotal = (line: QuoteLine) => {
 };
 
 export const calcQuoteTotals = (lines: QuoteLine[]) => {
-  const subtotal = lines.reduce((s, l) => s + calcLineTotal(l).withProfit, 0);
-  const vatTotal = lines.reduce((s, l) => s + calcLineTotal(l).vat, 0);
+  // Tek geçişte hesapla — önceden her satır için calcLineTotal 2 kez çağrılıyordu
+  // (subtotal + vat ayrı reduce). Büyük tekliflerde gereksiz iş + yuvarlama riski.
+  let subtotal = 0;
+  let vatTotal = 0;
+  for (const l of lines) {
+    const t = calcLineTotal(l);
+    subtotal += t.withProfit;
+    vatTotal += t.vat;
+  }
   return { subtotal, vatTotal, grandTotal: subtotal + vatTotal };
 };
 
@@ -376,7 +384,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       id: woId,
       client: q.customerTitle || q.customerName,
       serviceName: q.title,
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateISO(),
       engineer: q.engineer,
       materials: q.lines.map(l => ({
         id: l.pozId,

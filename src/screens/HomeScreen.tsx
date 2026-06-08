@@ -25,7 +25,6 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/StatusBadge';
 import FadeInView from '../components/FadeInView';
-import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import { RootStackParamList, TabParamList } from '../types';
 

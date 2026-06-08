@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography } from '../theme';
-import Toast from '../components/Toast';
 import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
 import { useAppContext } from '../context/AppContext';
