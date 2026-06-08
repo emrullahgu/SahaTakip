@@ -163,7 +163,7 @@ export default function ChatbotFAB() {
                 <TouchableOpacity onPress={() => setPending(null)}><Ionicons name="close-circle" size={18} color={colors.rose.default} /></TouchableOpacity>
               </View>
             )}
-            <View style={s.inputRow}>
+            <View style={[s.inputRow, { paddingBottom: insets.bottom + spacing.sm }]}>
               <TouchableOpacity style={s.attachBtn} onPress={pickImage} disabled={busy} hitSlop={6}>
                 <Ionicons name="image-outline" size={22} color={colors.text.muted} />
               </TouchableOpacity>

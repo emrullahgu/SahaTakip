@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,6 +68,11 @@ export default function NewServiceScreen() {
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
   const [otherCost, setOtherCost] = useState('');
   const [notes, setNotes] = useState('');
+  // Çift kayıt koruması: foto yüklemeleri birkaç saniye sürebiliyor; bu sırada
+  // butona tekrar basılınca aynı iş emri 2 kez oluşuyordu. submittingRef senkron
+  // koruma (hızlı çift dokunuş), submitting state buton görünümü içindir.
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showServicePicker, setShowServicePicker] = useState(false);
@@ -287,6 +293,11 @@ export default function NewServiceScreen() {
       Alert.alert('Müşteri Seçin', 'Devam etmek için bir müşteri seçin.');
       return;
     }
+    // Çift kayıt koruması: zaten gönderiliyorsa tekrar başlatma.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
     // Fotoğraflar artık opsiyonel — saha hızlı kayıt için engel olmaz.
 
     const materialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
@@ -370,6 +381,10 @@ export default function NewServiceScreen() {
     setOtherCost('');
     setNotes('');
     navigation.navigate('Services');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -671,12 +686,15 @@ export default function NewServiceScreen() {
 
         {/* Submit */}
         <TouchableOpacity
-          style={styles.submitBtn}
+          style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
           onPress={handleSubmit}
           activeOpacity={0.85}
+          disabled={submitting}
         >
-          <Ionicons name="send" size={16} color={colors.bg.primary} />
-          <Text style={styles.submitBtnText}>İŞİ ONAYA GÖNDER</Text>
+          {submitting
+            ? <ActivityIndicator size="small" color={colors.bg.primary} />
+            : <Ionicons name="send" size={16} color={colors.bg.primary} />}
+          <Text style={styles.submitBtnText}>{submitting ? 'GÖNDERİLİYOR…' : 'İŞİ ONAYA GÖNDER'}</Text>
         </TouchableOpacity>
       </ScrollView>
 

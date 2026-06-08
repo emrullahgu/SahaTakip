@@ -177,6 +177,56 @@ export default function VehicleFormScreen() {
             placeholderTextColor={colors.text.faint}
           />
 
+          <Text style={styles.label}>Kasko Bitiş Tarihi (YYYY-AA-GG)</Text>
+          <TextInput
+            value={form.kaskoDueAt ?? ''}
+            onChangeText={t => set('kaskoDueAt', t || undefined)}
+            style={styles.input}
+            placeholder="2026-12-31"
+            placeholderTextColor={colors.text.faint}
+          />
+
+          <Text style={styles.sectionTitle}>Son Bakım Bilgisi</Text>
+
+          <Text style={styles.label}>Son Bakım Tarihi (YYYY-AA-GG)</Text>
+          <TextInput
+            value={form.lastServiceAt ?? ''}
+            onChangeText={t => set('lastServiceAt', t || undefined)}
+            style={styles.input}
+            placeholder="2026-06-01"
+            placeholderTextColor={colors.text.faint}
+          />
+
+          <Text style={styles.label}>Son Bakım Km</Text>
+          <TextInput
+            value={form.lastServiceKm !== undefined ? String(form.lastServiceKm) : ''}
+            onChangeText={t => set('lastServiceKm', t === '' ? undefined : Number(t.replace(/[^0-9]/g, '')) || undefined)}
+            style={styles.input}
+            placeholder="0"
+            placeholderTextColor={colors.text.faint}
+            keyboardType="number-pad"
+          />
+
+          <Text style={styles.label}>Yapılan İşlemler</Text>
+          <TextInput
+            value={form.lastServiceNote ?? ''}
+            onChangeText={t => set('lastServiceNote', t || undefined)}
+            style={[styles.input, { minHeight: 60, textAlignVertical: 'top' }]}
+            placeholder="Yağ değişimi, fren balatası, filtre…"
+            placeholderTextColor={colors.text.faint}
+            multiline
+          />
+
+          <Text style={styles.label}>Bakım Ücreti (₺)</Text>
+          <TextInput
+            value={form.lastServiceCost !== undefined ? String(form.lastServiceCost) : ''}
+            onChangeText={t => set('lastServiceCost', t === '' ? undefined : Number(t.replace(',', '.')) || undefined)}
+            style={styles.input}
+            placeholder="0"
+            placeholderTextColor={colors.text.faint}
+            keyboardType="decimal-pad"
+          />
+
           <Text style={styles.label}>Notlar</Text>
           <TextInput
             value={form.notes ?? ''}
@@ -206,6 +256,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: spacing.md,
     marginBottom: 4,
+  },
+  sectionTitle: {
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: '800',
+    marginTop: spacing.lg,
+    marginBottom: 2,
   },
   input: {
     backgroundColor: colors.bg.secondary,

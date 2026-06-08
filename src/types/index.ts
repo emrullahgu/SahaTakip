@@ -442,6 +442,12 @@ export interface Vehicle {
   fuelType?: 'benzin' | 'dizel' | 'lpg' | 'elektrik' | 'hibrit';
   inspectionDueAt?: string;
   insuranceDueAt?: string;
+  // Kasko bitiş ve son bakım bilgisi (saha hızlı kayıt için araç kartında).
+  kaskoDueAt?: string;
+  lastServiceAt?: string;       // son bakım tarihi (YYYY-AA-GG)
+  lastServiceKm?: number;       // son bakımdaki km
+  lastServiceNote?: string;     // yapılan işlemler
+  lastServiceCost?: number;     // bakım ücreti (₺)
   notes?: string;
   createdAt: string;
 }

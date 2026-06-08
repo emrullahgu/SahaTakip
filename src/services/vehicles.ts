@@ -45,6 +45,11 @@ function fromRow(r: any): Vehicle {
     fuelType: r.fuel_type ?? undefined,
     inspectionDueAt: r.inspection_due_at ?? undefined,
     insuranceDueAt: r.insurance_due_at ?? undefined,
+    kaskoDueAt: r.kasko_due_at ?? undefined,
+    lastServiceAt: r.last_service_at ?? undefined,
+    lastServiceKm: r.last_service_km == null ? undefined : Number(r.last_service_km),
+    lastServiceNote: r.last_service_note ?? undefined,
+    lastServiceCost: r.last_service_cost == null ? undefined : Number(r.last_service_cost),
     notes: r.notes ?? undefined,
     createdAt: r.created_at ?? new Date().toISOString(),
   };
@@ -62,6 +67,11 @@ function toRow(v: Vehicle): Record<string, any> {
     fuel_type: v.fuelType ?? null,
     inspection_due_at: v.inspectionDueAt ?? null,
     insurance_due_at: v.insuranceDueAt ?? null,
+    kasko_due_at: v.kaskoDueAt ?? null,
+    last_service_at: v.lastServiceAt ?? null,
+    last_service_km: v.lastServiceKm ?? null,
+    last_service_note: v.lastServiceNote ?? null,
+    last_service_cost: v.lastServiceCost ?? null,
     notes: v.notes ?? null,
   };
   if (UUID_RE.test(v.id)) row.id = v.id;
