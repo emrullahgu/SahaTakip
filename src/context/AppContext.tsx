@@ -309,8 +309,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // ===== QUOTE actions =====
   const generateQuoteNumber = () => {
     const year = new Date().getFullYear();
-    const next = quotes.length + 1;
-    return `TK-${year}-${String(next).padStart(4, '0')}`;
+    const prefix = `TK-${year}-`;
+    // length+1 SİLME sonrası çakışırdı (iki teklif aynı resmi numarayı alır).
+    // Mevcut numaralardan en büyüğü +1 → yeni numara her zaman aktiflerin üstünde.
+    const maxSeq = quotes.reduce((m, q) => {
+      if (!q.number || !q.number.startsWith(prefix)) return m;
+      const n = parseInt(q.number.slice(prefix.length), 10);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, 0);
+    return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
   };
 
   // Yazma metodları GERÇEK DB sonucunu döndürür (await + rollback). Ajan/ekran
@@ -410,7 +417,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   ): string | null => {
     const q = quotes.find(x => x.id === quoteId);
     if (!q) return null;
-    const woId = `IE-${new Date().getFullYear()}-${String(workOrders.length + 1).padStart(3, '0')}`;
+    // İDEMPOTENT KORUMA: zaten kabul edilmiş teklif tekrar iş emri ÜRETMEZ
+    // (paylaşılan link + doğrudan çağrı ile çift iş emri / üzerine yazma engellenir).
+    if (q.generatedWorkOrderId || q.status === 'Kabul Edildi' || q.status === 'Faturalandırıldı') {
+      showToast('Bu teklif zaten kabul edilmiş.', 'error');
+      return q.generatedWorkOrderId ?? null;
+    }
+    const year = new Date().getFullYear();
+    const woPrefix = `IE-${year}-`;
+    // length+1 silme/eşzamanlı kabulde çakışırdı; mevcut IE numaralarından en büyüğü +1.
+    const maxWoSeq = workOrders.reduce((m, w) => {
+      if (!w.id || !w.id.startsWith(woPrefix)) return m;
+      const n = parseInt(w.id.slice(woPrefix.length), 10);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, 0);
+    const woId = `${woPrefix}${String(maxWoSeq + 1).padStart(3, '0')}`;
     const newWo: WorkOrder = {
       id: woId,
       client: q.customerTitle || q.customerName,
@@ -441,6 +462,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.warn('[wo.insert.fromQuote]', e);
       showToast('⚠️ İş emri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
     });
+    // İş emri oluşumu da loglanır + bildirilir (manuel addWorkOrder ile tutarlı;
+    // önceden yalnız 'quote.accept' loglanıyordu — iş emri sessizce doğuyordu).
+    auditRepo.log(userId, { action: 'work_order.create', tableName: 'work_orders', refId: woId, meta: { fromQuote: q.id } });
+    void Notify.workOrderCreated(newWo.client, newWo.serviceName, woId);
 
     const acceptedQuote: Quote = {
       ...q,
