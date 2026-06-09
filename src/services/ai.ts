@@ -61,25 +61,26 @@ export async function fetchWithTimeout(
 // Sağlayıcı kartına tıklandığında otomatik dolduracağımız built-in anahtarlar —
 // Önce Supabase'den indirilmiş `ai_settings.keys` map'i, yoksa .env fallback.
 export function getBuiltinKey(p: AiProvider): string | undefined {
-  // 1) Supabase cache (admin'in `app_settings.ai_settings.keys` üzerinden gönderdiği map)
-  try {
-    // require yerine senkron erişmek için AsyncStorage kullanılamaz; cache'i ayrı bir
-    // module-level değişkende tutuyoruz; syncRemoteAiSettings çağrısı her giriş yapan
-    // kullanıcı için bunu doldurur.
-    const map = _cachedRemoteKeys;
-    if (map && map[p]) return map[p];
-  } catch { /* ignore */ }
-  // 2) .env fallback
-  switch (p) {
-    case 'openai': return process.env.EXPO_PUBLIC_OPENAI_KEY;
-    case 'claude': return process.env.EXPO_PUBLIC_CLAUDE_KEY;
-    case 'gemini': return process.env.EXPO_PUBLIC_GEMINI_KEY;
-    case 'groq': return process.env.EXPO_PUBLIC_GROQ_KEY;
-    default: return undefined;
-  }
+  // Yalnızca ÇALIŞMA ZAMANINDA gelen anahtarlar: admin'in Ayarlar'dan girdiği ve
+  // `app_settings.ai_settings.keys` üzerinden senkronlanan map (_cachedRemoteKeys;
+  // syncRemoteAiSettings her giriş yapan kullanıcı için doldurur).
+  // GÜVENLİK: .env (EXPO_PUBLIC_*_KEY) fallback'i KALDIRILDI — o değişkenler web/APK
+  // bundle'ına derlenip kolayca çıkarılabiliyordu (kritik sızıntı). Anahtarlar artık
+  // bundle'a girmez; sunucuda (ai-proxy/ai-tools/ai-vision edge env) ya da admin'in
+  // çalışma-zamanı girişinde tutulur.
+  const map = _cachedRemoteKeys;
+  if (map && map[p]) return map[p];
+  return undefined;
 }
 
 let _cachedRemoteKeys: Partial<Record<AiProvider, string>> | null = null;
+
+/** Sağlayıcı anahtarlarını çalışma-zamanı bellek önbelleğine yükler (replace).
+ *  Anahtarlar yalnızca güvenli çalışma-zamanı kaynağından (Supabase app_settings)
+ *  gelir; client bundle'ına derlenmez. fetchRemoteAiSettings ve testler kullanır. */
+export function primeRemoteAiKeys(map: Partial<Record<AiProvider, string>> | null): void {
+  _cachedRemoteKeys = map ? { ...map } : null;
+}
 
 // Remote (Supabase) → tüm kullanıcılar tarafından paylaşılan ayarları çek.
 // Admin bir kere yazar, herkes okur. RLS bunu zorunlu kılar.
@@ -95,7 +96,7 @@ async function fetchRemoteAiSettings(): Promise<AiSettings | null> {
     const v = data.value as AiSettings & { keys?: Partial<Record<AiProvider, string>> };
     // `keys` map'ini cache'e al — sağlayıcı değiştirildiğinde UI doğru anahtarı bulur.
     if (v?.keys && typeof v.keys === 'object') {
-      _cachedRemoteKeys = v.keys;
+      primeRemoteAiKeys(v.keys);
     }
     if (v?.provider && v.provider !== 'mock' && v.apiKey) return v;
     return null;
@@ -157,22 +158,11 @@ async function resolveAiSettings(): Promise<AiSettings> {
     return remote;
   }
 
-  // 3) Fallback: .env'den seed et (yalnızca anahtar girilmemişse).
-  const envProv = (process.env.EXPO_PUBLIC_AI_DEFAULT_PROVIDER || '').toLowerCase() as AiProvider;
-  const envKey =
-    envProv === 'openai' ? process.env.EXPO_PUBLIC_OPENAI_KEY :
-    envProv === 'claude' ? process.env.EXPO_PUBLIC_CLAUDE_KEY :
-    envProv === 'gemini' ? process.env.EXPO_PUBLIC_GEMINI_KEY :
-    undefined;
-  if (envProv && envKey && envProv !== 'mock') {
-    return { provider: envProv, apiKey: envKey, model: DEFAULT_MODEL[envProv] };
-  }
-  // İkincil: hangi anahtar varsa onu kullan (TERCİH SIRASI: Claude → OpenAI → Gemini → Groq).
-  if (process.env.EXPO_PUBLIC_CLAUDE_KEY) return { provider: 'claude', apiKey: process.env.EXPO_PUBLIC_CLAUDE_KEY, model: DEFAULT_MODEL.claude };
-  if (process.env.EXPO_PUBLIC_OPENAI_KEY) return { provider: 'openai', apiKey: process.env.EXPO_PUBLIC_OPENAI_KEY, model: DEFAULT_MODEL.openai };
-  if (process.env.EXPO_PUBLIC_GEMINI_KEY) return { provider: 'gemini', apiKey: process.env.EXPO_PUBLIC_GEMINI_KEY, model: DEFAULT_MODEL.gemini };
-  if (process.env.EXPO_PUBLIC_GROQ_KEY) return { provider: 'groq', apiKey: process.env.EXPO_PUBLIC_GROQ_KEY, model: DEFAULT_MODEL.groq };
-
+  // 3) Anahtar yok → demo (mock).
+  // GÜVENLİK: .env (EXPO_PUBLIC_*_KEY) fallback'i KALDIRILDI — bundle'a gömülen
+  // anahtar sızıntısını kapatır. Üretimde metin için proxy (yukarıda) tercih edilir;
+  // ajan/görsel için admin Ayarlar ekranından anahtar girer (cihazda AsyncStorage)
+  // veya app_settings üzerinden senkronlanır.
   return { provider: 'mock' };
 }
 

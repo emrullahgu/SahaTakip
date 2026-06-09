@@ -8,7 +8,7 @@ import {
   chatWithTools, chatWithToolsFallback, sanitizeGeminiSchema, toGeminiTools, toGeminiContents, parseGeminiToolResponse,
   toClaudeTools, toClaudeMessages, parseClaudeToolResponse, fetchWithTimeout,
   normalizeClaudeModel,
-  shouldUseProxy, PROXY_SENTINEL,
+  shouldUseProxy, PROXY_SENTINEL, primeRemoteAiKeys,
   type ChatMessage, type ToolSchema,
 } from '../ai';
 
@@ -535,7 +535,8 @@ describe('AI Service', () => {
     });
 
     it('kalıcı hatada anahtarı olan diğer sağlayıcıya geçer', async () => {
-      process.env.EXPO_PUBLIC_CLAUDE_KEY = 'claude-test-key';
+      // Anahtarlar artık .env değil çalışma-zamanı (app_settings) önbelleğinden gelir.
+      primeRemoteAiKeys({ claude: 'claude-test-key' });
       try {
         mockFetch
           // primary openai → kalıcı 401 (retry edilmez)
@@ -547,7 +548,7 @@ describe('AI Service', () => {
         const claudeCall = mockFetch.mock.calls.find(c => String(c[0]).includes('anthropic'));
         expect(claudeCall).toBeTruthy();
       } finally {
-        delete process.env.EXPO_PUBLIC_CLAUDE_KEY;
+        primeRemoteAiKeys(null);
       }
     });
   });
