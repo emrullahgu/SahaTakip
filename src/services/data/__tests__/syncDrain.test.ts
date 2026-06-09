@@ -1,0 +1,79 @@
+// syncDrain.applyOp — offline→online uzlaştırma dal mantığı (denetim M10).
+// Kritik: work_orders keyCol='number', soft vs hard delete, created_by update'te
+// düşürülür, quotes insert quote_lines'ı da yazar. Hata = saha işinin kalıcı kaybı.
+
+// jest.mock factory yalnız `mock`-önekli dış değişkeni referans alabilir.
+const mockCalls: any[] = [];
+
+jest.mock('../repository', () => {
+  const builder = (table: string) => ({
+    insert: (row: any) => { mockCalls.push({ op: 'insert', table, row }); return Promise.resolve({ error: null }); },
+    update: (row: any) => {
+      mockCalls.push({ op: 'update', table, row });
+      return { eq: (col: string, val: any) => { mockCalls.push({ op: 'update.eq', table, col, val }); return Promise.resolve({ error: null }); } };
+    },
+    delete: () => ({ eq: (col: string, val: any) => { mockCalls.push({ op: 'delete.eq', table, col, val }); return Promise.resolve({ error: null }); } }),
+  });
+  return {
+    supabase: {
+      from: (t: string) => builder(t),
+      auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
+    },
+    isOnlineMode: () => true,
+    getSyncQueue: async () => [],
+    clearSyncOp: async () => {},
+  };
+});
+
+jest.mock('../mappers', () => ({
+  quoteToRow: (p: any, uid?: string) => ({ id: p.id, created_by: uid }),
+  quoteLineToRow: (qid: string, l: any) => ({ quote_id: qid, poz: l.pozId }),
+  customerToRow: (p: any, uid?: string) => ({ id: p.id, created_by: uid }),
+  workOrderToRow: (p: any, uid?: string) => ({ number: p.id, created_by: uid, status: p.status }),
+  employeeToRow: (p: any) => ({ id: p.id }),
+}));
+
+import { applyOp } from '../syncDrain';
+
+beforeEach(() => { mockCalls.length = 0; });
+
+describe('applyOp — delete dalı', () => {
+  it('work_orders delete → SOFT (deleted_at) ve keyCol "number"', async () => {
+    await applyOp({ table: 'work_orders', action: 'delete', payload: { id: 'IE-2026-001' } });
+    const eq = mockCalls.find(c => c.op === 'update.eq');
+    expect(eq).toMatchObject({ table: 'work_orders', col: 'number', val: 'IE-2026-001' });
+    const upd = mockCalls.find(c => c.op === 'update');
+    expect(upd.row).toHaveProperty('deleted_at');
+    expect(mockCalls.find(c => c.op === 'delete.eq')).toBeUndefined(); // hard delete olmamalı
+  });
+
+  it('customers delete → SOFT, keyCol "id"', async () => {
+    await applyOp({ table: 'customers', action: 'delete', payload: { id: 'cu-1' } });
+    expect(mockCalls.find(c => c.op === 'update.eq')).toMatchObject({ table: 'customers', col: 'id', val: 'cu-1' });
+  });
+
+  it('employees delete → HARD delete (soft değil)', async () => {
+    await applyOp({ table: 'employees', action: 'delete', payload: { id: 'e-1' } });
+    expect(mockCalls.find(c => c.op === 'delete.eq')).toMatchObject({ table: 'employees', col: 'id', val: 'e-1' });
+    expect(mockCalls.find(c => c.op === 'update.eq')).toBeUndefined();
+  });
+});
+
+describe('applyOp — insert / update', () => {
+  it('quotes insert → quotes + quote_lines yazar', async () => {
+    await applyOp({ table: 'quotes', action: 'insert', payload: { id: 'q-1', lines: [{ pozId: 'P1' }, { pozId: 'P2' }] } });
+    const q = mockCalls.filter(c => c.op === 'insert' && c.table === 'quotes');
+    const ql = mockCalls.filter(c => c.op === 'insert' && c.table === 'quote_lines');
+    expect(q).toHaveLength(1);
+    expect(ql).toHaveLength(1);
+    expect(ql[0].row).toHaveLength(2); // iki satır
+  });
+
+  it('work_orders update → keyCol "number" ve created_by GÖNDERİLMEZ (sahiplik korunur)', async () => {
+    await applyOp({ table: 'work_orders', action: 'update', payload: { id: 'IE-2026-002', status: 'Tamamlandı' } });
+    expect(mockCalls.find(c => c.op === 'update.eq')).toMatchObject({ table: 'work_orders', col: 'number', val: 'IE-2026-002' });
+    const upd = mockCalls.find(c => c.op === 'update' && c.table === 'work_orders');
+    expect(upd.row).not.toHaveProperty('created_by');
+    expect(upd.row).toHaveProperty('status', 'Tamamlandı');
+  });
+});

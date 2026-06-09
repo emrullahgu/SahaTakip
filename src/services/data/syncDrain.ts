@@ -51,7 +51,8 @@ export async function drainSyncQueue(): Promise<{ ok: number; failed: number }> 
   return { ok, failed };
 }
 
-async function applyOp(op: { table: string; action: string; payload: any }) {
+// export: birim testi (syncDrain.test.ts) doğrudan dal mantığını doğrular (denetim M10).
+export async function applyOp(op: { table: string; action: string; payload: any }) {
   const { table, action, payload } = op;
 
   // Offline biriken kayıtlar dren edilirken created_by set edilmeli; aksi halde
