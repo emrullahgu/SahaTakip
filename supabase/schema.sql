@@ -207,6 +207,30 @@ drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own" on public.profiles
   for update using (id = auth.uid());
 
+-- Yetki yÃ¼kseltme korumasÄ±: kullanÄ±cÄ± kendi profilinde role/approval_status/
+-- approved_at/approved_by/rejection_reason sÃ¼tunlarÄ±nÄ± DOÄžRUDAN UPDATE ile
+-- deÄŸiÅŸtiremez (self-promote engellenir). Bu sÃ¼tunlar yalnÄ±z SECURITY DEFINER
+-- RPC'leri (set_user_role / set_user_approval) Ã¼zerinden deÄŸiÅŸir; o fonksiyonlar
+-- owner (postgres) olarak Ã§alÄ±ÅŸtÄ±ÄŸÄ± iÃ§in current_user 'authenticated' deÄŸildir.
+create or replace function public.protect_profile_privileged_cols()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if current_user in ('authenticated', 'anon') then
+    new.role             := old.role;
+    new.approval_status  := old.approval_status;
+    new.approved_at      := old.approved_at;
+    new.approved_by      := old.approved_by;
+    new.rejection_reason := old.rejection_reason;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_protect_profile_privileged_cols on public.profiles;
+create trigger trg_protect_profile_privileged_cols
+  before update on public.profiles
+  for each row execute function public.protect_profile_privileged_cols();
+
 -- MÃ¼ÅŸteriler: tÃ¼m kimliÄŸi doÄŸrulanmÄ±ÅŸ kullanÄ±cÄ±lar okuyabilir; manager/admin yazar
 drop policy if exists "customers_all_read" on public.customers;
 create policy "customers_all_read" on public.customers
@@ -1636,13 +1660,13 @@ create policy "inbox_update_auth" on public.inbox_messages
 
 
 -- ====================================================================
--- STORAGE RLS (POZ-FIX 2026-05-24) — photos / signatures / documents / customer-docs
+-- STORAGE RLS (POZ-FIX 2026-05-24) ï¿½ photos / signatures / documents / customer-docs
 -- ====================================================================
--- Supabase Dashboard > Storage > "photos" bucket'ý (Public read) oluþturmuþ olman gerek.
--- Bu policy'ler authenticated user'larýn bucket'a yükleyebilmesini saðlar.
+-- Supabase Dashboard > Storage > "photos" bucket'ï¿½ (Public read) oluï¿½turmuï¿½ olman gerek.
+-- Bu policy'ler authenticated user'larï¿½n bucket'a yï¿½kleyebilmesini saï¿½lar.
 -- Aksi halde supabase.storage.from('photos').upload(...) "new row violates RLS" ile reddedilir.
 
--- photos: yetkili kullanýcý yazabilir, herkes okuyabilir (bucket zaten public)
+-- photos: yetkili kullanï¿½cï¿½ yazabilir, herkes okuyabilir (bucket zaten public)
 drop policy if exists "photos_authenticated_insert" on storage.objects;
 create policy "photos_authenticated_insert" on storage.objects
   for insert to authenticated
@@ -1671,10 +1695,10 @@ create policy "private_buckets_auth_all" on storage.objects
   with check (bucket_id in ('signatures','documents','customer-docs'));
 
 -- ====================================================================
--- WORK ORDERS DELETE (POZ-FIX 2026-05-24) — saha kullanýcýsý atandýðý iþi silebilsin
+-- WORK ORDERS DELETE (POZ-FIX 2026-05-24) ï¿½ saha kullanï¿½cï¿½sï¿½ atandï¿½ï¿½ï¿½ iï¿½i silebilsin
 -- ====================================================================
 -- Eski wo_owner_write created_by + admin/manager'a izin veriyordu.
--- Yeni: assigned_to_id (atanan saha kullanýcýsý) da silebilsin.
+-- Yeni: assigned_to_id (atanan saha kullanï¿½cï¿½sï¿½) da silebilsin.
 drop policy if exists "wo_owner_write" on public.work_orders;
 create policy "wo_owner_write" on public.work_orders
   for all using (

@@ -13,6 +13,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,46 @@ interface TranscriptItem {
   data?: any;
 }
 
+// Dışa mesaj gönderen yüksek riskli tool'lar: onay diyaloğunda alıcı + TAM gövde
+// gösterilmeli (500 karaktere kırpma yok). Argümanları kanal bazında ayrıştırır.
+const OUTBOUND_TOOLS = new Set(['gmail_send', 'whatsapp_send']);
+
+interface OutboundPreview {
+  channel: string;
+  recipient: string;
+  subject?: string;
+  body: string;
+  extra: { label: string; value: string }[];
+}
+
+function outboundPreview(toolName: string, args: any): OutboundPreview | null {
+  if (toolName === 'gmail_send') {
+    return {
+      channel: 'E-posta (Gmail)',
+      recipient: String(args?.to ?? '').trim() || '(alıcı boş!)',
+      subject: String(args?.subject ?? '').trim() || '(konu yok)',
+      body: String(args?.body ?? ''),
+      extra: [],
+    };
+  }
+  if (toolName === 'whatsapp_send') {
+    const extra: { label: string; value: string }[] = [];
+    if (args?.templateName) extra.push({ label: 'Onaylı şablon', value: String(args.templateName) });
+    if (Array.isArray(args?.templateParams) && args.templateParams.length) {
+      extra.push({ label: 'Şablon değişkenleri', value: args.templateParams.map(String).join('  |  ') });
+    }
+    return {
+      channel: 'WhatsApp',
+      recipient: String(args?.phone ?? '').trim() || '(telefon boş!)',
+      body:
+        String(args?.message ?? '').trim() ||
+        (args?.templateName ? '(düz metin yok — yukarıdaki onaylı şablon gönderilecek)' : ''),
+      extra,
+    };
+  }
+  return null;
+}
+
 const AgentConsoleScreen: React.FC = () => {
   const app = useAppContext();
   const nav = useNavigation<Nav>();
@@ -44,14 +85,37 @@ const AgentConsoleScreen: React.FC = () => {
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
   const stopRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
+  // Yüksek riskli dışa mesaj onayı için özel modal durumu (Alert'in kırptığı
+  // gövdeyi tam ve kaydırılabilir göster). resolve ref'te tutulur.
+  const [pendingConfirm, setPendingConfirm] = useState<{ toolName: string; preview: OutboundPreview } | null>(null);
+  const confirmResolveRef = useRef<((ok: boolean) => void) | null>(null);
 
   const append = useCallback((it: Omit<TranscriptItem, 'id'>) => {
     setTranscript(prev => [...prev, { ...it, id: Math.random().toString(36).slice(2) }]);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
   }, []);
 
+  // Modal'dan (onayla/iptal) gelen kararı bekleyen promise'i çözer.
+  const resolvePendingConfirm = useCallback((ok: boolean) => {
+    const r = confirmResolveRef.current;
+    confirmResolveRef.current = null;
+    setPendingConfirm(null);
+    r?.(ok);
+  }, []);
+
   const confirmDestructive = useCallback((toolName: string, args: any): Promise<boolean> => {
     return new Promise(resolve => {
+      // Dışa mesaj gönderen tool'lar (gmail_send/whatsapp_send): alıcı + TAM gövde
+      // her zaman tam görünmeli. Alert/confirm 500 karakterde kesip gövdeyi gizlerdi;
+      // bunun yerine kaydırılabilir özel modal'a yönlendir (web + native).
+      const preview = OUTBOUND_TOOLS.has(toolName) ? outboundPreview(toolName, args) : null;
+      if (preview) {
+        confirmResolveRef.current = resolve;
+        setPendingConfirm({ toolName, preview });
+        return;
+      }
+
+      // Diğer destructive tool'lar için genel 500 karakter önizleme yeterli.
       const argsStr = JSON.stringify(args, null, 2).slice(0, 500);
       if (Platform.OS === 'web') {
         // eslint-disable-next-line no-alert
@@ -248,6 +312,89 @@ const AgentConsoleScreen: React.FC = () => {
           ))}
         </ScrollView>
       )}
+
+      {/* DIŞA MESAJ ONAYI — alıcı + TAM gövde (kaydırılabilir). Prompt-injection'a
+          karşı bilinçli onay: web'den okunan içerik bu mesajı yönlendirmiş olabilir. */}
+      <Modal
+        visible={!!pendingConfirm}
+        transparent
+        animationType="slide"
+        onRequestClose={() => resolvePendingConfirm(false)}
+      >
+        <View style={st.confirmOverlay}>
+          <View style={st.confirmSheet}>
+            {pendingConfirm && (
+              <>
+                <View style={st.confirmHeader}>
+                  <Ionicons name="warning" size={20} color={colors.rose.default} />
+                  <Text style={st.confirmTitle}>Dışa mesaj gönderilecek — onayla</Text>
+                  <TouchableOpacity onPress={() => resolvePendingConfirm(false)} accessibilityLabel="Kapat">
+                    <Ionicons name="close" size={22} color={colors.text.muted} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={st.confirmWarn}>
+                  ⚠️ Bu mesajı ajan hazırladı. Ajan web'den içerik okuduysa o içerik mesajı
+                  yönlendirmiş olabilir. Alıcıyı ve aşağıdaki TAM gövdeyi kontrol etmeden onaylama.
+                </Text>
+
+                <View style={st.fieldRow}>
+                  <Text style={st.fieldLabel}>Kanal</Text>
+                  <Text style={st.fieldValue}>{pendingConfirm.preview.channel}</Text>
+                </View>
+                <View style={st.fieldRow}>
+                  <Text style={st.fieldLabel}>Alıcı</Text>
+                  <Text style={[st.fieldValue, st.recipientValue]} selectable>
+                    {pendingConfirm.preview.recipient}
+                  </Text>
+                </View>
+                {pendingConfirm.preview.subject != null ? (
+                  <View style={st.fieldRow}>
+                    <Text style={st.fieldLabel}>Konu</Text>
+                    <Text style={st.fieldValue} selectable>{pendingConfirm.preview.subject}</Text>
+                  </View>
+                ) : null}
+                {pendingConfirm.preview.extra.map(e => (
+                  <View key={e.label} style={st.fieldRow}>
+                    <Text style={st.fieldLabel}>{e.label}</Text>
+                    <Text style={st.fieldValue} selectable>{e.value}</Text>
+                  </View>
+                ))}
+
+                <Text style={st.bodyLabel}>
+                  Mesaj gövdesi (tam · {pendingConfirm.preview.body.length} karakter)
+                </Text>
+                <ScrollView style={st.bodyBox} contentContainerStyle={{ padding: spacing.sm }}>
+                  <Text style={st.bodyText} selectable>
+                    {pendingConfirm.preview.body || '(boş gövde)'}
+                  </Text>
+                </ScrollView>
+
+                <View style={st.confirmActions}>
+                  <TouchableOpacity
+                    style={[st.btn, st.btnGhost, st.confirmBtn]}
+                    onPress={() => resolvePendingConfirm(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Gönderimi iptal et"
+                  >
+                    <Ionicons name="close" size={16} color={colors.text.primary} />
+                    <Text style={st.btnTextGhost}>İptal</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[st.btn, st.btnDanger, st.confirmBtn]}
+                    onPress={() => resolvePendingConfirm(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Mesajı gönder"
+                  >
+                    <Ionicons name="send" size={16} color="#fff" />
+                    <Text style={st.btnTextPrimary}>Gönder</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -350,6 +497,51 @@ const st = StyleSheet.create({
   // koyu renk olmalı. (colors.text.primary koyu temada açık olur → açık baloncukta
   // okunmazdı.)
   bubbleText: { color: '#1f2937', fontSize: 13, lineHeight: 19 },
+
+  // Dışa mesaj onay modal'ı
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  confirmSheet: {
+    backgroundColor: colors.bg.secondary,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: spacing.lg,
+    maxHeight: '88%',
+  },
+  confirmHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  confirmTitle: { ...typography.h4, color: colors.text.primary, flex: 1 },
+  confirmWarn: {
+    color: colors.text.secondary,
+    fontSize: 12,
+    lineHeight: 18,
+    backgroundColor: colors.rose.bg,
+    borderColor: colors.rose.border,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  fieldRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xs },
+  fieldLabel: { width: 78, color: colors.text.muted, fontSize: 12, fontWeight: '700', paddingTop: 1 },
+  fieldValue: { flex: 1, color: colors.text.primary, fontSize: 14, lineHeight: 19 },
+  recipientValue: { fontWeight: '800', color: colors.emerald.dark },
+  bodyLabel: {
+    color: colors.text.muted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  bodyBox: {
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.sm,
+    backgroundColor: colors.bg.primary,
+    maxHeight: 280,
+    marginBottom: spacing.md,
+  },
+  bodyText: { color: colors.text.primary, fontSize: 13, lineHeight: 20 },
+  confirmActions: { flexDirection: 'row', gap: spacing.sm },
+  confirmBtn: { flex: 1, justifyContent: 'center' },
 });
 
 export default AgentConsoleScreen;
