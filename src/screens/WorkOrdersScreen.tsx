@@ -213,7 +213,7 @@ export default function WorkOrdersScreen() {
                         destructive: true,
                         confirm: `${item.title} iş emri silinecek. Emin misiniz?`,
                         confirmTitle: 'Silinsin mi?',
-                        onPress: () => deleteWorkOrder(item.id),
+                        onPress: () => { void deleteWorkOrder(item.id); },
                       },
                     ]}
                   />

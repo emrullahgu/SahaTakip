@@ -89,6 +89,10 @@ export const calcQuoteTotals = (lines: QuoteLine[]) => {
 // ======================================================
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
 
+/** Yazma işleminin GERÇEK sonucu — ajanın "yaptım" derken yalan söylememesi için
+ *  (Gereksinim 3). ok=DB yazımı başarılı; başarısızsa hata mesajı döner. */
+export type WriteResult = { ok: boolean; error?: string };
+
 export interface AppContextType {
   workOrders: WorkOrder[];
   employees: Employee[];
@@ -112,22 +116,22 @@ export interface AppContextType {
   startWorkTimer: (id: string, userId?: string, note?: string) => void;
   stopWorkTimer: (id: string) => void;
   attachWorkOrderMedia: (id: string, media: { videoUri?: string; audioUri?: string; signatureUri?: string; beforePhoto?: string; afterPhoto?: string; formPhoto?: string }) => void;
-  deleteWorkOrder: (id: string) => void;
+  deleteWorkOrder: (id: string) => Promise<WriteResult>;
   generateFromRecurring: () => Promise<number>;
   toggleAttendance: (empId: string, day: string, currentStatus: string) => void;
   updateWage: (empId: string, newWage: number) => void;
-  addQuote: (quote: Quote) => void;
-  updateQuote: (quote: Quote) => void;
+  addQuote: (quote: Quote) => Promise<WriteResult>;
+  updateQuote: (quote: Quote) => Promise<WriteResult>;
   deleteQuote: (id: string) => void;
-  setQuoteStatus: (id: string, status: QuoteStatus) => void;
+  setQuoteStatus: (id: string, status: QuoteStatus) => Promise<WriteResult>;
   // FAZ 4
   acceptQuoteAndCreateWorkOrder: (quoteId: string, signedBy?: string, signature?: string) => string | null;
   reviseQuote: (q: Quote, reason?: string) => Promise<void>;
   generateQuoteShareToken: (quoteId: string) => string | null;
   generateQuoteNumber: () => string;
-  addCustomer: (c: Customer) => void;
+  addCustomer: (c: Customer) => Promise<WriteResult>;
   updateCustomer: (c: Customer) => void;
-  deleteCustomer: (id: string) => void;
+  deleteCustomer: (id: string) => Promise<WriteResult>;
   addOrder: (o: Order) => void;
   deleteOrder: (id: string) => void;
   refresh: () => Promise<void>;
@@ -309,25 +313,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return `TK-${year}-${String(next).padStart(4, '0')}`;
   };
 
-  const addQuote = (q: Quote) => {
+  // Yazma metodları GERÇEK DB sonucunu döndürür (await + rollback). Ajan/ekran
+  // "kaydedildi" derken yalan söylemesin (Gereksinim 3); UI optimistik güncellenir,
+  // hata olursa geri alınır.
+  const addQuote = async (q: Quote): Promise<WriteResult> => {
     setQuotes(prev => [q, ...prev]);
-    quotesRepo.insert(q).catch(e => {
+    try {
+      await quotesRepo.insert(q);
+    } catch (e: any) {
+      setQuotes(prev => prev.filter(x => x.id !== q.id)); // optimistik geri al
       console.warn('[quote.insert]', e);
       showToast('⚠️ Teklif kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+      return { ok: false, error: e?.message || 'kayıt başarısız' };
+    }
     auditRepo.log(userId, { action: 'quote.create', tableName: 'quotes', refId: q.id });
     void Notify.quoteCreated(q.customerName, q.title, q.id);
     showToast(`Teklif ${q.number} kaydedildi.`);
+    return { ok: true };
   };
 
-  const updateQuote = (q: Quote) => {
+  const updateQuote = async (q: Quote): Promise<WriteResult> => {
+    const snapshot = quotes;
     setQuotes(prev => prev.map(x => (x.id === q.id ? q : x)));
-    quotesRepo.update(q.id, q).catch(e => {
+    try {
+      await quotesRepo.update(q.id, q);
+    } catch (e: any) {
+      setQuotes(snapshot); // geri al
       console.warn('[quote.update]', e);
       showToast('⚠️ Teklif güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+      return { ok: false, error: e?.message || 'güncelleme başarısız' };
+    }
     auditRepo.log(userId, { action: 'quote.update', tableName: 'quotes', refId: q.id });
     showToast(`Teklif ${q.number} güncellendi.`);
+    return { ok: true };
   };
 
   const deleteQuote = (id: string) => {
@@ -345,15 +363,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
   };
 
-  const setQuoteStatus = (id: string, status: QuoteStatus) => {
-    setQuotes(prev => {
-      const updated = prev.map(q => (q.id === id ? { ...q, status } : q));
-      const target = updated.find(q => q.id === id);
-      if (target) quotesRepo.update(id, target).catch(e => console.warn(e));
-      return updated;
-    });
+  const setQuoteStatus = async (id: string, status: QuoteStatus): Promise<WriteResult> => {
+    const existing = quotes.find(q => q.id === id);
+    if (!existing) return { ok: false, error: 'Teklif bulunamadı' };
+    const target: Quote = { ...existing, status };
+    const snapshot = quotes;
+    setQuotes(prev => prev.map(q => (q.id === id ? target : q)));
+    try {
+      await quotesRepo.update(id, target);
+    } catch (e: any) {
+      setQuotes(snapshot); // geri al
+      console.warn('[quote.status]', e);
+      showToast('⚠️ Durum kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+      return { ok: false, error: e?.message || 'güncelleme başarısız' };
+    }
     auditRepo.log(userId, { action: 'quote.status', tableName: 'quotes', refId: id, meta: { status } });
     showToast(`Teklif durumu: ${status}`);
+    return { ok: true };
   };
 
   // FAZ 4 — Revizyon kaydet (POZ-DEV-038)
@@ -440,15 +466,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // ===== CUSTOMER actions =====
-  const addCustomer = (c: Customer) => {
+  const addCustomer = async (c: Customer): Promise<WriteResult> => {
     setCustomers(prev => [c, ...prev]);
-    customersRepo.insert(c).catch(e => {
+    try {
+      await customersRepo.insert(c);
+    } catch (e: any) {
+      setCustomers(prev => prev.filter(x => x.id !== c.id)); // optimistik geri al
       console.warn('[customer.insert]', e);
       showToast('⚠️ Müşteri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+      return { ok: false, error: e?.message || 'kayıt başarısız' };
+    }
     auditRepo.log(userId, { action: 'customer.create', tableName: 'customers', refId: c.id });
     void Notify.customerCreated(c.shortName, c.id);
     showToast(`${c.shortName} eklendi.`);
+    return { ok: true };
   };
 
   const updateCustomer = (c: Customer) => {
@@ -461,20 +492,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     showToast(`${c.shortName} güncellendi.`);
   };
 
-  const deleteCustomer = (id: string) => {
+  const deleteCustomer = async (id: string): Promise<WriteResult> => {
     const cust = customers.find(c => c.id === id);
     const snapshot = [...customers];
     setCustomers(prev => prev.filter(x => x.id !== id));
-    customersRepo.delete(id)
-      .then(() => {
-        if (cust) showToast(`${cust.shortName} silindi.`, 'error');
-        auditRepo.log(userId, { action: 'customer.delete', tableName: 'customers', refId: id });
-      })
-      .catch(e => {
-        console.warn('[customer.delete]', e);
-        setCustomers(snapshot);
-        showToast('Müşteri silinemedi: ' + (e?.message || 'yetki yok'), 'error');
-      });
+    try {
+      await customersRepo.delete(id);
+    } catch (e: any) {
+      console.warn('[customer.delete]', e);
+      setCustomers(snapshot);
+      showToast('Müşteri silinemedi: ' + (e?.message || 'yetki yok'), 'error');
+      return { ok: false, error: e?.message || 'silme başarısız' };
+    }
+    if (cust) showToast(`${cust.shortName} silindi.`, 'error');
+    auditRepo.log(userId, { action: 'customer.delete', tableName: 'customers', refId: id });
+    return { ok: true };
   };
 
   const addOrder = (o: Order) => {
@@ -745,24 +777,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     auditRepo.log(userId, { action: 'work_order.media', tableName: 'work_orders', refId: id, meta: media });
   };
 
-  const deleteWorkOrder = (id: string) => {
+  const deleteWorkOrder = async (id: string): Promise<WriteResult> => {
     // Optimistik: önce listeden kaldır, hata olursa geri ekle.
     const snapshot = [...workOrders];
     setWorkOrders(prev => prev.filter(w => w.id !== id));
-
-    workOrdersRepo.delete(id)
-      .then(() => {
-        showToast('İş emri silindi.');
-        auditRepo.log(userId, { action: 'work_order.delete', tableName: 'work_orders', refId: id });
-      })
-      .catch(e => {
-        console.warn('[work_order.delete]', e);
-        // Rollback: silinemediği için listeyi eski haline döndür.
-        setWorkOrders(snapshot);
-        const msg = e?.message ?? 'yetkiniz olmayabilir';
-        showToast(`Silinemedi: ${msg}`, 'error');
-        try { Alert.alert('İş emri silinemedi', msg); } catch { /* ignore */ }
-      });
+    try {
+      await workOrdersRepo.delete(id);
+    } catch (e: any) {
+      console.warn('[work_order.delete]', e);
+      // Rollback: silinemediği için listeyi eski haline döndür.
+      setWorkOrders(snapshot);
+      const msg = e?.message ?? 'yetkiniz olmayabilir';
+      showToast(`Silinemedi: ${msg}`, 'error');
+      try { Alert.alert('İş emri silinemedi', msg); } catch { /* ignore */ }
+      return { ok: false, error: msg };
+    }
+    showToast('İş emri silindi.');
+    auditRepo.log(userId, { action: 'work_order.delete', tableName: 'work_orders', refId: id });
+    return { ok: true };
   };
 
   const generateFromRecurring = async (): Promise<number> => {

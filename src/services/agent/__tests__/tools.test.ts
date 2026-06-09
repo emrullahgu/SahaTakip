@@ -63,7 +63,7 @@ describe('match_poz_bulk — toplu POZ/fiyat eşleştirme', () => {
 describe('set_quote_status — geçersiz durum DB\'ye yazılmaz (Teklifler ekranı çökmesini önler)', () => {
   it('bilinen sinonimi geçerli QuoteStatus\'a eşler', async () => {
     let written: any = null;
-    const c: any = { ...ctx, app: { setQuoteStatus: (_id: string, s: string) => { written = s; } } };
+    const c: any = { ...ctx, app: { setQuoteStatus: (_id: string, s: string) => { written = s; return { ok: true }; } } };
     const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'Onaylandı' }, c);
     expect(res.ok).toBe(true);
     expect(written).toBe('Kabul Edildi'); // "Onaylandı" -> geçerli statü
@@ -71,7 +71,7 @@ describe('set_quote_status — geçersiz durum DB\'ye yazılmaz (Teklifler ekran
 
   it('tamamen geçersiz durumu reddeder, setQuoteStatus çağırmaz', async () => {
     let called = false;
-    const c: any = { ...ctx, app: { setQuoteStatus: () => { called = true; } } };
+    const c: any = { ...ctx, app: { setQuoteStatus: () => { called = true; return { ok: true }; } } };
     const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'zzz-yok' }, c);
     expect(res.ok).toBe(false);
     expect(called).toBe(false);
@@ -80,7 +80,7 @@ describe('set_quote_status — geçersiz durum DB\'ye yazılmaz (Teklifler ekran
 
   it('geçerli durumu olduğu gibi geçirir', async () => {
     let written: any = null;
-    const c: any = { ...ctx, app: { setQuoteStatus: (_id: string, s: string) => { written = s; } } };
+    const c: any = { ...ctx, app: { setQuoteStatus: (_id: string, s: string) => { written = s; return { ok: true }; } } };
     const res = await AGENT_TOOLS['set_quote_status'].handler({ id: 'x', status: 'Müşteriye Gönderildi' }, c);
     expect(res.ok).toBe(true);
     expect(written).toBe('Müşteriye Gönderildi');
@@ -122,7 +122,7 @@ describe('sistem-farkındalığı read-tool\'ları (agent tüm sistemi tanır)',
 describe('create_quote_draft — fiyat uydurma YASAK (yalnız katalogtan)', () => {
   it('katalog dışı kaleme ajan fiyat verse bile 0 yazılır + manualPriceLines\'da işaretlenir', async () => {
     let saved: any = null;
-    const c: any = { ...ctx, currentUserName: 'T', app: { addQuote: (q: any) => { saved = q; } } };
+    const c: any = { ...ctx, currentUserName: 'T', app: { addQuote: (q: any) => { saved = q; return { ok: true }; } } };
     const res = await AGENT_TOOLS['create_quote_draft'].handler(
       {
         customerName: 'X', title: 'Test',
@@ -145,7 +145,7 @@ describe('create_quote_draft — fiyat uydurma YASAK (yalnız katalogtan)', () =
   it('katalogdaki kalem gerçek katalog fiyatıyla fiyatlanır', async () => {
     const realPoz = POZ_CATALOG.find(p => (p.materialPrice || 0) > 0)!;
     let saved: any = null;
-    const c: any = { ...ctx, currentUserName: 'T', app: { addQuote: (q: any) => { saved = q; } } };
+    const c: any = { ...ctx, currentUserName: 'T', app: { addQuote: (q: any) => { saved = q; return { ok: true }; } } };
     const res = await AGENT_TOOLS['create_quote_draft'].handler(
       { customerName: 'X', title: 'T', lines: [{ pozId: realPoz.id, quantity: 1 }] },
       c,

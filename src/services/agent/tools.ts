@@ -497,18 +497,22 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     handler: async (args, ctx) => {
       const id = newUuid(); // UUID → DB'ye kalıcı yazılır (önceden 'CUST-...' yereldeydi)
+      // Customer tipi `name` DEĞİL `shortName`+`title` bekler; önceki `as any` bunu
+      // gizliyor, kayıt short_name=undefined ile bozuluyordu (denetim M4).
+      const name = String(args.name).trim();
       const customer: Customer = {
         id,
-        name: String(args.name),
+        shortName: name,
+        title: name,
         phone: args.phone || '',
         email: args.email || '',
         address: args.address || '',
         taxNumber: args.taxNumber || '',
-        segment: args.segment || 'Standart',
-        createdAt: NOW(),
-      } as any;
-      ctx.app.addCustomer(customer);
-      return { ok: true, id, message: 'Müşteri oluşturuldu' };
+      };
+      const res = await ctx.app.addCustomer(customer);
+      return res.ok
+        ? { ok: true, id, message: 'Müşteri oluşturuldu' }
+        : { ok: false, message: 'Müşteri kaydedilemedi: ' + (res.error || 'bilinmeyen hata') };
     },
   },
 
@@ -552,8 +556,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     destructive: true,
     handler: async (args, ctx) => {
-      ctx.app.deleteWorkOrder(String(args.id));
-      return { ok: true, message: 'İş emri silindi' };
+      const res = await ctx.app.deleteWorkOrder(String(args.id));
+      return res.ok
+        ? { ok: true, message: 'İş emri silindi' }
+        : { ok: false, message: 'İş emri silinemedi: ' + (res.error || 'bilinmeyen hata') };
     },
   },
 
@@ -572,8 +578,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     destructive: true,
     handler: async (args, ctx) => {
-      ctx.app.deleteCustomer(String(args.id));
-      return { ok: true };
+      const res = await ctx.app.deleteCustomer(String(args.id));
+      return res.ok
+        ? { ok: true, message: 'Müşteri silindi' }
+        : { ok: false, message: 'Müşteri silinemedi: ' + (res.error || 'bilinmeyen hata') };
     },
   },
 
@@ -1071,7 +1079,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         vatTotal: totals.vatTotal,
         grandTotal: totals.grandTotal,
       };
-      ctx.app.addQuote(q);
+      const saveRes = await ctx.app.addQuote(q);
+      if (!saveRes.ok) {
+        return { ok: false, id, number, message: 'Taslak teklif kaydedilemedi: ' + (saveRes.error || 'bilinmeyen hata') };
+      }
       return {
         ok: true,
         id,
@@ -1151,7 +1162,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       const incoming = String(args.notes || '');
       const mode = String(args.mode || 'replace');
       const next = mode === 'append' && q.notes ? q.notes + '\n\n' + incoming : incoming;
-      ctx.app.updateQuote({ ...q, notes: next });
+      const r = await ctx.app.updateQuote({ ...q, notes: next });
+      if (!r.ok) return { ok: false, error: 'Teklif notu kaydedilemedi: ' + (r.error || 'bilinmeyen hata') };
       return { ok: true, id, mode, length: next.length, message: 'Teklif notu güncellendi.' };
     },
   },
@@ -1180,7 +1192,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       const idx = Number(args.lineIndex);
       if (idx < 0 || idx >= (q.lines?.length || 0)) return { ok: false, error: 'Geçersiz satır indeksi' };
       const lines = q.lines.map((l, i) => (i === idx ? { ...l, notes: String(args.notes) } : l));
-      ctx.app.updateQuote({ ...q, lines });
+      const r = await ctx.app.updateQuote({ ...q, lines });
+      if (!r.ok) return { ok: false, error: 'Kalem notu kaydedilemedi: ' + (r.error || 'bilinmeyen hata') };
       return { ok: true, message: 'Kalem notu güncellendi.' };
     },
   },
@@ -1214,7 +1227,8 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           error: `Geçersiz durum: "${args.status}". Geçerli değerler: ${VALID_QUOTE_STATUSES.join(', ')}.`,
         };
       }
-      ctx.app.setQuoteStatus(String(args.id), status);
+      const r = await ctx.app.setQuoteStatus(String(args.id), status);
+      if (!r.ok) return { ok: false, error: 'Durum kaydedilemedi: ' + (r.error || 'bilinmeyen hata') };
       return { ok: true, message: `Teklif durumu güncellendi: ${status}` };
     },
   },

@@ -143,7 +143,7 @@ export default function CustomersScreen() {
                     destructive: true,
                     confirm: `${item.shortName} müşterisi silinecek. Emin misiniz?`,
                     confirmTitle: 'Silinsin mi?',
-                    onPress: () => deleteCustomer(item.id),
+                    onPress: () => { void deleteCustomer(item.id); },
                   },
                 ]}
               />
