@@ -2278,8 +2278,8 @@ export interface AiUsageLog {
   provider: AiAssistantProvider;
   promptTokens: number;
   completionTokens: number;
-  costUsd: number;
-  durationMs: number;
+  costUsd?: number;    // yalnız token varsa TAHMİN; yoksa undefined ("—" gösterilir)
+  durationMs?: number; // GERÇEK ölçüm; yoksa undefined (uydurma süre yazılmaz)
   createdAt: string;
   success: boolean;
   errorMessage?: string;

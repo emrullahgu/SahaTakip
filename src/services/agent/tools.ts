@@ -1028,18 +1028,28 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       const lines: QuoteLine[] = inLines.map((l: any, i: number) => {
         const poz = POZ_CATALOG.find(p => p.id === l.pozId);
         const inCatalog = !!poz;
-        const materialPrice = inCatalog ? Number(poz!.materialPrice ?? 0) : 0;
-        const installPrice = inCatalog ? Number(poz!.installPrice ?? 0) : 0;
-        const dismantlePrice = inCatalog ? Number(poz!.dismantlePrice ?? 0) : 0;
+        const sn = (v: any) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
+        const materialPrice = inCatalog ? sn(poz!.materialPrice) : 0;
+        const installPrice = inCatalog ? sn(poz!.installPrice) : 0;
+        const dismantlePrice = inCatalog ? sn(poz!.dismantlePrice) : 0;
         const pozName = String(l.pozName ?? poz?.name ?? l.pozId);
-        if (!inCatalog) manualPriceLines.push({ lineNo: i + 1, pozName });
+        // "Fiyatlı" = birim fiyat toplamı > 0. Katalogda olsa da fiyatı 0 olan kalem de
+        // FİYATSIZ sayılır → kullanıcıya dürüstçe "fiyat girilmeli" denir (sayaç doğru olur).
+        const priced = (materialPrice + installPrice + dismantlePrice) > 0;
+        if (!priced) manualPriceLines.push({ lineNo: i + 1, pozName });
+        // Miktar/iskonto guard'ı: LLM hatalı ("iki"/negatif/>100) gönderse bile NaN/negatif
+        // tutar DB'ye yazılmaz (Gereksinim 3 — yanlış tutar üretme).
+        const qtyRaw = Number(l.quantity ?? 1);
+        const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1;
+        const discRaw = Number(l.discountPct ?? 0);
+        const discountPct = Math.min(100, Math.max(0, Number.isFinite(discRaw) ? discRaw : 0));
         const baseNote = l.notes ? String(l.notes) : '';
         return {
           lineNo: i + 1,
           pozId: String(l.pozId),
           pozName,
           unit: String(l.unit ?? poz?.unit ?? 'Adet'),
-          quantity: Number(l.quantity ?? 1),
+          quantity,
           materialPrice,
           installPrice,
           dismantlePrice,
@@ -1047,10 +1057,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           overheadPct: poz?.defaultOverhead ?? 10,
           profitPct: poz?.defaultProfit ?? 15,
           vatPct: poz?.vatRate ?? 20,
-          discountPct: Number(l.discountPct ?? 0),
-          notes: inCatalog
+          discountPct,
+          notes: priced
             ? (baseNote || undefined)
-            : ('⚠ Birim fiyat girilmeli (katalogda yok)' + (baseNote ? ' · ' + baseNote : '')),
+            : ('⚠ Birim fiyat girilmeli' + (inCatalog ? ' (katalog fiyatı 0)' : ' (katalogda yok)') + (baseNote ? ' · ' + baseNote : '')),
         };
       });
 
@@ -1064,11 +1074,22 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       // id = UUID (DB primary key, uuid kolonu) → quotesRepo gerçekten DB'ye yazar.
       // Önceden id='QT-...' (UUID değil) olduğu için teklif yalnızca yerelde kalıyordu.
       const id = newUuid();
-      const number = 'QT-' + new Date().getFullYear() + '-' + Date.now().toString(36).toUpperCase();
+      // Kanonik numara (TK-YYYY-0001, sıralı + çakışma korumalı). Ajan elle 'QT-...'
+      // üretirse liste tutarsız olur ve çakışma koruması devre dışı kalır.
+      const number = typeof ctx.app.generateQuoteNumber === 'function'
+        ? ctx.app.generateQuoteNumber()
+        : 'QT-' + new Date().getFullYear() + '-' + Date.now().toString(36).toUpperCase();
+      // Müşteriyi GERÇEK Customer kaydına bağla — yoksa teklif müşteri-360/raporlarda
+      // görünmez, gönderimde alıcı boş kalır. TR-locale + trim ile shortName/title eşle.
+      const rawName = String(args.customerName ?? '').trim();
+      const lc = (s: string) => (s || '').toLocaleLowerCase('tr-TR').trim();
+      const matchedCustomer = (ctx.app.customers || []).find((c: any) =>
+        lc(c.shortName) === lc(rawName) || lc(c.title) === lc(rawName));
       const q: Quote = {
         id,
         number,
-        customerName: String(args.customerName),
+        customerName: matchedCustomer?.shortName || rawName,
+        customerTitle: matchedCustomer?.title || undefined,
         title: String(args.title),
         date: new Date().toISOString().slice(0, 10),
         engineer: String(args.engineer ?? ctx.currentUserName ?? 'AI Ajan'),
@@ -1088,13 +1109,16 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         id,
         number,
         lineCount: lines.length,
-        pricedFromCatalog: lines.length - manualPriceLines.length,
-        manualPriceLines, // fiyatı 0 bırakılan (katalog dışı) kalemler — kullanıcıya bildir
+        pricedFromCatalog: lines.length - manualPriceLines.length, // yalnız fiyatı > 0 olanlar
+        manualPriceLines, // fiyatı 0 bırakılan (katalog dışı VEYA katalog fiyatı 0) kalemler
         grandTotal: totals.grandTotal,
+        customerName: q.customerName,
+        needsCustomer: !matchedCustomer, // müşteri kayda bağlanamadı → kullanıcıya bildir
         message:
           'Taslak teklif oluşturuldu (fiyatlar yalnızca katalogdan, uydurma yok). ' +
+          (matchedCustomer ? '' : `DİKKAT: "${rawName}" kayıtlı müşteriyle eşleşmedi — teklif raporlarda görünmesi için müşteriyi doğrula/oluştur. `) +
           (manualPriceLines.length
-            ? `DİKKAT: ${manualPriceLines.length} kalemin fiyatı katalogda yok, 0 bırakıldı — bunları kullanıcıya AÇIKÇA listele ve fiyatlarını girmesini iste.`
+            ? `DİKKAT: ${manualPriceLines.length} kalemin birim fiyatı yok (0 bırakıldı) — kullanıcıya AÇIKÇA listele ve fiyatlarını girmesini iste.`
             : 'Tüm kalemler kataloğdan fiyatlandı.'),
       };
     },

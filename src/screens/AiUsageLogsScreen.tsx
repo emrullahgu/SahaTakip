@@ -13,7 +13,7 @@ export default function AiUsageLogsScreen() {
   const load = useCallback(async () => { setItems(await listUsageLogs()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const totalCost = items.reduce((s, i) => s + i.costUsd, 0);
+  const totalCost = items.reduce((s, i) => s + (i.costUsd ?? 0), 0);
   const totalTokens = items.reduce((s, i) => s + i.promptTokens + i.completionTokens, 0);
   const stats = computeAiUsageStats(items);
   const healthColor = stats.total === 0 ? colors.text.muted : stats.successRate >= 90 ? '#22c55e' : stats.successRate >= 70 ? '#f59e0b' : '#ef4444';
@@ -64,7 +64,7 @@ export default function AiUsageLogsScreen() {
               <Ionicons name={item.success ? 'checkmark-circle' : 'close-circle'} size={18} color={item.success ? '#22c55e' : '#ef4444'} />
               <View style={{ flex: 1 }}>
                 <Text style={s.n}>{FEATURE_LABEL[item.feature]} · {PROVIDER_LABEL[item.provider]}</Text>
-                <Text style={s.sub}>{item.promptTokens}+{item.completionTokens} token · {item.durationMs}ms · ${item.costUsd.toFixed(4)}</Text>
+                <Text style={s.sub}>{item.promptTokens}+{item.completionTokens} token · {item.durationMs != null ? `${item.durationMs}ms` : '—'} · {item.costUsd != null ? `$${item.costUsd.toFixed(4)}` : '—'}</Text>
                 <Text style={s.tm}>{new Date(item.createdAt).toLocaleString('tr-TR')}</Text>
                 {item.errorMessage && <Text style={s.err}>{item.errorMessage}</Text>}
               </View>

@@ -216,18 +216,47 @@ export async function listImprovements(): Promise<AiQuoteImprovementSuggestion[]
   if (cur) return cur;
   const s = await seedImprove(); await set(K.improve, s); return s;
 }
+// Öneri GERÇEK teklif sonuç verisine (kazanıldı/kaybedildi + neden) dayanır.
+// Önceki sürüm kategoriyi Math.random ile seçip impactScore'u uyduruyordu
+// (Gereksinim 3 ihlali — sahte AI önerisi). Artık: en çok kaybedilen nedene göre
+// somut öneri; impactScore = kayıpların yüzde kaçının bu nedenle olduğu (GERÇEK).
+// Yeterli veri yoksa dürüstçe "yeterli geçmiş yok" der, skor düşük tutulur.
 export async function generateImprovement(customerName: string): Promise<AiQuoteImprovementSuggestion> {
   const list = await listImprovements();
-  const cats: AiQuoteImprovementSuggestion['category'][] = ['price', 'scope', 'wording', 'discount', 'timing'];
-  const cat = cats[Math.floor(Math.random() * cats.length)];
-  const tips: Record<AiQuoteImprovementSuggestion['category'], string> = {
-    price: 'Fiyat optimizasyonu: kâr marjını koruyarak %4-7 indirim önerilir.',
-    scope: 'Kapsam modüler hale getirilebilir; opsiyonel ek hizmetler ayrılmalı.',
-    wording: 'Teknik dilden uzaklaşıp müşteri faydası vurgulanmalı.',
-    discount: 'Erken karar indirimi (%5) eklemek ivme yaratabilir.',
-    timing: 'Müşterinin bütçe döngüsü dikkate alınarak teklif zamanlaması güncellenmeli.',
+  const stats = await outcomeStats();
+  const reasons = (Object.entries(stats.lostByReason) as [QuoteLostReason, number][])
+    .sort((a, b) => b[1] - a[1]);
+  const top = reasons[0];
+
+  const REASON_CATEGORY: Record<QuoteLostReason, AiQuoteImprovementSuggestion['category']> = {
+    price: 'price', timing: 'timing', competitor: 'scope',
+    scope: 'scope', no_response: 'wording', other: 'wording',
   };
-  const item: AiQuoteImprovementSuggestion = { id: uid('im'), customerName, category: cat, suggestion: tips[cat], impactScore: 60 + Math.floor(Math.random() * 35), createdAt: new Date().toISOString() };
+  const TIP: Record<QuoteLostReason, string> = {
+    price: 'Kayıpların önemli kısmı FİYAT kaynaklı. Kâr marjını koruyarak hedef kalemlerde %4-7 indirim ya da kademeli fiyat seçeneği sun.',
+    timing: 'Kayıpların önemli kısmı ZAMANLAMA kaynaklı. Müşterinin bütçe/karar döngüsüne göre teklif zamanla ve net son geçerlilik tarihi ekle.',
+    competitor: 'Kayıpların önemli kısmı RAKİP kaynaklı. Farklılaştırıcı kapsam, garanti süresi veya hız avantajını teklifte öne çıkar.',
+    scope: 'Kayıpların önemli kısmı KAPSAM kaynaklı. Kapsamı modüler yap, opsiyonel kalemleri ayır ve müşteriye net seçenek sun.',
+    no_response: 'Kayıpların önemli kısmı YANITSIZLIK. Teklife net bir sonraki adım (CTA) + kısa takip planı ekle, özet ön sayfa koy.',
+    other: 'Teklif dilini teknikten müşteri faydasına çevir; özet, net fiyat ve karar gerekçesini öne al.',
+  };
+
+  let category: AiQuoteImprovementSuggestion['category'];
+  let suggestion: string;
+  let impactScore: number;
+  if (!top || top[1] === 0) {
+    // Henüz yeterli sonuç verisi yok — DÜRÜST mesaj, uydurma skor yok.
+    category = 'wording';
+    suggestion = 'Henüz yeterli teklif sonucu (kabul/red + neden) verisi yok. Teklif sonuçlarını işaretledikçe burada gerçek verine dayalı, nedene özgü öneriler üretilecek.';
+    impactScore = 0;
+  } else {
+    const [reason, count] = top;
+    category = REASON_CATEGORY[reason];
+    suggestion = TIP[reason];
+    impactScore = Math.round((count / Math.max(1, stats.lost)) * 100); // kayıpların % kaçı bu nedenle
+  }
+
+  const item: AiQuoteImprovementSuggestion = { id: uid('im'), customerName, category, suggestion, impactScore, createdAt: new Date().toISOString() };
   await set(K.improve, [item, ...list].slice(0, 50));
   return item;
 }

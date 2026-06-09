@@ -411,12 +411,15 @@ export function computeAiUsageStats(logs: AiUsageLog[]): AiUsageStats {
     byFeature: tally(logs.map(l => l.feature)).map(x => ({ feature: x.key, count: x.count })),
   };
 }
-async function logUsage(feature: AiFeature, provider: AiAssistantProvider, pTok: number, cTok: number, success: boolean, errorMessage?: string) {
+async function logUsage(feature: AiFeature, provider: AiAssistantProvider, pTok: number, cTok: number, success: boolean, errorMessage?: string, durationMs?: number) {
   const list = await load<AiUsageLog>(K.usage);
+  const hasTokens = pTok > 0 || cTok > 0;
   list.unshift({
     id: uid(), feature, provider, promptTokens: pTok, completionTokens: cTok,
-    costUsd: (pTok * 0.003 + cTok * 0.006) / 1000,
-    durationMs: 500 + Math.floor(Math.random() * 3000),
+    // Maliyet yalnız token varsa TAHMİN edilir; yoksa undefined. Süre GERÇEK ölçümdür
+    // (verilmediyse undefined) — önceki `500 + random*3000` UYDURMASI kaldırıldı (Gereksinim 3).
+    costUsd: hasTokens ? (pTok * 0.003 + cTok * 0.006) / 1000 : undefined,
+    durationMs,
     createdAt: now(), success, errorMessage,
   });
   await save(K.usage, list.slice(0, 200));

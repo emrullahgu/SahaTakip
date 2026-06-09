@@ -660,8 +660,13 @@ export async function decomposeSurveyToItems(surveyText: string): Promise<Survey
       .filter(s => s.length >= 3);
     const src = parts.length > 0 ? parts : [text];
     return src.slice(0, 20).map(p => {
-      // "3 adet ...", "x2 ...", "2x ..." gibi basit miktar yakala
-      const m = p.match(/(?:^|\b)(\d{1,4})\s*(?:adet|ad|x|adt)?\b/i) || p.match(/\bx\s*(\d{1,4})\b/i);
+      // Miktar YALNIZCA açık bir adet/ölçü işareti varsa alınır. "400 kVA trafo",
+      // "630A şalter", "16 mm² kablo" gibi TEKNİK ölçüleri miktar SANMA — aksi halde
+      // qty=400 olup teklif tutarını katlar (Gereksinim 3: yanlış tutar üretme).
+      const m =
+        p.match(/(?:^|\b)(\d{1,4})\s*(?:adet|ad\b|adt|tane|takım|tk\b|mt\b|metre|m²|m2|kg\b|saat)/i) ||
+        p.match(/\bx\s*(\d{1,4})\b/i) ||
+        p.match(/\b(\d{1,4})\s*x\b/i);
       const qty = m ? Math.max(1, parseInt(m[1], 10) || 1) : 1;
       return { description: p, quantity: qty };
     });
