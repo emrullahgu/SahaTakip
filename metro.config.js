@@ -9,6 +9,9 @@ const WEB_SHIM_MAP = {
   'expo-notifications': path.resolve(__dirname, 'src/shims/expo-notifications.web.js'),
   'expo-print': path.resolve(__dirname, 'src/shims/expo-print.web.js'),
   'expo-sharing': path.resolve(__dirname, 'src/shims/expo-sharing.web.js'),
+  // expo-image-manipulator@56 web'de bozuk paketleniyor (main: src/index.ts,
+  // build/ yalnız .d.ts) → metro './validators'i cozemeyip TUM web bundle cokuyordu.
+  'expo-image-manipulator': path.resolve(__dirname, 'src/shims/expo-image-manipulator.web.js'),
 };
 
 const originalResolveRequest = config.resolver.resolveRequest;
