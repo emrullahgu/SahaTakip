@@ -9,6 +9,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import type { AiQuoteDraft, QuoteLine, RootStackParamList } from '../types';
 import { getQuoteDraft, setQuoteDraftStatus } from '../services/aiAssistant';
 import { POZ_CATALOG, DEFAULT_OVERHEAD, DEFAULT_PROFIT, DEFAULT_VAT } from '../data/pozCatalog';
+import { newUuid } from '../services/data/repository';
 
 type R = RouteProp<RootStackParamList, 'AiQuoteDraftDetail'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -20,13 +21,16 @@ function draftToQuoteLines(d: AiQuoteDraft): QuoteLine[] {
     const poz = POZ_CATALOG.find(p => p.id === it.pozCode);
     if (poz) {
       return {
-        lineNo: i + 1, pozId: poz.id, pozName: poz.name, unit: poz.unit, quantity: it.qty,
+        id: `ai-${i}`, lineNo: i + 1, pozId: poz.id, pozName: poz.name, unit: poz.unit, quantity: it.qty,
         materialPrice: poz.materialPrice, installPrice: poz.installPrice, dismantlePrice: poz.dismantlePrice ?? 0,
         withDismantle: false, overheadPct: poz.defaultOverhead, profitPct: poz.defaultProfit, vatPct: poz.vatRate, discountPct: 0,
       };
     }
+    // Eşleşmeyen kalem → MANUAL- önekli pozId; NewQuote bunu manuel-fiyat moduna alır
+    // (Malzeme/Montaj alanları DÜZENLENEBİLİR olur). Önceki pozId:'' fiyat alanlarını
+    // kilitliyordu — "fiyat girilmeli" denip kullanıcı GİREMİYORDU.
     return {
-      lineNo: i + 1, pozId: '', pozName: it.pozName, unit: it.unit || 'Adet', quantity: it.qty,
+      id: `ai-${i}`, lineNo: i + 1, pozId: `MANUAL-${newUuid().slice(0, 8)}`, pozName: it.pozName, unit: it.unit || 'Adet', quantity: it.qty,
       materialPrice: it.needsPrice ? 0 : it.unitPrice, installPrice: 0, dismantlePrice: 0,
       withDismantle: false, overheadPct: DEFAULT_OVERHEAD, profitPct: DEFAULT_PROFIT, vatPct: DEFAULT_VAT, discountPct: 0,
     };

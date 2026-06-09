@@ -203,7 +203,9 @@ function mockReply(q: string): string {
 async function seedPoz(): Promise<AiPozSuggestion[]> {
   return [];
 }
-export async function listPozSuggestions() { return seedPoz(); }
+// Kalıcı listeyi döndür (suggestPoz buraya yazıyor). Önceden hep seedPoz()=[] dönüp
+// kaydedilen önerileri YOK SAYIYORDU → AiPozSuggest ekranı önerileri anında siliyordu.
+export async function listPozSuggestions(): Promise<AiPozSuggestion[]> { return load<AiPozSuggestion>(K.poz); }
 export async function suggestPoz(description: string): Promise<AiPozSuggestion> {
   const list = await load<AiPozSuggestion>(K.poz);
   // GERÇEK 1119 kalemlik POZ kataloğundan eşleştir (anahtar kelime + LLM zenginleştirme).

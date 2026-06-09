@@ -32,6 +32,7 @@ interface TranscriptItem {
   kind: AgentEvent['type'];
   text: string;
   data?: any;
+  quoteId?: string; // create_quote_draft başarılıysa → "Teklifi Aç" CTA
 }
 
 // Dışa mesaj gönderen yüksek riskli tool'lar: onay diyaloğunda alıcı + TAM gövde
@@ -158,10 +159,14 @@ const AgentConsoleScreen: React.FC = () => {
           break;
         case 'tool_result': {
           const preview = JSON.stringify(e.result ?? null).slice(0, 240);
+          // Teklif oluşturulduysa kullanıcıyı doğrudan teklife götür (akış kopmasın).
+          const qid = e.ok && e.name === 'create_quote_draft' && e.result && (e.result as any).id
+            ? String((e.result as any).id) : undefined;
           append({
             kind: e.type,
             text: (e.ok ? '✅ ' : '❌ ') + e.name + ' → ' + preview,
             data: e.result,
+            quoteId: qid,
           });
           break;
         }
@@ -308,6 +313,16 @@ const AgentConsoleScreen: React.FC = () => {
           {transcript.map(t => (
             <View key={t.id} style={[st.bubble, bubbleStyle(t.kind)]}>
               <Text style={st.bubbleText}>{t.text}</Text>
+              {t.quoteId && (
+                <TouchableOpacity
+                  style={st.openQuoteBtn}
+                  onPress={() => nav.navigate('QuoteDetail', { quoteId: t.quoteId! })}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="document-text-outline" size={15} color="#fff" />
+                  <Text style={st.openQuoteText}>Teklifi Aç</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -497,6 +512,12 @@ const st = StyleSheet.create({
   // koyu renk olmalı. (colors.text.primary koyu temada açık olur → açık baloncukta
   // okunmazdı.)
   bubbleText: { color: '#1f2937', fontSize: 13, lineHeight: 19 },
+  openQuoteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 8, paddingVertical: 8, paddingHorizontal: 12,
+    backgroundColor: '#0ea5e9', borderRadius: radius.sm, alignSelf: 'flex-start',
+  },
+  openQuoteText: { color: '#fff', fontWeight: '800', fontSize: 13 },
 
   // Dışa mesaj onay modal'ı
   confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
