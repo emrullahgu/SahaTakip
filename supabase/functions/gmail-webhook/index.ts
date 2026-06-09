@@ -37,8 +37,22 @@ async function fetchLatestMessages(emailAddress: string, _historyId: string) {
   return [] as Array<{ id: string; from: string; subject: string; body: string; date: string }>;
 }
 
+const PUBSUB_TOKEN = Deno.env.get('GMAIL_PUBSUB_TOKEN') ?? '';
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+
+  // ZORUNLU secret gate (denetim M7): GMAIL_PUBSUB_TOKEN tanımlı DEĞİLSE webhook
+  // kapalıdır (fail-closed). Aksi halde herkes sahte Pub/Sub mesajı POST'layıp
+  // inbox_messages'e veri enjekte edebilir (depolama doldurma). Pub/Sub push
+  // subscription URL'ine `?token=<GMAIL_PUBSUB_TOKEN>` eklenmeli.
+  if (!PUBSUB_TOKEN) {
+    console.warn('[gmail-webhook] GMAIL_PUBSUB_TOKEN tanımlı değil — webhook reddedildi (fail-closed).');
+    return new Response('webhook disabled: GMAIL_PUBSUB_TOKEN not configured', { status: 503 });
+  }
+  if ((new URL(req.url).searchParams.get('token') ?? '') !== PUBSUB_TOKEN) {
+    return new Response('forbidden', { status: 403 });
+  }
 
   try {
     const env: PubSubEnvelope = await req.json();

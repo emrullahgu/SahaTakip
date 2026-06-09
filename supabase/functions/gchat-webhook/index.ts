@@ -32,6 +32,14 @@ const MAX_ITER = Number(Deno.env.get('GCHAT_AGENT_MAX_ITER') ?? '5');
 // ─────────────────────────────────────────────────────────────
 // Yardımcılar
 // ─────────────────────────────────────────────────────────────
+/** Sabit-zamanlı string karşılaştırma (timing attack azaltma). */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 function stripMention(text: string): string {
   // Google Chat: "@SahaTakip Bot teklif oluştur ..." → "teklif oluştur ..."
   return text
@@ -171,11 +179,17 @@ Deno.serve(async (req) => {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  // Opsiyonel paylaşılan-secret doğrulaması
-  if (SHARED_TOKEN) {
+  // ZORUNLU paylaşılan-secret doğrulaması (denetim M7): token tanımlı DEĞİLSE
+  // webhook KAPALIDIR (fail-closed). Aksi halde service_role ile DB yazan ai-tools
+  // ajanı kimliksiz tetiklenebilirdi. Karşılaştırma sabit-zamanlı.
+  if (!SHARED_TOKEN) {
+    console.warn('[gchat-webhook] GCHAT_BOT_TOKEN tanımlı değil — webhook reddedildi (fail-closed).');
+    return new Response('webhook disabled: GCHAT_BOT_TOKEN not configured', { status: 503 });
+  }
+  {
     const auth = req.headers.get('authorization') ?? '';
     const got = auth.replace(/^Bearer\s+/i, '').trim();
-    if (got !== SHARED_TOKEN) {
+    if (!timingSafeEqual(got, SHARED_TOKEN)) {
       return new Response('forbidden', { status: 403 });
     }
   }

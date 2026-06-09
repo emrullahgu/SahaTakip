@@ -7,6 +7,7 @@
 // Env: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireUser } from '../_shared/auth.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -528,6 +529,17 @@ VERİ SORGUSU:
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+
+  // YETKİ (denetim M7): service_role ile RLS bypass edip GERÇEK DB yazan bu ajan
+  // yalnız onaylı admin/manager/engineer tarafından çağrılabilir. Anon key / kimliksiz
+  // veya 'field'/'viewer' rolü reddedilir (client-side hasPermission bypass'ı kapanır).
+  const auth = await requireUser(req, { roles: ['admin', 'manager', 'engineer'], requireApproved: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    });
+  }
 
   try {
     const body = await req.json();

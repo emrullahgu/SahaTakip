@@ -13,6 +13,7 @@
 // Env: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireUser } from '../_shared/auth.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -141,6 +142,17 @@ async function callOpenAI(messages: any[], json = false): Promise<any> {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+
+  // YETKİ (denetim M7): exec_readonly_sql SECURITY DEFINER ile RLS bypass edip TÜM
+  // tabloları okuyabildiğinden, yalnız onaylı admin/manager bu fonksiyonu çağırabilir.
+  const auth = await requireUser(req, { roles: ['admin', 'manager'], requireApproved: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+    });
+  }
+
   const t0 = Date.now();
   try {
     const body = await req.json();
