@@ -47,6 +47,7 @@ export default function VehicleFormScreen() {
   const [form, setForm] = useState<Vehicle>(newVehicle());
   // Kaydet geri bildirimi: idle → saving → saved. Çift-basımı da engeller.
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [plateError, setPlateError] = useState<string | null>(null);
   const savingRef = useRef(false);
 
   useEffect(() => {
@@ -63,9 +64,10 @@ export default function VehicleFormScreen() {
 
   const save = async () => {
     if (!form.plate.trim()) {
-      Alert.alert('Eksik', 'Plaka girin.');
+      setPlateError('Plaka zorunludur.');
       return;
     }
+    setPlateError(null);
     if (savingRef.current) return; // çift kayıt koruması
     savingRef.current = true;
     setStatus('saving');
@@ -91,12 +93,13 @@ export default function VehicleFormScreen() {
           <Text style={styles.label}>Plaka *</Text>
           <TextInput
             value={form.plate}
-            onChangeText={t => set('plate', t.toUpperCase())}
-            style={styles.input}
+            onChangeText={t => { set('plate', t.toUpperCase()); if (plateError) setPlateError(null); }}
+            style={[styles.input, plateError && styles.inputError]}
             placeholder="34 ABC 123"
             placeholderTextColor={colors.text.faint}
             autoCapitalize="characters"
           />
+          {plateError && <Text style={styles.errorText}>{plateError}</Text>}
 
           <Text style={styles.label}>Marka</Text>
           <TextInput
@@ -324,4 +327,6 @@ const styles = StyleSheet.create({
   },
   saveBtnDone: { backgroundColor: colors.emerald.default },
   saveText: { color: '#fff', fontWeight: '800', fontSize: typography.sm },
+  inputError: { borderColor: colors.rose.default },
+  errorText: { color: colors.rose.default, fontSize: typography.xs, marginTop: 4, fontWeight: '600' },
 });
