@@ -168,6 +168,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     import('../services/ai')
       .then(m => { if (!cancelled) m.syncRemoteAiSettings?.(); })
       .catch(() => { /* ignore */ });
+    // Push token'ı OTOMATİK kaydet (denetim M8): önceden yalnız Tercihler ekranındaki
+    // manuel butondan çağrılıyordu → çoğu kullanıcıda push_tokens boş kalıp
+    // notifyEveryone sessizce 0 gönderiyordu. Login'de otomatik kayıt eder.
+    import('../services/pushNotifications')
+      .then(m => { if (!cancelled) m.registerForPushNotifications?.(); })
+      .catch(() => { /* ignore */ });
     return () => { cancelled = true; };
   }, [user]);
 

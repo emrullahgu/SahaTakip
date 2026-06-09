@@ -4,8 +4,20 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { setPushToken } from './notificationPrefs';
 import { supabase, SUPABASE_CONFIGURED, getCurrentUser } from './supabase';
+
+/** EAS proje kimliği — standalone (APK) build'de getExpoPushTokenAsync ZORUNLU ister.
+ *  app.json → extra.eas.projectId. Bulunamazsa undefined (Expo Go kendi id'sini kullanır). */
+function getEasProjectId(): string | undefined {
+  return (
+    Constants?.expoConfig?.extra?.eas?.projectId ??
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (Constants as any)?.easConfig?.projectId ??
+    undefined
+  );
+}
 
 let configured = false;
 
@@ -52,9 +64,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
   if (finalStatus !== 'granted') return null;
 
   try {
-    const projectId =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (Notifications as any).getExpoPushTokenAsync ? undefined : undefined;
+    // Önceki kod her iki dalda da undefined döndürüyordu → standalone APK'da
+    // getExpoPushTokenAsync projectId olmadan HATA veriyor, token alınamıyor,
+    // push sessizce çöküyordu (denetim M8). Artık EAS projectId geçilir.
+    const projectId = getEasProjectId();
     const res = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined,
     );
