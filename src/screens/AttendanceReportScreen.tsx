@@ -121,6 +121,7 @@ export default function AttendanceReportScreen() {
         </tr>`).join('');
       const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"/><title>Puantaj ${esc(monthLabel)}</title>
 <style>
+  @page { size: A4; margin: 0; }
   body { font-family: Helvetica, Arial, sans-serif; color:#1f2937; margin:0; padding:24px; font-size:11px; }
   .header { border-bottom:3px solid #1e40af; padding-bottom:14px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:flex-end; }
   .title { font-size:20px; font-weight:900; color:#1e40af; }

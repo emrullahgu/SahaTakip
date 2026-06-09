@@ -155,3 +155,38 @@ describe('create_quote_draft — fiyat uydurma YASAK (yalnız katalogtan)', () =
     expect(saved.lines[0].materialPrice).toBe(realPoz.materialPrice);
   });
 });
+
+describe('yazma tool\'ları — dürüstlük + alan eşlemesi (denetim M4/M10)', () => {
+  it('create_customer: name → shortName + title (Customer\'da name yok), ok gerçek sonuçtan gelir', async () => {
+    let saved: any = null;
+    const c: any = { ...ctx, app: { addCustomer: (cust: any) => { saved = cust; return { ok: true }; } } };
+    const res = await AGENT_TOOLS['create_customer'].handler({ name: 'DİNÇER A.Ş.', phone: '555' }, c);
+    expect(res.ok).toBe(true);
+    expect(saved.shortName).toBe('DİNÇER A.Ş.');
+    expect(saved.title).toBe('DİNÇER A.Ş.');
+    expect(saved.name).toBeUndefined(); // bozuk 'name' alanı yazılmamalı
+    expect(saved.phone).toBe('555');
+  });
+
+  it('create_customer: DB başarısızsa ok:false döner (ajan "oluşturdum" yalanı engellenir)', async () => {
+    const c: any = { ...ctx, app: { addCustomer: () => ({ ok: false, error: 'RLS reddetti' }) } };
+    const res = await AGENT_TOOLS['create_customer'].handler({ name: 'X' }, c);
+    expect(res.ok).toBe(false);
+    expect(String(res.message)).toMatch(/RLS reddetti/);
+  });
+
+  it('delete_work_order: silme başarısızsa ok:false + hata mesajı', async () => {
+    const c: any = { ...ctx, app: { deleteWorkOrder: () => ({ ok: false, error: 'yetki yok' }) } };
+    const res = await AGENT_TOOLS['delete_work_order'].handler({ id: 'WO-1' }, c);
+    expect(res.ok).toBe(false);
+    expect(String(res.message)).toMatch(/yetki yok/);
+  });
+
+  it('delete_customer: başarılı silmede ok:true', async () => {
+    let deletedId: string | null = null;
+    const c: any = { ...ctx, app: { deleteCustomer: (id: string) => { deletedId = id; return { ok: true }; } } };
+    const res = await AGENT_TOOLS['delete_customer'].handler({ id: 'cu-9' }, c);
+    expect(res.ok).toBe(true);
+    expect(deletedId).toBe('cu-9');
+  });
+});

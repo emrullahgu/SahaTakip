@@ -394,6 +394,7 @@ function Inner() {
       const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"/>
 <title>Yönetici Raporu ${esc(periodLabel)}</title>
 <style>
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
   body { font-family: Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 26px 28px; font-size: 10px; }
   .header { border-bottom: 3px solid #1e40af; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; }
