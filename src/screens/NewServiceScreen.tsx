@@ -73,6 +73,9 @@ export default function NewServiceScreen() {
   const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
   const [otherCost, setOtherCost] = useState('');
+  // Teklif özetindeki Hizmet ve Malzeme bedelleri elle düzenlenebilir (boş = hesaplanan).
+  const [serviceFeeOverride, setServiceFeeOverride] = useState('');
+  const [materialFeeOverride, setMaterialFeeOverride] = useState('');
   const [notes, setNotes] = useState('');
   // Çift kayıt koruması: foto yüklemeleri birkaç saniye sürebiliyor; bu sırada
   // butona tekrar basılınca aynı iş emri 2 kez oluşuyordu. submittingRef senkron
@@ -190,6 +193,17 @@ export default function NewServiceScreen() {
 
   const lineTotal = (m: SelectedMaterial) =>
     m.price * m.qty * (1 - (m.discountPct ?? 0) / 100);
+
+  // ----- Teklif özeti bileşenleri (TEK kaynak: hem özet render hem handleSubmit) -----
+  // Hizmet ve Malzeme bedelleri elle düzenlenebilir; override boşsa hesaplanan kullanılır.
+  const rawMaterialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
+  const defaultServiceFee = selectedService?.price ?? 0;
+  const defaultMaterialFee = Math.round(rawMaterialCost * MATERIAL_MARKUP);
+  const effServiceFee = serviceFeeOverride.trim() !== '' ? (parseFloat(serviceFeeOverride) || 0) : defaultServiceFee;
+  const effMaterialFee = materialFeeOverride.trim() !== '' ? (parseFloat(materialFeeOverride) || 0) : defaultMaterialFee;
+  const effExtraCost = parseFloat(otherCost) || 0;
+  // Teklif tek noktada yuvarlanır → quoteAmount ve profit aynı değerden türetilir (tutarlı).
+  const calculatedQuote = Math.round(effServiceFee + effMaterialFee + effExtraCost);
 
   // Seçili malzemeleri id→kalem Map'ine al — katalog seçicide her satırda O(n)
   // `.find` yerine O(1) erişim (400 kalemlik listede belirgin fark).
@@ -322,12 +336,12 @@ export default function NewServiceScreen() {
     try {
     // Fotoğraflar artık opsiyonel — saha hızlı kayıt için engel olmaz.
 
-    const materialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
+    // Teklif bileşenleri yukarıda hesaplandı (düzenlenebilir hizmet/malzeme/yol).
+    const materialCost = rawMaterialCost;          // ham malzeme maliyeti (kâr/maliyet takibi)
     const laborCost = selectedService.estCost;
-    const extraCost = parseFloat(otherCost) || 0;
-    const calculatedQuote = selectedService.price + materialCost * MATERIAL_MARKUP + extraCost;
+    const extraCost = effExtraCost;
     const totalCost = laborCost + materialCost + extraCost;
-    const profit = calculatedQuote - totalCost;
+    const profit = calculatedQuote - totalCost;    // calculatedQuote zaten yuvarlı → tutarlı
 
     const workOrderId = `KOB-DRAFT-${Date.now().toString().slice(-4)}`;
 
@@ -673,34 +687,53 @@ export default function NewServiceScreen() {
         {(selectedMaterials.length > 0 || selectedService) && (
           <View style={styles.summary}>
             <Text style={styles.summaryTitle}>Otomatik Teklif Özeti</Text>
+            <Text style={styles.summaryHint}>Tutarlara dokunup elle değiştirebilirsiniz (boş = otomatik hesap).</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Hizmet Bedeli</Text>
-              <Text style={styles.summaryVal}>
-                ₺{selectedService.price.toLocaleString('tr-TR')}
-              </Text>
+              <View style={styles.summaryEditWrap}>
+                <Text style={styles.summaryCurrency}>₺</Text>
+                <TextInput
+                  style={styles.summaryInput}
+                  keyboardType="numeric"
+                  value={serviceFeeOverride}
+                  onChangeText={setServiceFeeOverride}
+                  placeholder={defaultServiceFee.toLocaleString('tr-TR')}
+                  placeholderTextColor={colors.text.faint}
+                />
+              </View>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Malzeme (+%25 marj)</Text>
-              <Text style={styles.summaryVal}>
-                ₺{Math.round(
-                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * MATERIAL_MARKUP
-                ).toLocaleString('tr-TR')}
-              </Text>
+              <View style={styles.summaryEditWrap}>
+                <Text style={styles.summaryCurrency}>₺</Text>
+                <TextInput
+                  style={styles.summaryInput}
+                  keyboardType="numeric"
+                  value={materialFeeOverride}
+                  onChangeText={setMaterialFeeOverride}
+                  placeholder={defaultMaterialFee.toLocaleString('tr-TR')}
+                  placeholderTextColor={colors.text.faint}
+                />
+              </View>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Yol / Yemek Masrafı</Text>
-              <Text style={styles.summaryVal}>
-                ₺{(parseFloat(otherCost) || 0).toLocaleString('tr-TR')}
-              </Text>
+              <View style={styles.summaryEditWrap}>
+                <Text style={styles.summaryCurrency}>₺</Text>
+                <TextInput
+                  style={styles.summaryInput}
+                  keyboardType="numeric"
+                  value={otherCost}
+                  onChangeText={setOtherCost}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.faint}
+                />
+              </View>
             </View>
             <View style={[styles.summaryRow, styles.summaryTotal]}>
               <Text style={styles.summaryTotalLabel}>Hesaplanan Teklif</Text>
               <Text style={styles.summaryTotalVal}>
-                ₺{Math.round(
-                  selectedService.price +
-                  selectedMaterials.reduce((s, m) => s + lineTotal(m), 0) * MATERIAL_MARKUP +
-                  (parseFloat(otherCost) || 0)
-                ).toLocaleString('tr-TR')}
+                ₺{calculatedQuote.toLocaleString('tr-TR')}
               </Text>
             </View>
           </View>
@@ -1205,9 +1238,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 4,
   },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryLabel: { fontSize: typography.sm, color: colors.text.muted },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 3 },
+  summaryLabel: { fontSize: typography.sm, color: colors.text.muted, flexShrink: 1, marginRight: spacing.sm },
   summaryVal: { fontSize: typography.sm, color: colors.text.secondary, fontWeight: '600' },
+  summaryHint: { fontSize: typography.xs, color: colors.text.faint, marginBottom: 6 },
+  summaryEditWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    paddingHorizontal: 8,
+    minWidth: 130,
+  },
+  summaryCurrency: { fontSize: typography.sm, color: colors.text.muted, marginRight: 2 },
+  summaryInput: {
+    flex: 1,
+    fontSize: typography.sm,
+    color: colors.text.primary,
+    fontWeight: '700',
+    textAlign: 'right',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
   summaryTotal: {
     borderTopWidth: 1,
     borderTopColor: colors.border.primary,
