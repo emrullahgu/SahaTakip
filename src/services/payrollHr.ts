@@ -2,6 +2,7 @@
 // payroll_records / leave_requests tablolarıyla konuşur. RLS sayesinde standart
 // kullanıcı yalnız KENDİ kayıtlarını görür; yönetici/admin hepsini.
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 export interface PayrollRecord {
   id: string;
@@ -82,7 +83,9 @@ export async function upsertPayrollRecord(input: {
     .upsert(row, { onConflict: 'employee_id,period' })
     .select().single();
   if (error) throw new Error(`[payroll.upsert] ${error.message}`);
-  return prFromRow(data);
+  const rec = prFromRow(data);
+  void auditRepo.logCurrent({ action: 'payroll.upsert', tableName: 'payroll_records', refId: rec.id, meta: { employeeId: rec.employeeId, period: rec.period, gross: rec.gross, net: rec.net, status: rec.status } });
+  return rec;
 }
 
 // ---------- İzin ----------
@@ -103,13 +106,16 @@ export async function createLeaveRequest(input: {
     leave_type: input.leaveType, reason: input.reason ?? null, status: 'pending',
   }).select().single();
   if (error) throw new Error(`[leave.create] ${error.message}`);
-  return lrFromRow(data);
+  const lr = lrFromRow(data);
+  void auditRepo.logCurrent({ action: 'leave.create', tableName: 'leave_requests', refId: lr.id, meta: { employeeId: lr.employeeId, leaveType: lr.leaveType, startDate: lr.startDate, endDate: lr.endDate } });
+  return lr;
 }
 
 /** İzin talebini sil (kendi bekleyen talebi veya yönetici — RLS). */
 export async function deleteLeaveRequest(id: string): Promise<void> {
   const { error } = await supabase.from('leave_requests').delete().eq('id', id);
   if (error) throw new Error(`[leave.delete] ${error.message}`);
+  void auditRepo.logCurrent({ action: 'leave.delete', tableName: 'leave_requests', refId: id });
 }
 
 /** İzin talebini onayla/reddet (yalnız yönetici — RLS). */
@@ -122,10 +128,12 @@ export async function decideLeaveRequest(id: string, approve: boolean): Promise<
     decided_at: new Date().toISOString(),
   }).eq('id', id);
   if (error) throw new Error(`[leave.decide] ${error.message}`);
+  void auditRepo.logCurrent({ action: 'leave.decide', tableName: 'leave_requests', refId: id, meta: { approve } });
 }
 
 /** Personel kaydını bir login kullanıcısına bağla (self-view RLS için). */
 export async function linkEmployeeToUser(employeeId: string, userId: string): Promise<void> {
   const { error } = await supabase.from('employees').update({ user_id: userId }).eq('id', employeeId);
   if (error) throw new Error(`[employee.link] ${error.message}`);
+  void auditRepo.logCurrent({ action: 'employee.link', tableName: 'employees', refId: employeeId, meta: { userId } });
 }

@@ -4,6 +4,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CashEntry, CashEntryKind, CashSummary, Employee } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 const KEY = '@SahaTakip:cash_entries';
 
@@ -91,6 +92,7 @@ export async function addEntry(
     } catch { /* keep local */ }
   }
   await saveAll([next, ...all]);
+  void auditRepo.logCurrent({ action: 'cash.entry.create', tableName: 'cash_entries', refId: next.id, meta: { kind: next.kind, amount: next.amount, employeeId: next.employeeId } });
   return next;
 }
 
@@ -100,6 +102,7 @@ export async function deleteEntry(id: string): Promise<void> {
   }
   const all = await listEntries();
   await saveAll(all.filter(e => e.id !== id));
+  void auditRepo.logCurrent({ action: 'cash.entry.delete', tableName: 'cash_entries', refId: id });
 }
 
 export async function listByEmployee(employeeId: string): Promise<CashEntry[]> {

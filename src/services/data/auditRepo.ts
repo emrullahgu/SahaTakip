@@ -40,6 +40,18 @@ export const auditRepo = {
     }
   },
 
+  /** Aktif kullanıcıyı kendi çözerek loglar — React context'i olmayan servisler
+   *  (payments/stock/cashRegister/payroll vb.) için kolaylık (denetim M9). */
+  async logCurrent(e: AuditEvent): Promise<void> {
+    if (!isOnlineMode()) return;
+    try {
+      const { data } = await supabase.auth.getUser();
+      await this.log(data?.user?.id ?? null, e);
+    } catch {
+      /* sessiz */
+    }
+  },
+
   async list(limit = 100): Promise<AuditLogRow[]> {
     if (!isOnlineMode()) return [];
     try {

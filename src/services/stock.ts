@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { listMaterials } from './materials';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 const BAL_KEY = '@SahaTakip:stock_balances';
 const MOV_KEY = '@SahaTakip:stock_movements';
@@ -223,6 +224,7 @@ export async function addMovement(input: {
 
   const all = await listMovements();
   await saveMovements([mov, ...all]);
+  void auditRepo.logCurrent({ action: `stock.movement.${mov.kind}`, tableName: 'stock_movements', refId: mov.id, meta: { materialId: mov.materialId, qty: mov.qty, fromWarehouseId: mov.fromWarehouseId, toWarehouseId: mov.toWarehouseId } });
   return mov;
 }
 

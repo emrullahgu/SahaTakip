@@ -12,6 +12,7 @@ import {
   Quote,
 } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 const KEY = '@SahaTakip:payments';
 
@@ -117,6 +118,7 @@ export async function createPayment(
     } catch { /* keep local */ }
   }
   await saveAll([next, ...all]);
+  void auditRepo.logCurrent({ action: 'payment.create', tableName: 'payments', refId: next.id, meta: { amount: next.amount, method: next.method, status: next.status, customerId: next.customerId } });
   return next;
 }
 
@@ -146,7 +148,10 @@ export async function updatePayment(
       }
     } catch { /* ignore */ }
   }
-  if (updated) await saveAll(next);
+  if (updated) {
+    await saveAll(next);
+    void auditRepo.logCurrent({ action: 'payment.update', tableName: 'payments', refId: id, meta: { amount: updated.amount, status: updated.status, method: updated.method } });
+  }
   return updated;
 }
 
@@ -156,6 +161,7 @@ export async function deletePayment(id: string): Promise<void> {
   }
   const all = await listPayments();
   await saveAll(all.filter(p => p.id !== id));
+  void auditRepo.logCurrent({ action: 'payment.delete', tableName: 'payments', refId: id });
 }
 
 export async function listByCustomer(customerId: string): Promise<Payment[]> {
