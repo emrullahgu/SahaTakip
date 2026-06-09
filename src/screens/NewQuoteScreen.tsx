@@ -35,6 +35,7 @@ import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } f
 import { newUuid } from '../services/data/repository';
 import { upsertMaterial } from '../services/materials';
 import { listPricingRules, applyPricingRules, type BrandPricingRule } from '../services/productPricing';
+import { matchesAnyField } from '../utils/search';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
 type NewQuoteRoute = RouteProp<RootStackParamList, 'NewQuote'>;
@@ -199,37 +200,28 @@ export default function NewQuoteScreen() {
     () =>
       POZ_CATALOG.filter(p => {
         const matchCat = pozCategory === 'Tümü' || p.category === pozCategory;
-        const matchSearch =
-          p.name.toLowerCase().includes(pozSearch.toLowerCase()) ||
-          p.id.toLowerCase().includes(pozSearch.toLowerCase());
+        // Aksan-toleranslı + kelime-bazlı (kontaktor → Kontaktör; sıra serbest).
+        const matchSearch = matchesAnyField([p.name, p.id], pozSearch);
         return matchCat && matchSearch;
       }),
     [pozCategory, pozSearch]
   );
 
-  // Müşteri arama (ad/unvan/vergi no/telefon — Türkçe duyarlı)
+  // Müşteri arama (ad/unvan/vergi no/telefon — aksan-toleranslı)
   const filteredCustomers = useMemo(() => {
-    const q = customerSearch.trim().toLocaleLowerCase('tr-TR');
+    const q = customerSearch.trim();
     if (!q) return customers;
-    return customers.filter(c =>
-      [c.shortName, c.title, c.taxNumber, c.phone]
-        .filter(Boolean)
-        .some(v => String(v).toLocaleLowerCase('tr-TR').includes(q)),
-    );
+    return customers.filter(c => matchesAnyField([c.shortName, c.title, c.taxNumber, c.phone], q));
   }, [customers, customerSearch]);
 
   const filteredProducts = useMemo(() => {
-    const q = productSearch.trim().toLocaleLowerCase('tr-TR');
+    const q = productSearch.trim();
     let base = [...customProds, ...applyOverrides(MATERIAL_CATALOG, catOverrides)];
     if (productCategory) base = base.filter(m => m.category === productCategory);
     if (productBrand) base = base.filter(m => m.brand === productBrand);
     if (q) {
-      base = base.filter(m =>
-        (m.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.code || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.brand || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
-      );
+      // Aksan-toleranslı + kelime-bazlı ürün araması (kontaktor → Kontaktör).
+      base = base.filter(m => matchesAnyField([m.name, m.code, m.brand, m.category], q));
     }
     // Toplu fiyat/iskonto kurallarını uygula → eklenecek fiyat indirimli gelir.
     return applyPricingRules(base.slice(0, 400), productRules);

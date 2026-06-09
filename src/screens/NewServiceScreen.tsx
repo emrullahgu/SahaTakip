@@ -30,6 +30,7 @@ import { getFxRates, liveUnitPriceTry, FX_FALLBACK, type FxRates } from '../serv
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { localDateISO } from '../utils/date';
 import { resizeForUpload } from '../utils/image';
+import { matchesAnyField } from '../utils/search';
 import type { MaterialCatalogItem } from '../types';
 import { createApproval } from '../services/governance';
 import { newUuid } from '../services/data/repository';
@@ -103,28 +104,21 @@ export default function NewServiceScreen() {
   const [newCustomer, setNewCustomer] = useState({ shortName: '', title: '', phone: '' });
 
   const filteredCustomers = useMemo(() => {
-    const q = clientSearch.trim().toLocaleLowerCase('tr-TR');
+    const q = clientSearch.trim();
     if (!q) return customers;
-    return customers.filter(c =>
-      (c.shortName || '').toLocaleLowerCase('tr-TR').includes(q) ||
-      (c.title || '').toLocaleLowerCase('tr-TR').includes(q) ||
-      (c.taxNumber || '').includes(q) ||
-      (c.phone || '').includes(q),
-    );
+    // Aksan-toleranslı + kelime-bazlı: "ege boru" / "EGE BORU" / "egeboru" eşleşir.
+    return customers.filter(c => matchesAnyField([c.shortName, c.title, c.taxNumber, c.phone], q));
   }, [customers, clientSearch]);
 
   const filteredMaterials = useMemo(() => {
-    const q = materialSearch.trim().toLocaleLowerCase('tr-TR');
+    const q = materialSearch.trim();
     let base = [...customProds, ...applyOverrides(MATERIAL_CATALOG, catOverrides)];
     if (materialCategory) base = base.filter(m => m.category === materialCategory);
     if (materialBrand) base = base.filter(m => m.brand === materialBrand);
     if (q) {
-      base = base.filter(m =>
-        (m.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.code || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.brand || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
-      );
+      // Aksan-toleranslı + kelime-bazlı arama: "kontaktor" → "Kontaktör",
+      // "siemens kontaktor" gibi çok kelimeli sorgular sıra şartı olmadan eşleşir.
+      base = base.filter(m => matchesAnyField([m.name, m.code, m.brand, m.category], q));
     }
     // Performans: ilk 400 sonuç yeterli (FlatList zaten lazy render eder).
     return base.slice(0, 400);
