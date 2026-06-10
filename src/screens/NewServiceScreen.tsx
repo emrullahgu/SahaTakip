@@ -70,8 +70,9 @@ export default function NewServiceScreen() {
     loadCustomProducts().then(setCustomProds);
     getFxRates().then(setFx).catch(() => { /* fallback zaten yüklü */ });
   }, []);
-  const [beforePhoto, setBeforePhoto] = useState<string | null>(null);
-  const [afterPhoto, setAfterPhoto] = useState<string | null>(null);
+  // Usta iş öncesi/sonrası İSTEDİĞİ KADAR foto yükleyebilir (çoklu).
+  const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
+  const [afterPhotos, setAfterPhotos] = useState<string[]>([]);
   const [formPhoto, setFormPhoto] = useState<string | null>(null);
   const [otherCost, setOtherCost] = useState('');
   // Teklif özetindeki Hizmet ve Malzeme bedelleri elle düzenlenebilir (boş = hesaplanan).
@@ -228,8 +229,8 @@ export default function NewServiceScreen() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         // Yüklemeden önce küçült (bellek + mobil veri tasarrufu).
         const { uri } = await resizeForUpload(result.assets[0].uri, { maxWidth: 1600, compress: 0.7 });
-        if (type === 'before') setBeforePhoto(uri);
-        else if (type === 'after') setAfterPhoto(uri);
+        if (type === 'before') setBeforePhotos(prev => [...prev, uri]);
+        else if (type === 'after') setAfterPhotos(prev => [...prev, uri]);
         else setFormPhoto(uri);
       }
     } catch (err: any) {
@@ -259,8 +260,8 @@ export default function NewServiceScreen() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         // Yüklemeden önce küçült (bellek + mobil veri tasarrufu).
         const { uri } = await resizeForUpload(result.assets[0].uri, { maxWidth: 1600, compress: 0.7 });
-        if (type === 'before') setBeforePhoto(uri);
-        else if (type === 'after') setAfterPhoto(uri);
+        if (type === 'before') setBeforePhotos(prev => [...prev, uri]);
+        else if (type === 'after') setAfterPhotos(prev => [...prev, uri]);
         else setFormPhoto(uri);
       }
     } catch (err: any) {
@@ -281,6 +282,32 @@ export default function NewServiceScreen() {
       { text: 'İptal', style: 'cancel' },
     ]);
   };
+
+  // Çoklu foto ızgarası: mevcut fotolar (sil butonlu) + "Foto Ekle" karosu.
+  // Usta öncesi/sonrası İSTEDİĞİ KADAR foto ekleyebilir.
+  const renderPhotoGrid = (
+    photos: string[],
+    setPhotos: React.Dispatch<React.SetStateAction<string[]>>,
+    type: 'before' | 'after',
+  ) => (
+    <View style={styles.photoGrid}>
+      {photos.map((uri, idx) => (
+        <View key={`${type}-${idx}`} style={styles.photoThumbWrap}>
+          <Image source={{ uri }} style={styles.photoThumb} resizeMode="cover" />
+          <TouchableOpacity
+            style={styles.removePhotoThumb}
+            onPress={() => setPhotos(prev => prev.filter((_, i) => i !== idx))}
+          >
+            <Ionicons name="close-circle" size={20} color={colors.rose.default} />
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity style={styles.photoAddTile} onPress={() => showPhotoOptions(type)} activeOpacity={0.8}>
+        <Ionicons name="camera-outline" size={26} color={colors.text.faint} />
+        <Text style={styles.photoAddText}>Foto Ekle</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const addMaterial = (mat: (typeof MATERIAL_CATALOG)[0]) => {
     setSelectedMaterials(prev => {
@@ -339,21 +366,19 @@ export default function NewServiceScreen() {
 
     const workOrderId = `KOB-DRAFT-${Date.now().toString().slice(-4)}`;
 
-    // Fotoğrafları Supabase Storage'a yükle (varsa). Hata olursa lokal URI fallback.
-    let beforeUrl = beforePhoto || '';
-    let afterUrl = afterPhoto || '';
-    let formUrl = formPhoto || undefined;
+    // Fotoğrafları Supabase Storage'a yükle (çoklu). Hata olursa lokal URI fallback.
     const uploadFolder = `work-orders/${workOrderId}`;
-    try {
-      if (beforePhoto) beforeUrl = await uploadPhoto(beforePhoto, uploadFolder);
-    } catch (e: any) {
-      Alert.alert('Foto yüklenemedi (öncesi)', e?.message ?? 'Bilinmeyen hata');
-    }
-    try {
-      if (afterPhoto) afterUrl = await uploadPhoto(afterPhoto, uploadFolder);
-    } catch (e: any) {
-      Alert.alert('Foto yüklenemedi (sonrası)', e?.message ?? 'Bilinmeyen hata');
-    }
+    const uploadAll = async (uris: string[]): Promise<string[]> => {
+      const out: string[] = [];
+      for (const u of uris) {
+        try { out.push(await uploadPhoto(u, uploadFolder)); }
+        catch (e: any) { console.warn('[wo.photo.upload]', e); out.push(u); } // hata → lokal URI fallback
+      }
+      return out;
+    };
+    const beforeUrls = await uploadAll(beforePhotos);
+    const afterUrls = await uploadAll(afterPhotos);
+    let formUrl = formPhoto || undefined;
     try {
       if (formPhoto) formUrl = await uploadPhoto(formPhoto, uploadFolder);
     } catch (e: any) {
@@ -374,8 +399,10 @@ export default function NewServiceScreen() {
       quoteAmount: Math.round(calculatedQuote),
       profit: Math.round(profit),
       status: 'Onay Bekliyor',
-      beforePhoto: beforeUrl,
-      afterPhoto: afterUrl,
+      beforePhoto: beforeUrls[0] || '',
+      afterPhoto: afterUrls[0] || '',
+      beforePhotos: beforeUrls,
+      afterPhotos: afterUrls,
       formPhoto: formUrl,
       notes: notes || 'Saha bakımı tamamlandı, gerilim testleri yapıldı.',
     });
@@ -405,8 +432,8 @@ export default function NewServiceScreen() {
     // sonucuna göre) — burada koşulsuz "Gönderildi" Alert'i kaldırıldı.
 
     // Reset form
-    setBeforePhoto(null);
-    setAfterPhoto(null);
+    setBeforePhotos([]);
+    setAfterPhotos([]);
     setFormPhoto(null);
     setSelectedMaterials([]);
     setOtherCost('');
@@ -442,28 +469,9 @@ export default function NewServiceScreen() {
           <Ionicons name="chevron-down" size={16} color={colors.text.muted} />
         </TouchableOpacity>
 
-        {/* Step 2: Before Photo */}
-        <Text style={styles.stepLabel}>2. İş Öncesi Fotoğraf (Before)</Text>
-        {beforePhoto ? (
-          <View style={styles.photoContainer}>
-            <Image source={{ uri: beforePhoto }} style={styles.photo} resizeMode="cover" />
-            <TouchableOpacity
-              style={styles.removePhoto}
-              onPress={() => setBeforePhoto(null)}
-            >
-              <Ionicons name="close-circle" size={24} color={colors.rose.default} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.photoUpload}
-            onPress={() => showPhotoOptions('before')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="camera-outline" size={32} color={colors.text.faint} />
-            <Text style={styles.photoUploadText}>Öncesi Fotoğrafı Çek / Yükle</Text>
-          </TouchableOpacity>
-        )}
+        {/* Step 2: Before Photos (çoklu — istediğin kadar) */}
+        <Text style={styles.stepLabel}>2. İş Öncesi Fotoğraflar (Before){beforePhotos.length ? ` · ${beforePhotos.length}` : ''}</Text>
+        {renderPhotoGrid(beforePhotos, setBeforePhotos, 'before')}
 
         {/* Step 3: Service Selection */}
         <Text style={styles.stepLabel}>3. Yapılan Ana Hizmet</Text>
@@ -609,28 +617,9 @@ export default function NewServiceScreen() {
           <Text style={styles.materialHint}>Henüz malzeme eklemediniz. Yukarıdaki butona dokunup arayarak hızlıca seçin.</Text>
         )}
 
-        {/* Step 5: After Photo */}
-        <Text style={styles.stepLabel}>5. İş Sonrası Fotoğraf (After)</Text>
-        {afterPhoto ? (
-          <View style={styles.photoContainer}>
-            <Image source={{ uri: afterPhoto }} style={styles.photo} resizeMode="cover" />
-            <TouchableOpacity
-              style={styles.removePhoto}
-              onPress={() => setAfterPhoto(null)}
-            >
-              <Ionicons name="close-circle" size={24} color={colors.rose.default} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.photoUpload}
-            onPress={() => showPhotoOptions('after')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="camera-outline" size={32} color={colors.text.faint} />
-            <Text style={styles.photoUploadText}>Sonrası Fotoğrafı Çek / Yükle</Text>
-          </TouchableOpacity>
-        )}
+        {/* Step 5: After Photos (çoklu — istediğin kadar) */}
+        <Text style={styles.stepLabel}>5. İş Sonrası Fotoğraflar (After){afterPhotos.length ? ` · ${afterPhotos.length}` : ''}</Text>
+        {renderPhotoGrid(afterPhotos, setAfterPhotos, 'after')}
 
         {/* Step 6: Servis Formu Fotoğrafı (opsiyonel) */}
         <Text style={styles.stepLabel}>6. Servis Formu Fotoğrafı (opsiyonel)</Text>
@@ -1130,6 +1119,23 @@ const styles = StyleSheet.create({
     color: colors.text.faint,
     fontWeight: '600',
   },
+  // Çoklu foto ızgarası (öncesi/sonrası)
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  photoThumbWrap: {
+    width: 96, height: 96, borderRadius: radius.md, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: colors.emerald.default, position: 'relative',
+  },
+  photoThumb: { width: '100%', height: '100%' },
+  removePhotoThumb: {
+    position: 'absolute', top: 2, right: 2,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10,
+  },
+  photoAddTile: {
+    width: 96, height: 96, borderRadius: radius.md,
+    backgroundColor: colors.bg.secondary, borderWidth: 1.5, borderStyle: 'dashed',
+    borderColor: colors.border.secondary, justifyContent: 'center', alignItems: 'center', gap: 4,
+  },
+  photoAddText: { fontSize: 10, color: colors.text.faint, fontWeight: '700' },
   materialGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

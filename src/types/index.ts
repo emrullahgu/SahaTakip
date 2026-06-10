@@ -69,8 +69,10 @@ export interface WorkOrder {
     | 'Onay Bekliyor'
     | 'Teklif Gönderildi'
     | 'Faturalandırıldı';
-  beforePhoto: string;
-  afterPhoto: string;
+  beforePhoto: string;            // Geriye uyum: beforePhotos[0]
+  afterPhoto: string;             // Geriye uyum: afterPhotos[0]
+  beforePhotos?: string[];        // İş ÖNCESİ — usta istediği kadar foto yükleyebilir
+  afterPhotos?: string[];         // İş SONRASI — usta istediği kadar foto yükleyebilir
   formPhoto?: string;             // Servis formu (kağıt) fotoğrafı
   notes: string;
   // FAZ 3 alanları

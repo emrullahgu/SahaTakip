@@ -21,6 +21,19 @@ export function buildWorkOrderHtml(wo: WorkOrder): string {
     `)
     .join('');
 
+  // Çoklu foto: yeni beforePhotos/afterPhotos dizilerini kullan; yoksa eski tekil alana düş.
+  const beforeList = (wo.beforePhotos && wo.beforePhotos.length ? wo.beforePhotos : (wo.beforePhoto ? [wo.beforePhoto] : []))
+    .filter(Boolean);
+  const afterList = (wo.afterPhotos && wo.afterPhotos.length ? wo.afterPhotos : (wo.afterPhoto ? [wo.afterPhoto] : []))
+    .filter(Boolean);
+  const photoBox = (label: string, src: string) =>
+    `<div class="photo-box"><div class="l">${escapeHtml(label)}</div><img src="${src}"/></div>`;
+  const photosHtml = [
+    ...beforeList.map((p, i) => photoBox(`ÖNCESİ${beforeList.length > 1 ? ' ' + (i + 1) : ''}`, p)),
+    ...afterList.map((p, i) => photoBox(`SONRASI${afterList.length > 1 ? ' ' + (i + 1) : ''}`, p)),
+    ...(wo.formPhoto ? [photoBox('SERVİS FORMU', wo.formPhoto)] : []),
+  ].join('');
+
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -46,9 +59,12 @@ export function buildWorkOrderHtml(wo: WorkOrder): string {
   td { padding: 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
   .right { text-align: right; }
   .center { text-align: center; }
-  .photos { display: flex; gap: 10px; margin-top: 20px; }
-  .photo-box { flex: 1; text-align: center; }
-  .photo-box img { width: 100%; height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
+  .photos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .photo-box { width: calc(33.33% - 7px); text-align: center; }
+  .photo-box img { width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
+  .photo-box .l { color: #6b7280; font-weight: 700; font-size: 9px; text-transform: uppercase; margin-bottom: 3px; }
+  table.cost td { padding: 7px 8px; }
+  table.cost .total-row td { font-weight: 800; color: #1e40af; border-top: 2px solid #1e40af; font-size: 12px; }
   .signature-box { display: flex; gap: 40px; margin-top: 40px; }
   .sign { flex: 1; border-top: 1px solid #1f2937; padding-top: 8px; text-align: center; }
   .sign img { max-height: 60px; margin-bottom: 4px; }
@@ -102,11 +118,20 @@ export function buildWorkOrderHtml(wo: WorkOrder): string {
     </table>
   ` : ''}
 
+  <div class="section-title">Masraflar / Maliyet Özeti</div>
+  <table class="cost">
+    <tbody>
+      <tr><td>Malzeme Toplamı</td><td class="right">${fmt(wo.materialCost || 0)} ₺</td></tr>
+      <tr><td>İşçilik</td><td class="right">${fmt(wo.laborCost || 0)} ₺</td></tr>
+      <tr><td>Yol / Yemek Masrafı</td><td class="right">${fmt(wo.otherCost || 0)} ₺</td></tr>
+      <tr class="total-row"><td>Teklif Tutarı (KDV dahil)</td><td class="right">${fmt(wo.quoteAmount || 0)} ₺</td></tr>
+    </tbody>
+  </table>
+
+  ${photosHtml ? `
   <div class="section-title">Fotoğraflar</div>
-  <div class="photos">
-    ${wo.beforePhoto ? `<div class="photo-box"><div class="l">ÖNCESİ</div><img src="${wo.beforePhoto}"/></div>` : ''}
-    ${wo.afterPhoto ? `<div class="photo-box"><div class="l">SONRASI</div><img src="${wo.afterPhoto}"/></div>` : ''}
-  </div>
+  <div class="photos">${photosHtml}</div>
+  ` : ''}
 
   <div class="signature-box">
     <div class="sign">
