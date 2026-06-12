@@ -1,6 +1,6 @@
 // PortalUserFormScreen — POZ-DEV-402
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -51,6 +51,7 @@ export default function PortalUserFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}>
         <Text style={s.label}>Ad Soyad *</Text>
         <TextInput style={s.input} value={fullName} onChangeText={setFullName} placeholder="Ali Veli" placeholderTextColor={colors.text.faint} />
@@ -72,6 +73,7 @@ export default function PortalUserFormScreen() {
           <Text style={s.saveT}>Kaydet</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

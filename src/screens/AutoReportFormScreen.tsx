@@ -1,6 +1,6 @@
 // AutoReportFormScreen — POZ-DEV-412
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -48,6 +48,7 @@ export default function AutoReportFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}>
         <Text style={s.label}>İsim *</Text>
         <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Aylık Yönetim Özeti" placeholderTextColor={colors.text.faint} />
@@ -82,6 +83,7 @@ export default function AutoReportFormScreen() {
           <Text style={s.saveT}>Kaydet</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

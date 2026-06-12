@@ -1,7 +1,7 @@
 // CalendarEventFormScreen — POZ-DEV-311 Etkinlik oluştur/düzenle
 import React, { useCallback, useEffect, useState } from 'react';
 import { localDateISO } from '../utils/date';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -89,6 +89,7 @@ export default function CalendarEventFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.label}>Başlık</Text>
         <TextInput style={s.input} value={title} onChangeText={setTitle} placeholder="Etkinlik başlığı" placeholderTextColor={colors.text.faint} />
@@ -152,6 +153,7 @@ export default function CalendarEventFormScreen() {
           <Text style={s.saveText}>Kaydet</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

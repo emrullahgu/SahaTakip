@@ -1,6 +1,6 @@
 // TenantFormScreen — Faz 40
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -37,6 +37,7 @@ export default function TenantFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         <View>
           <Text style={s.l}>Firma Adı *</Text>
@@ -67,6 +68,7 @@ export default function TenantFormScreen() {
           <Text style={s.saveT}>Kaydet</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

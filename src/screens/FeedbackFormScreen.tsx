@@ -1,6 +1,6 @@
 // FeedbackFormScreen — POZ-DEV-334 Geri bildirim oluştur/düzenle
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -66,6 +66,7 @@ export default function FeedbackFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.label}>Kategori</Text>
         <View style={s.chipRow}>
@@ -99,6 +100,7 @@ export default function FeedbackFormScreen() {
           <Text style={s.saveT}>Kaydet</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

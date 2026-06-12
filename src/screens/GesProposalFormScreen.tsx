@@ -1,6 +1,6 @@
 // GesProposalFormScreen — POZ-DEV-227 GES teklif formu
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -74,6 +74,7 @@ export default function GesProposalFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Section title="Müşteri">
           <TextInput style={s.input} value={customerName} onChangeText={setCustomerName} placeholder="Müşteri adı" placeholderTextColor={colors.text.faint} />
@@ -140,6 +141,7 @@ export default function GesProposalFormScreen() {
           <Text style={s.saveText}>{editingId ? 'Güncelle' : 'Teklifi Kaydet'}</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

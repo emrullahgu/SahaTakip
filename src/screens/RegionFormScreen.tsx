@@ -1,6 +1,6 @@
 // RegionFormScreen — POZ-DEV-355
 import React, { useEffect, useState } from 'react';
-import { Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -38,6 +38,7 @@ export default function RegionFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.label}>Bölge Adı *</Text>
         <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Marmara" placeholderTextColor={colors.text.faint} />
@@ -53,6 +54,7 @@ export default function RegionFormScreen() {
           <Text style={s.saveTxt}>Kaydet</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

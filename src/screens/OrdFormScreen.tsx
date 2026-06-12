@@ -1,6 +1,6 @@
 // Faz 59 — OrdFormScreen (POZ-DEV-293)
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -47,6 +47,7 @@ export default function OrdFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.scroll}>
         <Text style={s.sectionT}>Müşteri Bilgileri</Text>
         <View style={s.field}>
@@ -141,6 +142,7 @@ export default function OrdFormScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

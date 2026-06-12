@@ -1,8 +1,7 @@
 // AssetFormScreen — POZ-DEV-086
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
-} from 'react-native';
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -88,6 +87,7 @@ export default function AssetFormScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.label}>Cihaz Adı *</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="ör. Trafo TR-1" placeholderTextColor={colors.text.faint} />
@@ -141,6 +141,7 @@ export default function AssetFormScreen() {
           <Text style={styles.saveText}>{editing ? 'Güncelle' : 'Kaydet'}</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

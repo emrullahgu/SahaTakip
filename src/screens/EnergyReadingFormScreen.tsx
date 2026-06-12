@@ -1,8 +1,7 @@
 // EnergyReadingFormScreen — POZ-DEV-083 (sayaç + pano) + POZ-DEV-084 (trafo + GES)
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch,
-} from 'react-native';
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, KeyboardAvoidingView, Platform} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -81,6 +80,7 @@ export default function EnergyReadingFormScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.label}>Tip</Text>
         <View style={styles.grid}>
@@ -197,6 +197,7 @@ export default function EnergyReadingFormScreen() {
           <Text style={styles.saveText}>{editing ? 'Güncelle' : 'Kaydet'}</Text>
         </TouchableOpacity>
       </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
