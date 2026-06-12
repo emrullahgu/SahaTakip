@@ -21,6 +21,7 @@ import EmptyState from '../components/EmptyState';
 import RowMenu from '../components/RowMenu';
 import PressableScale from '../components/PressableScale';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
+import { matchesAnyField } from '../utils/search';
 import { a11yButton, a11yInput, HIT_SLOP_8 } from '../utils/a11y';
 import type { Customer, RootStackParamList } from '../types';
 
@@ -37,15 +38,10 @@ export default function CustomersScreen() {
   const canWrite = hasPermission('customers', 'W');
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return customers;
-    return customers.filter(
-      c =>
-        c.shortName.toLowerCase().includes(q) ||
-        c.title.toLowerCase().includes(q) ||
-        (c.city ?? '').toLowerCase().includes(q) ||
-        (c.phone ?? '').includes(q)
-    );
+    // Aksan-toleranslı + kelime-bazlı (dimes→DİMES, "ege boru" sıra serbest).
+    return customers.filter(c => matchesAnyField([c.shortName, c.title, c.city, c.phone, c.taxNumber], q));
   }, [customers, query]);
 
   return (
