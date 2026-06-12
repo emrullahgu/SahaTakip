@@ -153,8 +153,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         quality: 0.7,
       });
       if (!res.canceled && res.assets[0]?.uri) {
-        attachWorkOrderMedia(wo.id, { videoUri: res.assets[0].uri });
-        showToast('Video kaydı eklendi.');
+        attachWorkOrderMedia(wo.id, { videoUri: res.assets[0].uri }, 'Video kaydı eklendi.');
       }
     } catch (e: any) {
       Alert.alert('Hata', e?.message ?? 'Video kaydedilemedi.');
@@ -173,8 +172,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         quality: 0.7,
       });
       if (!res.canceled && res.assets[0]?.uri) {
-        attachWorkOrderMedia(wo.id, { videoUri: res.assets[0].uri });
-        showToast('Video eklendi.');
+        attachWorkOrderMedia(wo.id, { videoUri: res.assets[0].uri }, 'Video eklendi.');
       }
     } catch (e: any) {
       Alert.alert('Hata', e?.message ?? 'Video seçilemedi.');
@@ -187,8 +185,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
       try {
         const rec = await stopAudioRecording();
         setAudioRecording(false);
-        attachWorkOrderMedia(wo.id, { audioUri: rec.uri });
-        showToast(`Ses kaydı eklendi (${Math.round(rec.durationMs / 1000)}s).`);
+        attachWorkOrderMedia(wo.id, { audioUri: rec.uri }, `Ses kaydı eklendi (${Math.round(rec.durationMs / 1000)}s).`);
       } catch (e: any) {
         setAudioRecording(false);
         Alert.alert('Hata', e?.message ?? 'Kayıt durdurulamadı.');
@@ -216,8 +213,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
   // ---- FAZ 19 — POZ-DEV-033 Mobil imza ----
   const onSignatureSave = (dataUri: string) => {
     setSignOpen(false);
-    attachWorkOrderMedia(wo.id, { signatureUri: dataUri });
-    showToast('İmza kaydedildi.');
+    attachWorkOrderMedia(wo.id, { signatureUri: dataUri }, 'İmza kaydedildi.');
   };
 
   const clearMedia = (kind: 'video' | 'audio' | 'signature' | 'beforePhoto' | 'afterPhoto') => {

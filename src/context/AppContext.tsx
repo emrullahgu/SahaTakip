@@ -86,7 +86,7 @@ export interface AppContextType {
   setWorkOrderSchedule: (id: string, plannedStart?: string, plannedEnd?: string, slaHours?: number) => void;
   startWorkTimer: (id: string, userId?: string, note?: string) => void;
   stopWorkTimer: (id: string) => void;
-  attachWorkOrderMedia: (id: string, media: { videoUri?: string; audioUri?: string; signatureUri?: string; beforePhoto?: string; afterPhoto?: string; formPhoto?: string }) => void;
+  attachWorkOrderMedia: (id: string, media: { videoUri?: string; audioUri?: string; signatureUri?: string; beforePhoto?: string; afterPhoto?: string; formPhoto?: string }, successMsg?: string) => void;
   deleteWorkOrder: (id: string) => Promise<WriteResult>;
   generateFromRecurring: () => Promise<number>;
   toggleAttendance: (empId: string, day: string, currentStatus: string) => void;
@@ -783,15 +783,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const attachWorkOrderMedia = (
     id: string,
     media: { videoUri?: string; audioUri?: string; signatureUri?: string; beforePhoto?: string; afterPhoto?: string; formPhoto?: string },
+    successMsg?: string,
   ) => {
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = { ...w, ...media };
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    const current = workOrders.find(w => w.id === id);
+    if (!current) return;
+    const next: WorkOrder = { ...current, ...media };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    // successMsg verildiyse toast yalnız DB yazımı başarılıysa gösterilir, hata →
+    // medyayı geri al (Req#3: "İmza kaydedildi" deyip aslında kaydetmeme).
+    persistWorkOrder(next, successMsg ? {
+      successMsg,
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    } : undefined);
     auditRepo.log(userId, { action: 'work_order.media', tableName: 'work_orders', refId: id, meta: media });
   };
 
