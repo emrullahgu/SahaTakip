@@ -151,10 +151,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         workOrdersRepo.list(),
         employeesRepo.list(),
       ]);
-      if (q.length) setQuotes(q);
-      if (c.length) setCustomers(c);
-      if (w.length) setWorkOrders(w);
-      if (e.length) setEmployees(e);
+      // list() KOŞULSUZ set edilir — `if (length)` boş-başarılı sonucu yutup eski/seed
+      // veriyi gösteriyordu (silinmiş kayıt gerçek sanılıyordu). Repo'lar GEÇİCİ hatada
+      // cache döndürür (boş değil), bu yüzden gerçek boş → boş, hata → cache korunur.
+      setQuotes(q);
+      setCustomers(c);
+      setWorkOrders(w);
+      setEmployees(e);
       setSyncState('idle');
     } catch (err) {
       console.warn('[AppContext.refresh]', err);
