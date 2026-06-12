@@ -600,7 +600,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     handler: async (_args, ctx) => {
       const findings: any[] = [];
       const today = new Date();
-      const todayStr = today.toISOString().slice(0, 10);
+      const todayStr = TODAY(); // yerel gün (localDateISO) — UTC kaymasız, dosya geneliyle tutarlı
 
       // 1) Müşteri eksik telefon/email
       const custMissing = ctx.app.customers.filter(c => !c.phone && !c.email);
@@ -1215,7 +1215,9 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       const q = ctx.app.quotes.find(x => x.id === String(args.quoteId));
       if (!q) return { ok: false, error: 'Teklif bulunamadı' };
       const idx = Number(args.lineIndex);
-      if (idx < 0 || idx >= (q.lines?.length || 0)) return { ok: false, error: 'Geçersiz satır indeksi' };
+      // Number.isInteger guard'ı: 'iki'→NaN, 1.5 gibi geçersizler 'idx<0||idx>=len'
+      // karşılaştırmasını sessizce geçip not yazmadan ok:true dönüyordu (G3 yalan).
+      if (!Number.isInteger(idx) || idx < 0 || idx >= (q.lines?.length || 0)) return { ok: false, error: 'Geçersiz satır indeksi: ' + String(args.lineIndex) };
       const lines = q.lines.map((l, i) => (i === idx ? { ...l, notes: String(args.notes) } : l));
       const r = await ctx.app.updateQuote({ ...q, lines });
       if (!r.ok) return { ok: false, error: 'Kalem notu kaydedilemedi: ' + (r.error || 'bilinmeyen hata') };

@@ -10,15 +10,23 @@ const fmt = (n: number) =>
 
 export function buildWorkOrderHtml(wo: WorkOrder): string {
   const materialsRows = (wo.materials || [])
-    .map((m, idx) => `
+    .map((m: any, idx) => {
+      // Satır iskontosunu UYGULA — kayıtlı materialCost iskontolu; PDF iskontosuz
+      // gösterirse imzalı belge ile maliyet çelişirdi (denetim). qty/quantity esnek.
+      const qty = Number(m.qty ?? m.quantity) || 0;
+      const price = Number(m.price) || 0;
+      const disc = Math.min(100, Math.max(0, Number(m.discountPct) || 0));
+      const unit = price * (1 - disc / 100);
+      return `
       <tr>
         <td class="center">${idx + 1}</td>
-        <td>${escapeHtml(m.name)}</td>
-        <td class="center">${m.qty}</td>
-        <td class="right">${fmt(m.price)} ₺</td>
-        <td class="right">${fmt(m.qty * m.price)} ₺</td>
+        <td>${escapeHtml(m.name)}${disc > 0 ? ` <span style="color:#dc2626;font-size:9px">−%${disc}</span>` : ''}</td>
+        <td class="center">${qty}</td>
+        <td class="right">${fmt(unit)} ₺</td>
+        <td class="right">${fmt(qty * unit)} ₺</td>
       </tr>
-    `)
+    `;
+    })
     .join('');
 
   // Çoklu foto: yeni beforePhotos/afterPhotos dizilerini kullan; yoksa eski tekil alana düş.
@@ -27,7 +35,7 @@ export function buildWorkOrderHtml(wo: WorkOrder): string {
   const afterList = (wo.afterPhotos && wo.afterPhotos.length ? wo.afterPhotos : (wo.afterPhoto ? [wo.afterPhoto] : []))
     .filter(Boolean);
   const photoBox = (label: string, src: string) =>
-    `<div class="photo-box"><div class="l">${escapeHtml(label)}</div><img src="${src}"/></div>`;
+    `<div class="photo-box"><div class="l">${escapeHtml(label)}</div><img src="${escapeHtml(src)}"/></div>`;
   const photosHtml = [
     ...beforeList.map((p, i) => photoBox(`ÖNCESİ${beforeList.length > 1 ? ' ' + (i + 1) : ''}`, p)),
     ...afterList.map((p, i) => photoBox(`SONRASI${afterList.length > 1 ? ' ' + (i + 1) : ''}`, p)),

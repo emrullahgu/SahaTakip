@@ -370,7 +370,9 @@ export default function NewServiceScreen() {
     const totalCost = laborCost + materialCost + extraCost;
     const profit = calculatedQuote - totalCost;    // calculatedQuote zaten yuvarlı → tutarlı
 
-    const workOrderId = `KOB-DRAFT-${Date.now().toString().slice(-4)}`;
+    // slice(-4) son 4 hane ~10 sn'de tekrar ediyordu (id + foto klasörü çakışması).
+    // Tam base36 timestamp + kısa rastgele ek → pratikte benzersiz.
+    const workOrderId = `KOB-DRAFT-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, '0')}`;
 
     // Fotoğrafları Supabase Storage'a yükle (çoklu). Hata olursa lokal URI fallback.
     const uploadFolder = `work-orders/${workOrderId}`;
