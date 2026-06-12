@@ -10,6 +10,7 @@ import {
   customerToRow,
   workOrderToRow,
   employeeToRow,
+  expenseToRow,
 } from './mappers';
 
 let draining = false;
@@ -71,6 +72,8 @@ export async function applyOp(op: { table: string; action: string; payload: any 
         return workOrderToRow(payload, userId);
       case 'employees':
         return employeeToRow(payload);
+      case 'expenses':
+        return expenseToRow(payload, userId);
       default:
         return payload;
     }

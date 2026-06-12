@@ -32,6 +32,7 @@ jest.mock('../mappers', () => ({
   customerToRow: (p: any, uid?: string) => ({ id: p.id, created_by: uid }),
   workOrderToRow: (p: any, uid?: string) => ({ number: p.id, created_by: uid, status: p.status }),
   employeeToRow: (p: any) => ({ id: p.id }),
+  expenseToRow: (p: any, uid?: string) => ({ id: p.id, category: p.type, amount: p.amount, created_by: p.createdBy ?? uid }),
 }));
 
 import { applyOp } from '../syncDrain';
@@ -79,6 +80,13 @@ describe('applyOp — insert / update', () => {
     expect(up).toBeDefined();
     expect(up.opts).toMatchObject({ onConflict: 'number' });
     expect(up.row).toHaveProperty('number', 'IE-2026-003');
+  });
+
+  it('expenses insert → expenseToRow ile id PK upsert (offline masraf drenajı)', async () => {
+    await applyOp({ table: 'expenses', action: 'insert', payload: { id: 'ex-uuid-1', type: 'Yol', amount: 150, createdBy: 'u9' } });
+    const up = mockCalls.find(c => c.op === 'upsert' && c.table === 'expenses');
+    expect(up).toBeDefined();
+    expect(up.row).toMatchObject({ id: 'ex-uuid-1', category: 'Yol', amount: 150 });
   });
 
   it('work_orders update → keyCol "number" ve created_by GÖNDERİLMEZ (sahiplik korunur)', async () => {

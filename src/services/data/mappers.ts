@@ -219,3 +219,21 @@ export const employeeToRow = (e: Employee) => ({
   attendance_json: e.attendance,
   active: true,
 });
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Masraf → public.expenses satırı. Offline drenajda da kullanılır; bu yüzden
+// expenses.ts'teki yerel toRow ile AYNI kolonları üretmeli (category/amount/
+// description/date + uuid id + created_by). id yalnız UUID ise gönderilir.
+export const expenseToRow = (e: any, userId?: string) => {
+  const row: Record<string, any> = {
+    category: e.type,
+    amount: e.amount,
+    description: e.description ?? null,
+    date: e.date,
+  };
+  if (typeof e.id === 'string' && UUID_RE.test(e.id)) row.id = e.id;
+  const cb = e.createdBy ?? userId;
+  if (cb) row.created_by = cb;
+  return row;
+};

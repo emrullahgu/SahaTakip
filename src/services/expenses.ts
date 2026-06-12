@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { auditRepo } from './data/auditRepo';
+import { enqueueSync } from './data/repository';
 
 export interface Expense {
   id: string;
@@ -109,7 +110,11 @@ export async function addExpense(input: Omit<Expense, 'id' | 'status'> & Partial
         .select()
         .single();
       if (error) {
+        // DB yazımı koptu → sessizce yerelde bırakma; sync kuyruğuna al ki yeniden
+        // bağlanınca drenajda Supabase'e gitsin (önceden masraf kalıcı olarak yalnız
+        // bu cihazda kalıp yöneticiye/diğer cihaza hiç ulaşmıyordu).
         console.warn('[expenses.insert]', error.message);
+        await enqueueSync({ id: e.id, table: 'expenses', action: 'insert', payload: e }).catch(() => {});
       } else if (data) {
         const fromDb = fromRow(data);
         const all = await getCache();
@@ -126,6 +131,7 @@ export async function addExpense(input: Omit<Expense, 'id' | 'status'> & Partial
       }
     } catch (ex: any) {
       console.warn('[expenses.insert.exception]', ex?.message ?? ex);
+      await enqueueSync({ id: e.id, table: 'expenses', action: 'insert', payload: e }).catch(() => {});
     }
   }
   const all = await getCache();
