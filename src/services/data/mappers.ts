@@ -127,6 +127,9 @@ export const workOrderFromRow = (row: any): WorkOrder => ({
   status: row.status,
   beforePhoto: row.before_photo ?? '',
   afterPhoto: row.after_photo ?? '',
+  beforePhotos: Array.isArray(row.before_photos) ? row.before_photos : undefined,
+  afterPhotos: Array.isArray(row.after_photos) ? row.after_photos : undefined,
+  formPhoto: row.form_photo ?? undefined,
   notes: row.notes ?? '',
   // FAZ 3 alanları
   priority: row.priority ?? undefined,
@@ -164,6 +167,9 @@ export const workOrderToRow = (w: WorkOrder, userId?: string) => ({
   profit: w.profit,
   before_photo: w.beforePhoto || null,
   after_photo: w.afterPhoto || null,
+  before_photos: w.beforePhotos ?? null,
+  after_photos: w.afterPhotos ?? null,
+  form_photo: w.formPhoto ?? null,
   notes: w.notes || null,
   created_by: userId ?? null,
   // FAZ 3 alanları

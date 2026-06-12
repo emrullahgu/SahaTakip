@@ -651,6 +651,32 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      {/* Tüm saha fotoğrafları (çoklu öncesi/sonrası + servis formu) */}
+      {(() => {
+        const allBefore = wo.beforePhotos?.length ? wo.beforePhotos : (wo.beforePhoto ? [wo.beforePhoto] : []);
+        const allAfter = wo.afterPhotos?.length ? wo.afterPhotos : (wo.afterPhoto ? [wo.afterPhoto] : []);
+        // Editör zaten ilk öncesi/sonrası'ı gösteriyor; ek foto veya form fotosu varsa galeriyi göster.
+        if (allBefore.length + allAfter.length <= 2 && !wo.formPhoto) return null;
+        const items = [
+          ...allBefore.map((u, i) => ({ u, l: `Öncesi ${i + 1}` })),
+          ...allAfter.map((u, i) => ({ u, l: `Sonrası ${i + 1}` })),
+          ...(wo.formPhoto ? [{ u: wo.formPhoto, l: 'Servis Formu' }] : []),
+        ];
+        return (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Tüm Saha Fotoğrafları ({items.length})</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {items.map((it, i) => (
+                <View key={i} style={{ width: 92 }}>
+                  <Image source={{ uri: it.u }} style={{ width: 92, height: 92, borderRadius: 8, borderWidth: 1, borderColor: colors.border.primary }} />
+                  <Text style={{ fontSize: 10, color: colors.text.muted, marginTop: 2, textAlign: 'center' }}>{it.l}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* FAZ 19 — POZ-DEV-031/032/033 Medya */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Medya</Text>
