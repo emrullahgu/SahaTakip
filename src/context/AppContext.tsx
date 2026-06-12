@@ -539,11 +539,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // =====================================================
   // FAZ 3 — İş Emri Akışı (POZ-DEV-024..035)
   // =====================================================
-  const persistWorkOrder = (w: WorkOrder) => {
-    workOrdersRepo.update(w.id, w).catch(e => {
-      console.warn('[wo.update]', e);
-      showToast('⚠️ İş emri güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+  // Başarı toast'ı yalnız DB yazımı GERÇEKTEN başarılı olursa gösterilir; hata olursa
+  // (varsa) rollback çağrılır ve dürüst hata mesajı verilir (Req#3: olmayanı söyleme).
+  // opts'suz çağrılar geriye-uyumlu: sessiz yazar, yalnız hatada uyarır.
+  const persistWorkOrder = (
+    w: WorkOrder,
+    opts?: { successMsg?: string; rollback?: () => void },
+  ) => {
+    workOrdersRepo.update(w.id, w)
+      .then(() => { if (opts?.successMsg) showToast(opts.successMsg); })
+      .catch(e => {
+        console.warn('[wo.update]', e);
+        opts?.rollback?.();
+        showToast('⚠️ İş emri güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+      });
   };
 
   const updateWorkOrderStatus = (id: string, status: WorkOrder['status']): boolean => {
@@ -553,43 +562,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       showToast(`Geçersiz geçiş: ${current.status} → ${status}`, 'error');
       return false;
     }
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = { ...w, status };
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    // Yan etki (DB yazımı) setState updater DIŞINDA (StrictMode çift-yazım önlenir);
+    // başarı toast'ı yalnız yazım başarılıysa, hata → eski duruma rollback.
+    const next: WorkOrder = { ...current, status };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    persistWorkOrder(next, {
+      successMsg: `Durum: ${status}`,
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    });
     auditRepo.log(userId, { action: 'work_order.status', tableName: 'work_orders', refId: id, meta: { status } });
     // Tüm ekibe durum bildirimi (her iş herkese bildirim olarak gider).
     if (status === 'Başladı') void Notify.workOrderStarted(current.client, id);
     else if (status === 'Tamamlandı') void Notify.workOrderCompleted(current.client, id);
-    showToast(`Durum: ${status}`);
     return true;
   };
 
   const assignWorkOrder = (id: string, employeeId: string, employeeName: string) => {
-    let snapshot: WorkOrder | null = null;
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = {
-          ...w,
-          assignedToId: employeeId,
-          assignedToName: employeeName,
-          assignmentStatus: 'Atandı',
-          status: w.status === 'Bekliyor' ? 'Atandı' : w.status,
-          engineer: w.engineer || employeeName,
-        };
-        snapshot = next;
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    const current = workOrders.find(w => w.id === id);
+    if (!current) { showToast('İş emri bulunamadı.', 'error'); return; }
+    const next: WorkOrder = {
+      ...current,
+      assignedToId: employeeId,
+      assignedToName: employeeName,
+      assignmentStatus: 'Atandı',
+      status: current.status === 'Bekliyor' ? 'Atandı' : current.status,
+      engineer: current.engineer || employeeName,
+    };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    persistWorkOrder(next, {
+      successMsg: `${employeeName} kişisine atandı.`,
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    });
     auditRepo.log(userId, { action: 'work_order.assign', tableName: 'work_orders', refId: id, meta: { employeeId } });
-    showToast(`${employeeName} kişisine atandı.`);
-    const s = snapshot as WorkOrder | null;
+    const s = next;
     // Bildirim: atanan personelin KENDİ cihazına uzak push (notify-push Edge Fn)
     // + yöneticinin bildirim merkezi/local push'u. sendLocalPush yalnızca atamayı
     // yapan cihazda göründüğü için tek başına yetersizdi.
@@ -712,31 +717,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     plannedEnd?: string,
     slaHours?: number,
   ) => {
-    let snapshot: WorkOrder | null = null;
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = { ...w, plannedStart, plannedEnd, slaHours };
-        snapshot = next;
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    const current = workOrders.find(w => w.id === id);
+    if (!current) { showToast('İş emri bulunamadı.', 'error'); return; }
+    const next: WorkOrder = { ...current, plannedStart, plannedEnd, slaHours };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    persistWorkOrder(next, {
+      successMsg: 'Planlama kaydedildi.',
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    });
     // Yeni planlama üzerine hatırlatıcı zamanla (15 dk önce)
     if (plannedStart) {
       const d = new Date(plannedStart);
       if (!isNaN(d.getTime())) {
         const remindAt = new Date(d.getTime() - 15 * 60 * 1000);
-        const s = snapshot as WorkOrder | null;
         void scheduleLocalPushAt(
           remindAt,
           'Görev hatırlatması',
-          `${s?.client ?? ''} — ${s?.serviceName ?? id} 15 dk içinde başlıyor.`,
+          `${next.client ?? ''} — ${next.serviceName ?? id} 15 dk içinde başlıyor.`,
           { workOrderId: id, kind: 'reminder' },
         );
       }
     }
-    showToast('Planlama kaydedildi.');
   };
 
   const startWorkTimer = (id: string, timerUserId?: string, note?: string) => {
