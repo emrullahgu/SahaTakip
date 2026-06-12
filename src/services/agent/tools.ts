@@ -1033,10 +1033,14 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         const materialPrice = inCatalog ? sn(poz!.materialPrice) : 0;
         const installPrice = inCatalog ? sn(poz!.installPrice) : 0;
         const dismantlePrice = inCatalog ? sn(poz!.dismantlePrice) : 0;
+        const withDismantle = Boolean(l.withDismantle);
         const pozName = String(l.pozName ?? poz?.name ?? l.pozId);
-        // "Fiyatlı" = birim fiyat toplamı > 0. Katalogda olsa da fiyatı 0 olan kalem de
-        // FİYATSIZ sayılır → kullanıcıya dürüstçe "fiyat girilmeli" denir (sayaç doğru olur).
-        const priced = (materialPrice + installPrice + dismantlePrice) > 0;
+        // "Fiyatlı" = FATURALANACAK birim fiyat toplamı > 0. Söküm bedeli yalnız
+        // withDismantle=true ise tutara girer (calcLineTotal de böyle) — söküm seçili
+        // değilse dismantlePrice'ı sayma; aksi halde fiilen 0 olan kalem "fiyatlı"
+        // sanılıp "fiyat girilmeli" uyarısı atlanır, sayaç şişer.
+        const effectiveDismantle = withDismantle ? dismantlePrice : 0;
+        const priced = (materialPrice + installPrice + effectiveDismantle) > 0;
         if (!priced) manualPriceLines.push({ lineNo: i + 1, pozName });
         // Miktar/iskonto guard'ı: LLM hatalı ("iki"/negatif/>100) gönderse bile NaN/negatif
         // tutar DB'ye yazılmaz (Gereksinim 3 — yanlış tutar üretme).
@@ -1054,7 +1058,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           materialPrice,
           installPrice,
           dismantlePrice,
-          withDismantle: Boolean(l.withDismantle),
+          withDismantle,
           overheadPct: poz?.defaultOverhead ?? 10,
           profitPct: poz?.defaultProfit ?? 15,
           vatPct: poz?.vatRate ?? 20,
