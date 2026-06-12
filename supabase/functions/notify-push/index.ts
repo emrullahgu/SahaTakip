@@ -13,6 +13,7 @@
 // Env:     SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireUser } from '../_shared/auth.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -68,11 +69,19 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, error: 'POST gerekli' }, 405);
 
+  // Kimlik: anonim/kimliksiz çağrı reddedilir — önceden herkes (kimliksiz) TÜM
+  // kullanıcılara push/e-posta spam'i atabiliyordu (service_role ile RLS aşılıyor).
+  const auth = await requireUser(req);
+  if (!auth.ok) return json({ ok: false, error: auth.error }, auth.status);
+
   let payload: any;
   try { payload = await req.json(); } catch { return json({ ok: false, error: 'Geçersiz JSON' }, 400); }
 
   const { userIds = [], userNames = [], all = false, excludeUserId = null, email = false, type = 'custom', title, body, relatedId = null } = payload ?? {};
   if (!title || !body) return json({ ok: false, error: 'title ve body zorunlu' }, 400);
+  // NOT: all=true yayını "her iş herkese bildirim" tasarımının parçası ve field
+  // kullanıcılarınca da tetiklenir → role-gate EDİLMEZ. Kimlik kontrolü (yukarıda)
+  // anonim suistimali zaten kapatır; rol bazlı sıkılaştırma ayrı bir karar.
 
   // 1) Hedef user id setini topla
   const targetIds = new Set<string>(Array.isArray(userIds) ? userIds : []);

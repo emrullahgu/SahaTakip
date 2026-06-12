@@ -24,6 +24,8 @@
 //   supabase secrets set RESEND_API_KEY=re_xxxx RESEND_FROM="SahaTakip <noreply@sahatakip.app>"
 // ====================================================================
 
+import { requireUser } from '../_shared/auth.ts';
+
 // @ts-ignore — Deno global, Supabase Edge runtime'da mevcut
 declare const Deno: { env: { get(key: string): string | undefined } };
 
@@ -58,6 +60,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method !== 'POST') {
     return json(405, { error: 'method_not_allowed' });
   }
+
+  // Kimlik: anonim çağrı reddedilir — önceden kimliksiz herkes herhangi bir adrese
+  // (rakip/müşteri) sahte HTML e-posta atabiliyordu. Authenticated-only (rol-gate
+  // değil) ki teklif gönderen tüm meşru roller çalışmaya devam etsin.
+  const auth = await requireUser(req);
+  if (!auth.ok) return json(auth.status, { error: auth.error });
 
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
   const RESEND_FROM =

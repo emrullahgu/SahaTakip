@@ -175,6 +175,7 @@ async function dispatch(body: ReqBody): Promise<AiResult> {
 }
 
 import { logUsage, userIdFromAuth } from '../_shared/usageLog.ts';
+import { requireUser } from '../_shared/auth.ts';
 
 /**
  * OpenAI Chat Completions stream'ini olduğu gibi (SSE) proxy'ler.
@@ -274,6 +275,10 @@ async function streamOpenAI(body: ReqBody, model: string, userId: string | null)
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+  // Kimlik: anonim çağrı reddedilir — önceden kimliksiz herkes LLM API'larına
+  // (faturalı) sınırsız istek atıp maliyet şişirebiliyordu.
+  const auth = await requireUser(req);
+  if (!auth.ok) return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { ...CORS, 'content-type': 'application/json' } });
   const t0 = Date.now();
   const userId = userIdFromAuth(req);
   try {

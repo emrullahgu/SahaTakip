@@ -488,6 +488,9 @@ async function callOpenAI(messages: any[]): Promise<any> {
       tools: TOOLS,
       tool_choice: 'auto',
       temperature: 0.2,
+      // Yanıt uzunluğu tavanı → öngörülebilir maliyet (10 iterasyonluk ajan
+      // döngüsünde sınırsız çıktı maliyet patlamasına yol açabilirdi).
+      max_tokens: 1500,
     }),
   });
   if (!r.ok) throw new Error(`OpenAI ${r.status}: ${await r.text()}`);

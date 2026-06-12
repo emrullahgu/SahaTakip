@@ -194,6 +194,14 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     action = body.action ?? 'unknown';
+    // ingest/delete DB'yi değiştirir (belge ekler/siler) → en az authenticated.
+    // Önceden kimliksiz herhangi biri ai_documents/ai_chunks'a spam belge basabiliyordu.
+    // query/list (yalnız-okuma) açık kalır. Rol-gate değil ki meşru akış kırılmasın.
+    if (action === 'ingest' || action === 'delete') {
+      const { requireUser } = await import('../_shared/auth.ts');
+      const auth = await requireUser(req);
+      if (!auth.ok) return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { ...CORS, 'content-type': 'application/json' } });
+    }
     let out: any;
     if (body.action === 'ingest') out = await ingest(body);
     else if (body.action === 'query') out = await query(body);
