@@ -131,25 +131,47 @@ export default function ServicesScreen() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Photos */}
-                <View style={styles.photosRow}>
-                  <View style={styles.photoBox}>
-                    <Text style={styles.photoLabel}>İŞ ÖNCESİ</Text>
-                    <Image
-                      source={{ uri: selectedOrder.beforePhoto }}
-                      style={styles.photoImg}
-                      resizeMode="cover"
-                    />
-                  </View>
-                  <View style={styles.photoBox}>
-                    <Text style={styles.photoLabel}>İŞ SONRASI</Text>
-                    <Image
-                      source={{ uri: selectedOrder.afterPhoto }}
-                      style={styles.photoImg}
-                      resizeMode="cover"
-                    />
-                  </View>
-                </View>
+                {/* Photos — usta birden fazla iş öncesi/sonrası foto yükleyebilir */}
+                {(() => {
+                  const beforeList = (selectedOrder.beforePhotos?.length
+                    ? selectedOrder.beforePhotos
+                    : [selectedOrder.beforePhoto]).filter(Boolean) as string[];
+                  const afterList = (selectedOrder.afterPhotos?.length
+                    ? selectedOrder.afterPhotos
+                    : [selectedOrder.afterPhoto]).filter(Boolean) as string[];
+                  const groups: { label: string; photos: string[] }[] = [
+                    { label: 'İŞ ÖNCESİ', photos: beforeList },
+                    { label: 'İŞ SONRASI', photos: afterList },
+                  ];
+                  if (selectedOrder.formPhoto) {
+                    groups.push({ label: 'SERVİS FORMU', photos: [selectedOrder.formPhoto] });
+                  }
+                  return (
+                    <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
+                      {groups.map(g => (
+                        <View key={g.label}>
+                          <Text style={styles.photoLabel}>
+                            {g.label}{g.photos.length > 1 ? ` (${g.photos.length})` : ''}
+                          </Text>
+                          {g.photos.length === 0 ? (
+                            <View style={[styles.photoImg, styles.photoEmpty]}>
+                              <Ionicons name="image-outline" size={20} color={colors.text.faint} />
+                              <Text style={styles.photoEmptyText}>Foto yok</Text>
+                            </View>
+                          ) : g.photos.length === 1 ? (
+                            <Image source={{ uri: g.photos[0] }} style={styles.photoImg} resizeMode="cover" />
+                          ) : (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                              {g.photos.map((uri, i) => (
+                                <Image key={i} source={{ uri }} style={styles.photoThumb} resizeMode="cover" />
+                              ))}
+                            </ScrollView>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })()}
 
                 {/* Cost Breakdown */}
                 <View style={styles.costGrid}>
@@ -322,6 +344,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   photoImg: { width: '100%', height: 110, borderRadius: radius.md, backgroundColor: colors.bg.card },
+  photoThumb: { width: 150, height: 110, borderRadius: radius.md, backgroundColor: colors.bg.card },
+  photoEmpty: { alignItems: 'center', justifyContent: 'center', gap: 4, borderWidth: 1, borderColor: colors.border.primary, borderStyle: 'dashed' },
+  photoEmptyText: { fontSize: 10, color: colors.text.faint },
   costGrid: {
     flexDirection: 'row',
     backgroundColor: colors.bg.card,

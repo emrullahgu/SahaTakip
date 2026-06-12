@@ -650,25 +650,36 @@ function ApprovalCard({
         <StatusBadge status={order.status} />
       </View>
 
-      {/* Photos */}
-      <View style={approvalStyles.photos}>
-        <View style={approvalStyles.photoBox}>
-          <Text style={approvalStyles.photoLabel}>ÖNCESİ</Text>
-          <Image
-            source={{ uri: order.beforePhoto }}
-            style={approvalStyles.photo}
-            resizeMode="cover"
-          />
-        </View>
-        <View style={approvalStyles.photoBox}>
-          <Text style={approvalStyles.photoLabel}>SONRASI</Text>
-          <Image
-            source={{ uri: order.afterPhoto }}
-            style={approvalStyles.photo}
-            resizeMode="cover"
-          />
-        </View>
-      </View>
+      {/* Photos — birden fazla iş öncesi/sonrası + servis formu */}
+      {(() => {
+        const beforeList = (order.beforePhotos?.length ? order.beforePhotos : [order.beforePhoto]).filter(Boolean) as string[];
+        const afterList = (order.afterPhotos?.length ? order.afterPhotos : [order.afterPhoto]).filter(Boolean) as string[];
+        const groups: { label: string; photos: string[] }[] = [
+          { label: 'ÖNCESİ', photos: beforeList },
+          { label: 'SONRASI', photos: afterList },
+        ];
+        if (order.formPhoto) groups.push({ label: 'SERVİS FORMU', photos: [order.formPhoto] });
+        return (
+          <View style={{ gap: spacing.sm, marginBottom: spacing.md }}>
+            {groups.map(g => (
+              <View key={g.label}>
+                <Text style={approvalStyles.photoLabel}>
+                  {g.label}{g.photos.length > 1 ? ` (${g.photos.length})` : ''}
+                </Text>
+                {g.photos.length <= 1 ? (
+                  <Image source={{ uri: g.photos[0] }} style={approvalStyles.photo} resizeMode="cover" />
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {g.photos.map((uri, i) => (
+                      <Image key={i} source={{ uri }} style={approvalStyles.photoThumb} resizeMode="cover" />
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            ))}
+          </View>
+        );
+      })()}
 
       {/* Costs */}
       <View style={approvalStyles.costs}>
@@ -752,6 +763,12 @@ const approvalStyles = StyleSheet.create({
   },
   photo: {
     width: '100%',
+    height: 100,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg.card,
+  },
+  photoThumb: {
+    width: 140,
     height: 100,
     borderRadius: radius.md,
     backgroundColor: colors.bg.card,
