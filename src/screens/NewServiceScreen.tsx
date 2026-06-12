@@ -191,7 +191,13 @@ export default function NewServiceScreen() {
 
   // ----- Teklif özeti bileşenleri (TEK kaynak: hem özet render hem handleSubmit) -----
   // Hizmet ve Malzeme bedelleri elle düzenlenebilir; override boşsa hesaplanan kullanılır.
-  const rawMaterialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
+  // Geçerli malzemeler: qty>0 ve (katalog ya da adı doldurulmuş manuel). Adsız manuel
+  // kalemler ne maliyete/bedele ne de kaydedilen listeye girer (önceden materialCost'u
+  // şişiriyordu ama materials listesinden filtreleniyordu — tutarsızlık giderildi).
+  const validMaterials = selectedMaterials.filter(
+    m => m.qty > 0 && (!isManualMat(m.id) || (m.name || '').trim().length > 0),
+  );
+  const rawMaterialCost = validMaterials.reduce((s, m) => s + lineTotal(m), 0);
   const defaultServiceFee = selectedService?.price ?? 0;
   const defaultMaterialFee = Math.round(rawMaterialCost * MATERIAL_MARKUP);
   // tr-TR para girişi: binlik '.' kaldır, ondalık ',' → '.' . parseFloat('1.500')=1,5
@@ -400,7 +406,7 @@ export default function NewServiceScreen() {
       date: localDateISO(),
       engineer: engineerName,
       // Boş bırakılmış manuel kalemleri (ad girilmemiş) ele.
-      materials: selectedMaterials.filter(m => m.qty > 0 && (!isManualMat(m.id) || (m.name || '').trim().length > 0)),
+      materials: validMaterials,
       otherCost: extraCost,
       laborCost,
       materialCost,
