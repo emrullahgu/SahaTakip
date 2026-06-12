@@ -80,6 +80,27 @@ export default function QuoteDetailScreen() {
   };
 
   const handleSetStatus = (s: QuoteStatus) => {
+    // 'Kabul Edildi'yi doğrudan set etmek iş emri oluşturmaz: teklif kabul
+    // görünür ama arkasında iş emri yoktur (Req#3 dürüstlük ihlali + yönetici
+    // boru hattı kırılır). Bu durumda gerçek kabul akışını çalıştır.
+    if (s === 'Kabul Edildi' && !quote.generatedWorkOrderId) {
+      setShowStatusModal(false);
+      Alert.alert(
+        'Teklifi kabul et',
+        `${quote.number} kabul edilip otomatik iş emri oluşturulsun mu?`,
+        [
+          { text: 'Vazgeç', style: 'cancel' },
+          {
+            text: 'Kabul Et',
+            onPress: () => {
+              const woId = acceptQuoteAndCreateWorkOrder(quote.id, quote.engineer);
+              if (woId) showToast(`Kabul edildi · İş emri: ${woId}`);
+            },
+          },
+        ],
+      );
+      return;
+    }
     setQuoteStatus(quote.id, s);
     setShowStatusModal(false);
     showToast(`Durum güncellendi: ${s}`);
