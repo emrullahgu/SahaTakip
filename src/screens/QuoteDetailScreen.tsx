@@ -62,7 +62,7 @@ export default function QuoteDetailScreen() {
   const nextStatus = NEXT_STATUS[quote.status];
   const canEdit = true; // Revize/düzenleme her durumda açık; faturalandırılmış teklif düzenlenirse revizyon oluşur.
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const copy: Quote = {
       ...quote,
       id: newUuid(),
@@ -72,14 +72,17 @@ export default function QuoteDetailScreen() {
       revision: 0,
       generatedWorkOrderId: undefined,
       title: `${quote.title} (Kopya)`,
-      lines: quote.lines.map(l => ({ ...l })),
+      lines: (quote.lines ?? []).map(l => ({ ...l })),
     };
-    addQuote(copy);
+    // Kayıt başarısını bekle: başarısızsa navigate ETME (önceden boş/yok teklife
+    // gidiliyordu) — kullanıcı dürüstçe bilgilendirilir.
+    const res = await addQuote(copy);
+    if (!res.ok) { showToast('Teklif kopyalanamadı: ' + (res.error || 'bilinmeyen hata'), 'error'); return; }
     showToast('Teklif kopyalandı. Taslak olarak açılıyor.');
     navigation.replace('QuoteDetail', { quoteId: copy.id });
   };
 
-  const handleSetStatus = (s: QuoteStatus) => {
+  const handleSetStatus = async (s: QuoteStatus) => {
     // 'Kabul Edildi'yi doğrudan set etmek iş emri oluşturmaz: teklif kabul
     // görünür ama arkasında iş emri yoktur (Req#3 dürüstlük ihlali + yönetici
     // boru hattı kırılır). Bu durumda gerçek kabul akışını çalıştır.
@@ -101,8 +104,11 @@ export default function QuoteDetailScreen() {
       );
       return;
     }
-    setQuoteStatus(quote.id, s);
     setShowStatusModal(false);
+    // Başarı toast'ı yalnız DB yazımı başarılıysa (Req#3) — önceden koşulsuz "güncellendi"
+    // gösteriliyordu, DB reddetse bile kullanıcı değişmiş sanıyordu.
+    const res = await setQuoteStatus(quote.id, s);
+    if (!res.ok) { showToast('Durum güncellenemedi: ' + (res.error || 'bilinmeyen hata'), 'error'); return; }
     showToast(`Durum güncellendi: ${s}`);
   };
 
@@ -273,7 +279,7 @@ export default function QuoteDetailScreen() {
           {nextStatus && (
             <TouchableOpacity
               style={styles.advanceBtn}
-              onPress={() => setQuoteStatus(quote.id, nextStatus)}
+              onPress={() => handleSetStatus(nextStatus)}
               activeOpacity={0.85}
             >
               <Ionicons name="arrow-forward-circle" size={18} color="#fff" />
@@ -429,7 +435,7 @@ export default function QuoteDetailScreen() {
           {quote.status !== 'Reddedildi' && quote.status !== 'Faturalandırıldı' && (
             <TouchableOpacity
               style={styles.rejectBtn}
-              onPress={() => setQuoteStatus(quote.id, 'Reddedildi')}
+              onPress={() => handleSetStatus('Reddedildi')}
               activeOpacity={0.85}
             >
               <Text style={styles.rejectBtnText}>Reddedildi olarak işaretle</Text>

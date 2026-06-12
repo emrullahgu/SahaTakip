@@ -83,7 +83,7 @@ export default function CustomerFormScreen() {
     } finally { setEnriching(false); }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.shortName.trim() || !form.title.trim()) {
       Alert.alert('Eksik bilgi', 'Kısa ad ve resmi ünvan zorunludur.');
       return;
@@ -105,11 +105,10 @@ export default function CustomerFormScreen() {
       return;
     }
 
-    if (isEdit) {
-      updateCustomer(form);
-    } else {
-      addCustomer(form);
-    }
+    // Kayıt başarısını bekle: başarısızsa formu KAPATMA (önceden kullanıcı eklendi
+    // sanıp çıkıyordu ama DB'de yoktu — Req#3). Hata toast'ı AppContext'ten gelir.
+    const res = isEdit ? await updateCustomer(form) : await addCustomer(form);
+    if (!res.ok) return;
     navigation.goBack();
   };
 

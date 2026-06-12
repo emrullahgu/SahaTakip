@@ -61,6 +61,15 @@ export async function applyOp(op: { table: string; action: string; payload: any 
   let userId: string | undefined;
   try { const { data } = await supabase.auth.getUser(); userId = data?.user?.id ?? undefined; } catch { /* ignore */ }
 
+  // INSERT'te created_by zorunlu (RLS owner-write). Auth geçici olarak alınamadıysa
+  // null göndermek RLS reddine + gereksiz round-trip'e yol açar; bunun yerine op'u
+  // ERTELE — kuyrukta kalır (bu hata kalıcı-uuid hatası değil), auth gelince yeniden
+  // denenir ve geçerli created_by ile yazılır (kalıcı veri kaybı önlenir).
+  const OWNER_WRITE = new Set(['quotes', 'customers', 'work_orders', 'expenses']);
+  if (action === 'insert' && !userId && OWNER_WRITE.has(table)) {
+    throw new Error('auth-unavailable: created_by alınamadı, drenaj ertelendi');
+  }
+
   // ROW BUILDER — payload'u DB satırına çevir
   const toRow = (): any => {
     switch (table) {

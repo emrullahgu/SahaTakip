@@ -145,7 +145,7 @@ export default function NewQuoteScreen() {
     setLines(prev => prev.filter((_, i) => i !== idx).map((l, i) => ({ ...l, lineNo: i + 1 })));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!customer) {
       Alert.alert('Eksik bilgi', 'Lütfen müşteri seçiniz.');
       return;
@@ -172,7 +172,10 @@ export default function NewQuoteScreen() {
         grandTotal: totals.grandTotal,
         revision: (editingQuote.revision ?? 0) + 1,
       };
-      updateQuote(updated);
+      // Kayıt başarısını bekle: başarısızsa ekrandan ÇIKMA (önceden kullanıcı
+      // revizyon kaydedildi sanıp çıkıyordu ama DB'de değişmemişti — Req#3).
+      const res = await updateQuote(updated);
+      if (!res.ok) { Alert.alert('Kaydedilemedi', res.error || 'Teklif güncellenemedi.'); return; }
       recordQuoteLines(lines);
       navigation.goBack();
       return;
@@ -193,7 +196,8 @@ export default function NewQuoteScreen() {
       vatTotal: totals.vatTotal,
       grandTotal: totals.grandTotal,
     };
-    addQuote(quote);
+    const res = await addQuote(quote);
+    if (!res.ok) { Alert.alert('Kaydedilemedi', res.error || 'Teklif oluşturulamadı.'); return; }
     recordQuoteLines(lines);
     navigation.goBack();
   };

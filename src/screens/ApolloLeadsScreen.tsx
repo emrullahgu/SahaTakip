@@ -53,7 +53,7 @@ export default function ApolloLeadsScreen() {
     } finally { setLoading(false); }
   };
 
-  const addOrg = (o: ApolloOrganization) => {
+  const addOrg = async (o: ApolloOrganization) => {
     const dup = customers.find(c => c.title === o.name || c.shortName === o.name);
     if (dup) { showToast('Bu firma zaten müşteri.'); return; }
     const c: Customer = {
@@ -68,11 +68,14 @@ export default function ApolloLeadsScreen() {
       type: 'Potansiyel',
       source: 'Apollo',
     } as Customer;
-    addCustomer(c);
+    // Kayıt başarısını bekle: başarısızsa "eklendi" işaretleme (önceden DB hatası
+    // olsa bile eklendi görünüyordu). addCustomer hata toast'ını kendi gösterir.
+    const res = await addCustomer(c);
+    if (!res.ok) return;
     setAdded(prev => new Set(prev).add(o.id || o.name || ''));
   };
 
-  const addPerson = (p: ApolloPerson) => {
+  const addPerson = async (p: ApolloPerson) => {
     const name = p.organization || p.name || 'Kişi';
     const dup = customers.find(c => c.title === name || c.shortName === name);
     if (dup) { showToast('Zaten müşteri.'); return; }
@@ -88,7 +91,8 @@ export default function ApolloLeadsScreen() {
       type: 'Potansiyel',
       source: 'Apollo',
     } as Customer;
-    addCustomer(c);
+    const res = await addCustomer(c);
+    if (!res.ok) return;
     setAdded(prev => new Set(prev).add(p.id || p.email || p.name || ''));
   };
 

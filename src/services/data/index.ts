@@ -9,7 +9,7 @@
 
 export { isOnlineMode, supabase, cacheGet, cacheSet } from './repository';
 export { drainSyncQueue, getSyncQueue } from './syncDrain';
-export { clearSyncQueue, clearSyncOp } from './repository';
+export { clearSyncQueue, clearSyncOp, enqueueSync } from './repository';
 export { quotesRepo } from './quotesRepo';
 export { customersRepo } from './customersRepo';
 export { workOrdersRepo } from './workOrdersRepo';

@@ -36,6 +36,7 @@ import {
   auditRepo,
   drainSyncQueue,
   clearSyncQueue,
+  enqueueSync,
 } from '../services/data';
 import { useAuth } from './AuthContext';
 import { localDateISO } from '../utils/date';
@@ -101,7 +102,7 @@ export interface AppContextType {
   generateQuoteShareToken: (quoteId: string) => string | null;
   generateQuoteNumber: () => string;
   addCustomer: (c: Customer) => Promise<WriteResult>;
-  updateCustomer: (c: Customer) => void;
+  updateCustomer: (c: Customer) => Promise<WriteResult>;
   deleteCustomer: (id: string) => Promise<WriteResult>;
   addOrder: (o: Order) => void;
   deleteOrder: (id: string) => void;
@@ -241,7 +242,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       })
       .catch(e => {
         console.warn('[wo.insert]', e);
-        showToast('⚠️ İş emri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+        // Online insert koptu (offline değil — o yol enqueue edip resolve eder).
+        // Düşürme: veri kaybı olmasın diye sync kuyruğuna al, çevrimiçi olunca
+        // drain tekrar dener. UI'da kalır; mesaj durumu dürüstçe bildirir.
+        void enqueueSync({ id: order.id, table: 'work_orders', action: 'insert', payload: order }).catch(() => {});
+        showToast('⚠️ İş emri buluta kaydedilemedi; çevrimiçi olunca tekrar denenecek.', 'error');
       });
     auditRepo.log(userId, { action: 'work_order.create', tableName: 'work_orders', refId: order.id });
     void Notify.workOrderCreated(order.client, order.serviceName, order.id);
@@ -275,22 +280,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateWage = (empId: string, newWage: number) => {
-    setEmployees(prev => {
-      const updated = prev.map(emp =>
-        emp.id === empId
-          ? { ...emp, monthlyWage: newWage, dailyRate: Math.round(newWage / STANDARD_WORK_DAYS_PER_MONTH) }
-          : emp
-      );
-      const target = updated.find(e => e.id === empId);
-      if (target) {
-        employeesRepo.update(empId, target).catch(e => {
-          console.warn('[employee.wage]', e);
-          showToast('⚠️ Maaş güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-        });
-        auditRepo.log(userId, { action: 'employee.wage_update', tableName: 'employees', refId: empId, meta: { newWage } });
-      }
-      return updated;
+    // Yan etki (DB yazımı) setState updater DIŞINDA (StrictMode çift-yazım önlenir);
+    // hata → eski maaşa rollback (önceden UI yeni maaşı tutup DB eskide kalıyordu).
+    const current = employees.find(e => e.id === empId);
+    if (!current) return;
+    const target: Employee = { ...current, monthlyWage: newWage, dailyRate: Math.round(newWage / STANDARD_WORK_DAYS_PER_MONTH) };
+    setEmployees(prev => prev.map(e => (e.id === empId ? target : e)));
+    employeesRepo.update(empId, target).catch(e => {
+      console.warn('[employee.wage]', e);
+      setEmployees(prev => prev.map(e => (e.id === empId ? current : e)));
+      showToast('⚠️ Maaş güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
     });
+    auditRepo.log(userId, { action: 'employee.wage_update', tableName: 'employees', refId: empId, meta: { newWage } });
   };
 
   // ===== QUOTE actions =====
@@ -424,10 +425,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // İşçilik = montaj + (söküm SEÇİLİYSE söküm bedeli) — calcLineTotal ile aynı
     // mantık. Önceden söküm laborCost/profit'e hiç girmiyordu: withDismantle=true
     // tekliflerde maliyet eksik, kâr fazla görünüyordu (yanlış marj saklanıyordu).
+    // num(): bozuk/eski kayıtta fiyat/miktar undefined olabilir → Number(undefined)=NaN
+    // saklanan tutara sızmasın (NaN materialCost/profit raporları bozar).
+    const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
     const laborCost = Math.round(qLines.reduce((s, l) =>
-      s + (l.installPrice + (l.withDismantle ? (l.dismantlePrice ?? 0) : 0)) * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0));
+      s + (num(l.installPrice) + (l.withDismantle ? num(l.dismantlePrice) : 0)) * num(l.quantity) * (1 - num(l.discountPct) / 100), 0));
     const materialCost = Math.round(qLines.reduce((s, l) =>
-      s + l.materialPrice * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0));
+      s + num(l.materialPrice) * num(l.quantity) * (1 - num(l.discountPct) / 100), 0));
     // profit yuvarlanmış maliyetlerden türetilir → quoteAmount = profit+laborCost+
     // materialCost tutarlı (önceki ayrı reduce ±1 TL sapma yaratıyordu).
     const profit = Math.round(q.grandTotal) - laborCost - materialCost;
@@ -511,14 +515,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return { ok: true };
   };
 
-  const updateCustomer = (c: Customer) => {
+  const updateCustomer = async (c: Customer): Promise<WriteResult> => {
+    const snapshot = customers.find(x => x.id === c.id);
     setCustomers(prev => prev.map(x => (x.id === c.id ? c : x)));
-    customersRepo.update(c.id, c).catch(e => {
+    try {
+      await customersRepo.update(c.id, c);
+    } catch (e: any) {
+      if (snapshot) setCustomers(prev => prev.map(x => (x.id === c.id ? snapshot : x)));
       console.warn('[customer.update]', e);
       showToast('⚠️ Müşteri güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+      return { ok: false, error: e?.message || 'güncelleme başarısız' };
+    }
     auditRepo.log(userId, { action: 'customer.update', tableName: 'customers', refId: c.id });
     showToast(`${c.shortName} güncellendi.`);
+    return { ok: true };
   };
 
   const deleteCustomer = async (id: string): Promise<WriteResult> => {
@@ -556,10 +566,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // opts'suz çağrılar geriye-uyumlu: sessiz yazar, yalnız hatada uyarır.
   const persistWorkOrder = (
     w: WorkOrder,
-    opts?: { successMsg?: string; rollback?: () => void },
+    opts?: { successMsg?: string; successType?: 'success' | 'error'; rollback?: () => void },
   ) => {
     workOrdersRepo.update(w.id, w)
-      .then(() => { if (opts?.successMsg) showToast(opts.successMsg); })
+      .then(() => { if (opts?.successMsg) showToast(opts.successMsg, opts.successType); })
       .catch(e => {
         console.warn('[wo.update]', e);
         opts?.rollback?.();
@@ -628,80 +638,80 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const respondAssignment = (id: string, accept: boolean, reason?: string) => {
-    let snapshot: WorkOrder | null = null;
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = accept
-          ? { ...w, assignmentStatus: 'Kabul Edildi' }
-          : {
-              ...w,
-              assignmentStatus: 'Reddedildi',
-              rejectReason: reason ?? '',
-              status: 'Bekliyor',
-              assignedToId: undefined,
-              assignedToName: undefined,
-            };
-        snapshot = next;
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    const current = workOrders.find(w => w.id === id);
+    if (!current) { showToast('İş emri bulunamadı.', 'error'); return; }
+    const next: WorkOrder = accept
+      ? { ...current, assignmentStatus: 'Kabul Edildi' }
+      : {
+          ...current,
+          assignmentStatus: 'Reddedildi',
+          rejectReason: reason ?? '',
+          status: 'Bekliyor',
+          assignedToId: undefined,
+          assignedToName: undefined,
+        };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    // Toast yalnız DB yazımı başarılıysa; hata → eski atama durumuna rollback.
+    persistWorkOrder(next, {
+      successMsg: accept ? 'Görev kabul edildi.' : 'Görev reddedildi.',
+      successType: accept ? 'success' : 'error',
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    });
     auditRepo.log(userId, {
       action: accept ? 'work_order.accept' : 'work_order.reject',
       tableName: 'work_orders',
       refId: id,
       meta: { reason },
     });
-    showToast(accept ? 'Görev kabul edildi.' : 'Görev reddedildi.', accept ? 'success' : 'error');
-    const s = snapshot as WorkOrder | null;
     // Bildirim: yöneticiye geri dönüş
     void sendLocalPush(
       accept ? 'Görev kabul edildi' : 'Görev reddedildi',
-      `${s?.client ?? ''} — ${s?.serviceName ?? id}${!accept && reason ? ` (${reason})` : ''}`,
+      `${next.client ?? ''} — ${next.serviceName ?? id}${!accept && reason ? ` (${reason})` : ''}`,
       { workOrderId: id, kind: accept ? 'accept' : 'reject' },
     );
   };
 
   const transferWorkOrder = (id: string, employeeId: string, employeeName: string) => {
-    let snapshot: WorkOrder | null = null;
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = {
-          ...w,
-          assignedToId: employeeId,
-          assignedToName: employeeName,
-          assignmentStatus: 'Devredildi',
-          engineer: employeeName,
-        };
-        snapshot = next;
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    const current = workOrders.find(w => w.id === id);
+    if (!current) { showToast('İş emri bulunamadı.', 'error'); return; }
+    const next: WorkOrder = {
+      ...current,
+      assignedToId: employeeId,
+      assignedToName: employeeName,
+      assignmentStatus: 'Devredildi',
+      engineer: employeeName,
+    };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    persistWorkOrder(next, {
+      successMsg: `${employeeName} kişisine devredildi.`,
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    });
     auditRepo.log(userId, { action: 'work_order.transfer', tableName: 'work_orders', refId: id, meta: { employeeId } });
-    showToast(`${employeeName} kişisine devredildi.`);
-    const s = snapshot as WorkOrder | null;
     // Devredilen personelin kendi cihazına uzak push + yönetici bildirimi.
-    void Notify.workOrderAssigned(employeeName, s?.client ?? '', id);
+    void Notify.workOrderAssigned(employeeName, next.client ?? '', id);
   };
 
   const bulkAssignWorkOrders = (ids: string[], employeeId: string, employeeName: string) => {
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (!ids.includes(w.id)) return w;
-        const next: WorkOrder = {
-          ...w,
-          assignedToId: employeeId,
-          assignedToName: employeeName,
-          assignmentStatus: 'Atandı',
-          status: w.status === 'Bekliyor' ? 'Atandı' : w.status,
-        };
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    // Hedeflerin snapshot'ı — her biri BAĞIMSIZ persist + kendi rollback'i (3. kayıt
+    // koparsa 1-2 değişmiş kalır ama 3 eski haline döner; "hepsi atandı" yanılgısı yok).
+    const targets = workOrders.filter(w => ids.includes(w.id));
+    const nextById = new Map<string, WorkOrder>();
+    for (const cur of targets) {
+      nextById.set(cur.id, {
+        ...cur,
+        assignedToId: employeeId,
+        assignedToName: employeeName,
+        assignmentStatus: 'Atandı',
+        status: cur.status === 'Bekliyor' ? 'Atandı' : cur.status,
+      });
+    }
+    setWorkOrders(prev => prev.map(w => nextById.get(w.id) ?? w));
+    for (const cur of targets) {
+      const next = nextById.get(cur.id)!;
+      persistWorkOrder(next, {
+        rollback: () => setWorkOrders(prev => prev.map(w => (w.id === cur.id ? cur : w))),
+      });
+    }
     auditRepo.log(userId, {
       action: 'work_order.bulk_assign',
       tableName: 'work_orders',
@@ -713,14 +723,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setWorkOrderPriority = (id: string, p: WorkOrderPriority) => {
-    setWorkOrders(prev =>
-      prev.map(w => {
-        if (w.id !== id) return w;
-        const next: WorkOrder = { ...w, priority: p };
-        persistWorkOrder(next);
-        return next;
-      }),
-    );
+    const current = workOrders.find(w => w.id === id);
+    if (!current) return;
+    const next: WorkOrder = { ...current, priority: p };
+    setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
+    persistWorkOrder(next, {
+      rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
+    });
   };
 
   const setWorkOrderSchedule = (

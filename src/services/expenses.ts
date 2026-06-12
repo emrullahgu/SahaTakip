@@ -6,7 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { auditRepo } from './data/auditRepo';
-import { enqueueSync } from './data/repository';
+import { enqueueSync, clearSyncOp } from './data/repository';
 
 export interface Expense {
   id: string;
@@ -156,6 +156,9 @@ export async function deleteExpense(id: string) {
   if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
     try { await supabase.from('expenses').delete().eq('id', id); } catch {}
   }
+  // Henüz drain edilmemiş bekleyen insert op'unu kuyruktan düşür: aksi halde silinen
+  // masraf sonraki drain'de DB'ye yazılıp "zombi" olarak geri geliyordu (offline ekle→sil).
+  await clearSyncOp(id).catch(() => {});
   const all = await getCache();
   await setCache(all.filter(x => x.id !== id));
   if (createdBy) {
