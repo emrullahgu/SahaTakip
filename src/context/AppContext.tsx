@@ -419,6 +419,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return Number.isFinite(n) && n > m ? n : m;
     }, 0);
     const woId = `${woPrefix}${String(maxWoSeq + 1).padStart(3, '0')}`;
+    // q.lines bozuk/eski kayıtta undefined olabilir → guard (yoksa .map/.reduce çöker).
+    const qLines = q.lines ?? [];
+    // İşçilik = montaj + (söküm SEÇİLİYSE söküm bedeli) — calcLineTotal ile aynı
+    // mantık. Önceden söküm laborCost/profit'e hiç girmiyordu: withDismantle=true
+    // tekliflerde maliyet eksik, kâr fazla görünüyordu (yanlış marj saklanıyordu).
+    const laborCost = Math.round(qLines.reduce((s, l) =>
+      s + (l.installPrice + (l.withDismantle ? (l.dismantlePrice ?? 0) : 0)) * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0));
+    const materialCost = Math.round(qLines.reduce((s, l) =>
+      s + l.materialPrice * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0));
+    // profit yuvarlanmış maliyetlerden türetilir → quoteAmount = profit+laborCost+
+    // materialCost tutarlı (önceki ayrı reduce ±1 TL sapma yaratıyordu).
+    const profit = Math.round(q.grandTotal) - laborCost - materialCost;
     const newWo: WorkOrder = {
       id: woId,
       client: q.customerTitle || q.customerName,
@@ -428,7 +440,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // qty (quantity DEĞİL) — recomputeWorkOrderCosts m.qty okuyor; 'quantity'
       // yazılınca timer durunca materialCost/profit NaN oluyordu. discountPct de
       // taşınır ki maliyet iskontoyu yansıtsın.
-      materials: q.lines.map(l => ({
+      materials: qLines.map(l => ({
         id: l.pozId,
         name: l.pozName,
         unit: l.unit,
@@ -437,11 +449,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         discountPct: l.discountPct ?? 0,
       })) as any,
       otherCost: 0,
-      // Maliyetler satır iskontosunu yansıtır; profit artık sabit 0 değil — gerçek marj.
-      laborCost: Math.round(q.lines.reduce((s, l) => s + l.installPrice * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0)),
-      materialCost: Math.round(q.lines.reduce((s, l) => s + l.materialPrice * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0)),
+      // Maliyetler satır iskontosunu + sökümü yansıtır; profit gerçek marj.
+      laborCost,
+      materialCost,
       quoteAmount: q.grandTotal,
-      profit: Math.round(q.grandTotal - q.lines.reduce((s, l) => s + (l.installPrice + l.materialPrice) * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0)),
+      profit,
       status: 'Bekliyor',
       beforePhoto: '',
       afterPhoto: '',

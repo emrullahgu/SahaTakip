@@ -304,7 +304,7 @@ export default function NewServiceScreen() {
   ) => (
     <View style={styles.photoGrid}>
       {photos.map((uri, idx) => (
-        <View key={`${type}-${idx}`} style={styles.photoThumbWrap}>
+        <View key={`${type}-${uri}`} style={styles.photoThumbWrap}>
           <Image source={{ uri }} style={styles.photoThumb} resizeMode="cover" />
           <TouchableOpacity
             style={styles.removePhotoThumb}
