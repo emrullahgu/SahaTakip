@@ -190,34 +190,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [userId, isDemoMode]);
 
   // ===== WORK ORDER actions =====
-  const approveReport = (id: string) => {
-    setWorkOrders(prev => {
-      const updated = prev.map(o =>
-        o.id === id ? { ...o, status: 'Teklif Gönderildi' as const } : o
-      );
-      const target = updated.find(o => o.id === id);
-      if (target) {
-        workOrdersRepo.update(id, target).catch(e => console.warn(e));
-        auditRepo.log(userId, { action: 'work_order.approve', tableName: 'work_orders', refId: id });
-      }
-      return updated;
-    });
-    showToast(`${id} onaylandı! Müşteriye teklif e-postası iletildi.`);
+  // Yan etki (DB yazımı) artık setState updater DIŞINDA (StrictMode çift-yazımını önler);
+  // toast GERÇEK sonuca göre; hata → rollback. Mesaj yalnız OLAN'ı söyler (önceden
+  // gerçekleşmeyen "e-posta iletildi"/"fatura oluşturuldu" iddiası vardı — Gereksinim 3).
+  const approveReport = async (id: string) => {
+    const existing = workOrders.find(o => o.id === id);
+    if (!existing) { showToast('İş emri bulunamadı.', 'error'); return; }
+    const target: WorkOrder = { ...existing, status: 'Teklif Gönderildi' };
+    setWorkOrders(prev => prev.map(o => (o.id === id ? target : o)));
+    try {
+      await workOrdersRepo.update(id, target);
+    } catch (e: any) {
+      setWorkOrders(prev => prev.map(o => (o.id === id ? existing : o)));
+      showToast('⚠️ Onaylanamadı: ' + (e?.message || 'bilinmeyen hata'), 'error');
+      return;
+    }
+    auditRepo.log(userId, { action: 'work_order.approve', tableName: 'work_orders', refId: id });
+    showToast(`${id} onaylandı (durum: Teklif Gönderildi).`);
   };
 
-  const clientAccept = (id: string) => {
-    setWorkOrders(prev => {
-      const updated = prev.map(o =>
-        o.id === id ? { ...o, status: 'Faturalandırıldı' as const } : o
-      );
-      const target = updated.find(o => o.id === id);
-      if (target) {
-        workOrdersRepo.update(id, target).catch(e => console.warn(e));
-        auditRepo.log(userId, { action: 'work_order.client_accept', tableName: 'work_orders', refId: id });
-      }
-      return updated;
-    });
-    showToast('Müşteri onayladı! Fatura oluşturuldu ve arşivlendi.');
+  const clientAccept = async (id: string) => {
+    const existing = workOrders.find(o => o.id === id);
+    if (!existing) { showToast('İş emri bulunamadı.', 'error'); return; }
+    const target: WorkOrder = { ...existing, status: 'Faturalandırıldı' };
+    setWorkOrders(prev => prev.map(o => (o.id === id ? target : o)));
+    try {
+      await workOrdersRepo.update(id, target);
+    } catch (e: any) {
+      setWorkOrders(prev => prev.map(o => (o.id === id ? existing : o)));
+      showToast('⚠️ Müşteri onayı kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+      return;
+    }
+    auditRepo.log(userId, { action: 'work_order.client_accept', tableName: 'work_orders', refId: id });
+    showToast('Müşteri onayı kaydedildi (durum: Faturalandırıldı).');
   };
 
   const addWorkOrder = (order: WorkOrder) => {
