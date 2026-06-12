@@ -91,10 +91,18 @@ export async function applyOp(op: { table: string; action: string; payload: any 
   }
 
   if (action === 'insert') {
-    const { error } = await supabase.from(table).insert(toRow());
+    // İDEMPOTENT: kısmi başarısızlıkta (ör. quotes yazıldı ama quote_lines koptu)
+    // op kuyrukta kalır; tekrar denemede plain insert 'duplicate key' verip kuyruğu
+    // kalıcı tıkardı. Bu yüzden upsert. work_orders'da DB id auto-uuid, app id'si
+    // benzersiz `number` kolonunda → çakışma kolonu number; diğerleri PK (id).
+    const upsertOpts = table === 'work_orders' ? { onConflict: 'number' } : undefined;
+    const { error } = await supabase.from(table).upsert(toRow(), upsertOpts as any);
     if (error) throw new Error(error.message);
-    // Teklif insert ise satırları da yaz
+    // Teklif insert ise satırları da yaz — önce mevcutları sil (kısmi insert
+    // tekrarında çift satır oluşmasın), sonra ekle.
     if (table === 'quotes' && payload.lines?.length) {
+      const { error: eDel } = await supabase.from('quote_lines').delete().eq('quote_id', payload.id);
+      if (eDel) throw new Error(eDel.message);
       const lineRows = payload.lines.map((l: any) => quoteLineToRow(payload.id, l));
       const { error: e2 } = await supabase.from('quote_lines').insert(lineRows);
       if (e2) throw new Error(e2.message);

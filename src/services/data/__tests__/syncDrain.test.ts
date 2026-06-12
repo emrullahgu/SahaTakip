@@ -8,6 +8,7 @@ const mockCalls: any[] = [];
 jest.mock('../repository', () => {
   const builder = (table: string) => ({
     insert: (row: any) => { mockCalls.push({ op: 'insert', table, row }); return Promise.resolve({ error: null }); },
+    upsert: (row: any, opts?: any) => { mockCalls.push({ op: 'upsert', table, row, opts }); return Promise.resolve({ error: null }); },
     update: (row: any) => {
       mockCalls.push({ op: 'update', table, row });
       return { eq: (col: string, val: any) => { mockCalls.push({ op: 'update.eq', table, col, val }); return Promise.resolve({ error: null }); } };
@@ -60,13 +61,24 @@ describe('applyOp — delete dalı', () => {
 });
 
 describe('applyOp — insert / update', () => {
-  it('quotes insert → quotes + quote_lines yazar', async () => {
+  it('quotes insert → quotes upsert + quote_lines (sil→ekle, idempotent)', async () => {
     await applyOp({ table: 'quotes', action: 'insert', payload: { id: 'q-1', lines: [{ pozId: 'P1' }, { pozId: 'P2' }] } });
-    const q = mockCalls.filter(c => c.op === 'insert' && c.table === 'quotes');
+    const q = mockCalls.filter(c => c.op === 'upsert' && c.table === 'quotes');
+    const qlDel = mockCalls.filter(c => c.op === 'delete.eq' && c.table === 'quote_lines');
     const ql = mockCalls.filter(c => c.op === 'insert' && c.table === 'quote_lines');
-    expect(q).toHaveLength(1);
+    expect(q).toHaveLength(1);            // plain insert değil → idempotent upsert
+    expect(qlDel).toHaveLength(1);        // önce mevcut satırlar silinir
+    expect(qlDel[0]).toMatchObject({ col: 'quote_id', val: 'q-1' });
     expect(ql).toHaveLength(1);
-    expect(ql[0].row).toHaveLength(2); // iki satır
+    expect(ql[0].row).toHaveLength(2);    // iki satır
+  });
+
+  it('work_orders insert → number çakışmalı upsert (idempotent, çift kayıt yok)', async () => {
+    await applyOp({ table: 'work_orders', action: 'insert', payload: { id: 'IE-2026-003', status: 'Bekliyor' } });
+    const up = mockCalls.find(c => c.op === 'upsert' && c.table === 'work_orders');
+    expect(up).toBeDefined();
+    expect(up.opts).toMatchObject({ onConflict: 'number' });
+    expect(up.row).toHaveProperty('number', 'IE-2026-003');
   });
 
   it('work_orders update → keyCol "number" ve created_by GÖNDERİLMEZ (sahiplik korunur)', async () => {
