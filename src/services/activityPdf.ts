@@ -58,7 +58,7 @@ export async function generateAndShareActivityPdf(
 </style>
 </head>
 <body>
-  <img class="logo" src="${LOGO_DATA_URI}" alt="${COMPANY.name}" />
+  <img class="logo" src="${LOGO_DATA_URI}" alt="${esc(COMPANY.name)}" />
   <h1>SAHA AKTİVİTE RAPORU</h1>
   <div class="date">Tarih: ${esc(date)}</div>
 
@@ -74,7 +74,7 @@ export async function generateAndShareActivityPdf(
     <tbody>${qRows || '<tr><td colspan="6" style="text-align:center">Kayıt yok</td></tr>'}</tbody>
   </table>
 
-  <div class="footer">${COMPANY.legalName} · Otomatik Sistem Raporu</div>
+  <div class="footer">${esc(COMPANY.legalName)} · Otomatik Sistem Raporu</div>
 </body>
 </html>`;
 

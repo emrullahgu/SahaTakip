@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { matchesAnyField } from '../utils/search';
 import {
   View,
@@ -90,25 +90,34 @@ export default function ManagerScreen() {
   const [aiLoading, setAiLoading] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
 
-  // Metrics
-  const invoiced = workOrders.filter(w => w.status === 'Faturalandırıldı');
-  const totalRevenue = invoiced.reduce((s, w) => s + w.quoteAmount, 0);
-  const totalCost = invoiced.reduce((s, w) => s + w.laborCost + w.materialCost + w.otherCost, 0);
-  const totalProfit = totalRevenue - totalCost;
-  const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-  const pendingApprovals = workOrders.filter(w => w.status === 'Onay Bekliyor' || w.status === 'Teklif Gönderildi');
+  // Metrics — useMemo: workOrders değişmedikçe her render'da yeniden filtrelenmesin
+  // (archiveChips 5 yıl × tüm iş emirleri iç-filtre yapıyordu; 1000+ kayıtta 5K iterasyon).
+  const { invoiced, totalRevenue, totalCost, totalProfit, margin, pendingApprovals } = useMemo(() => {
+    const inv = workOrders.filter(w => w.status === 'Faturalandırıldı');
+    const rev = inv.reduce((s, w) => s + w.quoteAmount, 0);
+    const cost = inv.reduce((s, w) => s + w.laborCost + w.materialCost + w.otherCost, 0);
+    const profit = rev - cost;
+    return {
+      invoiced: inv,
+      totalRevenue: rev,
+      totalCost: cost,
+      totalProfit: profit,
+      margin: rev > 0 ? (profit / rev) * 100 : 0,
+      pendingApprovals: workOrders.filter(w => w.status === 'Onay Bekliyor' || w.status === 'Teklif Gönderildi'),
+    };
+  }, [workOrders]);
 
-  const filteredArchive = workOrders.filter(o => {
+  const filteredArchive = useMemo(() => workOrders.filter(o => {
     const matchYear = archiveYear === 'Hepsi' || o.date.startsWith(archiveYear);
     const matchSearch = matchesAnyField([o.client, o.serviceName, o.engineer], searchQuery);
     return matchYear && matchSearch;
-  });
+  }), [workOrders, archiveYear, searchQuery]);
 
-  const archiveChips: FilterChip[] = ARCHIVE_YEARS.map(y => ({
+  const archiveChips: FilterChip[] = useMemo(() => ARCHIVE_YEARS.map(y => ({
     key: y,
     label: y,
     count: y === 'Hepsi' ? workOrders.length : workOrders.filter(o => o.date.startsWith(y)).length,
-  }));
+  })), [workOrders]);
 
   const runAiAnalysis = () => {
     setAiLoading(true);

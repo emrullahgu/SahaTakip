@@ -919,11 +919,12 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
     },
     handler: async (args) => {
       const items = Array.isArray(args.items) ? args.items : [];
-      // Yalnız YÜKSEK güvenli (≥%50) ve birim-uyumlu eşleşmeleri otomatik fiyatla.
-      // Aksi halde fiyat sessizce kataloga oturup yanlış olabilir (ör. kg miktarını
-      // adet fiyatıyla çarpmak → milyonlarca TL şişme). Bunları "manuel fiyat gerekli"
-      // olarak işaretle; ajan kullanıcıya sorar veya boş bırakır.
-      const AUTO_PRICE_MIN = 0.5;
+      // Yalnız YÜKSEK güvenli (≥%60) ve birim-uyumlu eşleşmeleri otomatik fiyatla.
+      // %50 fazla gevşekti: aynı birimde 2/4 token eşleşen yanlış kalem (ör. "Trafo
+      // 1000 kVA" ↔ "Trafo 630 kVA") otomatik yanlış fiyatlanabiliyordu. Eşik 0.60'a
+      // çekildi → şüpheliler "manuel fiyat gerekli" işaretlenir (birim uyuşmazlığı
+      // ayrıca conflict ile zaten yakalanıyor). Para doğruluğu otomasyondan önce gelir.
+      const AUTO_PRICE_MIN = 0.6;
       let needsReview = 0;
       const out = items.map((it: any, i: number) => {
         const desc = String(it.description ?? '');
