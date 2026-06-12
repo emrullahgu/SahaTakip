@@ -145,7 +145,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     setSyncState('syncing');
     try {
-      const [q, c, w, e] = await Promise.all([
+      // allSettled: tek repo'nun hatası (ör. employees) diğer üçünü yutmamalı.
+      // Promise.all ile biri reddedince başarılı listeler de atılıyordu; artık her
+      // domain bağımsız uygulanır, hatalı domain mevcut/cache state'ini korur.
+      const [qR, cR, wR, eR] = await Promise.allSettled([
         quotesRepo.list(),
         customersRepo.list(),
         workOrdersRepo.list(),
@@ -154,11 +157,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // list() KOŞULSUZ set edilir — `if (length)` boş-başarılı sonucu yutup eski/seed
       // veriyi gösteriyordu (silinmiş kayıt gerçek sanılıyordu). Repo'lar GEÇİCİ hatada
       // cache döndürür (boş değil), bu yüzden gerçek boş → boş, hata → cache korunur.
-      setQuotes(q);
-      setCustomers(c);
-      setWorkOrders(w);
-      setEmployees(e);
-      setSyncState('idle');
+      if (qR.status === 'fulfilled') setQuotes(qR.value); else console.warn('[refresh.quotes]', qR.reason);
+      if (cR.status === 'fulfilled') setCustomers(cR.value); else console.warn('[refresh.customers]', cR.reason);
+      if (wR.status === 'fulfilled') setWorkOrders(wR.value); else console.warn('[refresh.workOrders]', wR.reason);
+      if (eR.status === 'fulfilled') setEmployees(eR.value); else console.warn('[refresh.employees]', eR.reason);
+      const anyFailed = [qR, cR, wR, eR].some(r => r.status === 'rejected');
+      setSyncState(anyFailed ? 'error' : 'idle');
     } catch (err) {
       console.warn('[AppContext.refresh]', err);
       setSyncState('error');
