@@ -380,13 +380,17 @@ export default function NewServiceScreen() {
     // Tam base36 timestamp + kısa rastgele ek → pratikte benzersiz.
     const workOrderId = `KOB-DRAFT-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, '0')}`;
 
-    // Fotoğrafları Supabase Storage'a yükle (çoklu). Hata olursa lokal URI fallback.
+    // Fotoğrafları Supabase Storage'a yükle (çoklu). Hata olursa lokal URI fallback,
+    // ANCAK sessiz kalmaz: yüklenemeyen foto sayısı toplanıp tek uyarıyla bildirilir.
+    // Lokal file:// URI başka cihazda görünmez; usta yüklendi sanıp gerçekte olmayan
+    // bir durumu varsaymasın (Req#3 dürüstlük).
     const uploadFolder = `work-orders/${workOrderId}`;
+    let uploadFailures = 0;
     const uploadAll = async (uris: string[]): Promise<string[]> => {
       const out: string[] = [];
       for (const u of uris) {
         try { out.push(await uploadPhoto(u, uploadFolder)); }
-        catch (e: any) { console.warn('[wo.photo.upload]', e); out.push(u); } // hata → lokal URI fallback
+        catch (e: any) { console.warn('[wo.photo.upload]', e); uploadFailures++; out.push(u); } // hata → lokal URI fallback
       }
       return out;
     };
@@ -396,7 +400,16 @@ export default function NewServiceScreen() {
     try {
       if (formPhoto) formUrl = await uploadPhoto(formPhoto, uploadFolder);
     } catch (e: any) {
-      Alert.alert('Foto yüklenemedi (form)', e?.message ?? 'Bilinmeyen hata');
+      console.warn('[wo.form.upload]', e);
+      uploadFailures++;
+    }
+    if (uploadFailures > 0) {
+      Alert.alert(
+        'Bazı fotoğraflar yüklenemedi',
+        `${uploadFailures} fotoğraf buluta yüklenemedi ve yalnızca bu cihazda saklandı. ` +
+          `İnternet bağlantısı olunca raporu tekrar açıp fotoğrafları yeniden gönderin; ` +
+          `aksi halde diğer cihazlarda (ör. yönetici onayında) görünmeyebilir.`,
+      );
     }
 
     addWorkOrder({
