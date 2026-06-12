@@ -151,7 +151,9 @@ export function totalLabourMinutes(logs?: WorkOrder['timeLogs']): number {
 export function recomputeWorkOrderCosts(w: WorkOrder, dailyRatePerHour = 250): WorkOrder {
   const minutes = totalLabourMinutes(w.timeLogs);
   const computedLabor = minutes > 0 ? Math.round((minutes / 60) * dailyRatePerHour) : w.laborCost;
-  const materialCost = w.materials.reduce((s, m) => s + m.price * m.qty, 0);
+  // İskontoyu UYGULA — NewServiceScreen iskontolu materialCost kaydeder; iskontosuz
+  // yeniden hesap timer durunca doğru maliyeti/karı bozuyordu (denetim).
+  const materialCost = w.materials.reduce((s, m: any) => s + m.price * m.qty * (1 - (m.discountPct ?? 0) / 100), 0);
   return {
     ...w,
     actualLaborMinutes: minutes,

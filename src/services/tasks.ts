@@ -1,5 +1,6 @@
 // POZ-DEV-232: Görev Takip servisi
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { localDateISO } from '../utils/date';
 import { Task, TaskPriority, TaskStatus } from '../types';
 
 const KEY = 'tasks_v1';
@@ -82,6 +83,6 @@ export async function deleteTask(id: string): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(all.filter(x => x.id !== id)));
 }
 export function tasksOverdue(tasks: Task[]): Task[] {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   return tasks.filter(t => t.dueDate && t.dueDate < today && t.status !== 'done' && t.status !== 'cancelled');
 }

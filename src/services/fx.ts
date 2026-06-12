@@ -6,6 +6,7 @@
 // varsayılana (build kuru) düşer.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { localDateISO } from '../utils/date';
 export interface FxRates {
   USD: number;
   EUR: number;
@@ -87,7 +88,7 @@ async function fetchTcmb(timeoutMs = 8000): Promise<FxRates | null> {
     const xml = await res.text();
     const p = parseTcmbXml(xml);
     if (p.USD && p.EUR) {
-      return { USD: p.USD, EUR: p.EUR, date: p.date || new Date().toISOString().slice(0, 10), source: 'TCMB' };
+      return { USD: p.USD, EUR: p.EUR, date: p.date || localDateISO(), source: 'TCMB' };
     }
     return null;
   } catch {
@@ -102,7 +103,7 @@ async function fetchTcmb(timeoutMs = 8000): Promise<FxRates | null> {
  * bayat cache → fallback. Gün içinde tek ağ isteği yapılır (cache).
  */
 export async function getFxRates(force = false): Promise<FxRates> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   if (!force && _mem && _memDay === today) return _mem;
 
   // 1) Bugünün cache'i

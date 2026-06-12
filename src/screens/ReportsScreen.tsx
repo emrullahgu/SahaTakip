@@ -3,6 +3,7 @@
 // + günlük 18:00 hatırlatıcı + haftalık e-posta tercihi.
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import {
   View,
   Text,
@@ -146,7 +147,7 @@ export default function ReportsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.linkBtn}
-                onPress={() => generateAndShareActivityPdf(new Date().toISOString().slice(0,10), workOrders, quotes)}
+                onPress={() => generateAndShareActivityPdf(localDateISO(), workOrders, quotes)}
               >
                 <Ionicons name="document-text-outline" size={16} color={brand.green} />
                 <Text style={styles.linkText}>Aktivite PDF</Text>

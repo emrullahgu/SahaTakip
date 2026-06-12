@@ -1,5 +1,6 @@
 // FormHubScreen — POZ-DEV-149 Form sistem merkez ekranı
 import React, { useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +48,7 @@ export default function FormHubScreen() {
         setTplCount(tpls.length);
         setSeedCount(tpls.filter(t => t.isSeed).length);
         setRespCount(resps.length);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = localDateISO();
         setTodayCount(resps.filter(r => (r.createdAt || '').slice(0, 10) === today).length);
       } catch {}
     })();

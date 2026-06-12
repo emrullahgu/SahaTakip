@@ -5,6 +5,7 @@
 // ====================================================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { localDateISO } from '../utils/date';
 import { RecurringTemplate, WorkOrder } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 
@@ -96,7 +97,7 @@ function addDays(date: string, days: number): string {
  */
 export async function runDueTemplates(): Promise<WorkOrder[]> {
   const list = await listTemplates();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateISO();
   const newOrders: WorkOrder[] = [];
   const updated: RecurringTemplate[] = [];
   for (const t of list) {

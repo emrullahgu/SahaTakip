@@ -8,6 +8,7 @@
 // ve gerçek verilere dayalı yanıt üretir.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { localDateISO } from '../utils/date';
 import { chat as llmChat, chatWithFallback, getAiSettings, chatVision, pickVisionSettings, pickDocSettings } from './ai';
 import { recordAiCall } from './aiTelemetry';
 import { retrieveRelevant, KbDoc } from './aiKnowledgeBase';
@@ -32,7 +33,7 @@ export interface CopilotSnapshot {
 }
 
 function uid() { return 'm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6); }
-function todayKey() { return new Date().toISOString().slice(0, 10); }
+function todayKey() { return localDateISO(); }
 
 export async function loadHistory(): Promise<CopilotMessage[]> {
   try {

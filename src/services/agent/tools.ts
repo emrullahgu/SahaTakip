@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------
 
 import type { ToolSchema } from '../ai';
+import { localDateISO } from '../../utils/date';
 import type { WorkOrder, Customer, Quote, QuoteLine, Employee, MaterialCatalogItem, QuoteStatus } from '../../types';
 import type { AppContextType } from '../../context/AppContext';
 import { calcQuoteTotals } from '../../context/AppContext';
@@ -43,7 +44,7 @@ export interface ToolDef {
 }
 
 // ---------- helpers ----------
-const TODAY = () => new Date().toISOString().slice(0, 10);
+const TODAY = () => localDateISO();
 const NOW = () => new Date().toISOString();
 const slim = <T extends Record<string, any>>(o: T, keys: (keyof T)[]) =>
   keys.reduce((a, k) => ((a as any)[k] = o[k], a), {} as Partial<T>);
@@ -1091,7 +1092,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         customerName: matchedCustomer?.shortName || rawName,
         customerTitle: matchedCustomer?.title || undefined,
         title: String(args.title),
-        date: new Date().toISOString().slice(0, 10),
+        date: localDateISO(),
         engineer: String(args.engineer ?? ctx.currentUserName ?? 'AI Ajan'),
         lines,
         status: 'Taslak',

@@ -3,6 +3,7 @@
 // ====================================================================
 
 import React, { useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -78,7 +79,7 @@ export default function QuoteTemplatesScreen() {
       customerName: '',
       customerTitle: '',
       title: t.defaultTitle || t.name,
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateISO(),
       engineer: '',
       lines,
       status: 'Taslak',

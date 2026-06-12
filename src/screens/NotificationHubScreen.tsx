@@ -1,5 +1,6 @@
 // NotificationHubScreen — POZ-DEV-177 Bildirim & İletişim merkez
 import React, { useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,7 +43,7 @@ export default function NotificationHubScreen() {
     (async () => {
       try {
         const [all, un] = await Promise.all([listNotifications(), unreadCount()]);
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = localDateISO();
         setTotal(all.length);
         setUnread(un);
         setToday(all.filter(n => (n.createdAt || '').slice(0, 10) === todayStr).length);

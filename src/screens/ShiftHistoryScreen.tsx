@@ -4,6 +4,7 @@
 // PDF olarak çıktı alma + her gün özet sekmesi.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import {
   View,
   Text,
@@ -122,7 +123,7 @@ function ShiftHistoryInner() {
   }, [refresh]);
 
   const rows = useMemo<HistoryRow[]>(() => {
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = localDateISO();
     return shifts
       .map<HistoryRow>((s) => {
         const name =

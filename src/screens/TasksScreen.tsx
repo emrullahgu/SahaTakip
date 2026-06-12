@@ -1,5 +1,6 @@
 // TasksScreen — POZ-DEV-233 Görev listesi + filtre
 import React, { useCallback, useMemo, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -85,7 +86,7 @@ export default function TasksScreen() {
               </View>
               {t.description ? <Text style={s.cardDesc} numberOfLines={2}>{t.description}</Text> : null}
               <View style={s.cardMeta}>
-                {t.dueDate && <Text style={[s.metaText, t.dueDate < new Date().toISOString().slice(0, 10) && t.status !== 'done' && { color: '#ef4444' }]}>📅 {t.dueDate}</Text>}
+                {t.dueDate && <Text style={[s.metaText, t.dueDate < localDateISO() && t.status !== 'done' && { color: '#ef4444' }]}>📅 {t.dueDate}</Text>}
                 {t.assignedTo && <Text style={s.metaText}>👤 {t.assignedTo}</Text>}
               </View>
             </PressableScale>

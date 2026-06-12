@@ -1,5 +1,6 @@
 // aiAssistant.ts — Faz 41 AI servis katmanı (mock, AsyncStorage)
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { localDateISO } from '../utils/date';
 import type {
   AiPermission, AiSession, AiMessage, AiPozSuggestion, AiQuoteDraft,
   AiWorkOrderSummary, AiCustomerInsight, AiRiskAlert, AiDailyReport, AiUsageLog,
@@ -363,7 +364,7 @@ export async function generateDailyReport(): Promise<AiDailyReport> {
   const list = await load<AiDailyReport>(K.daily);
   // Sahte rastgele metrik yerine dürüst sıfır — gün içi veri oluştukça dolar.
   const r: AiDailyReport = {
-    id: uid(), date: new Date().toISOString().slice(0, 10),
+    id: uid(), date: localDateISO(),
     text: 'Günlük özet, gün içinde iş emri/teklif/ziyaret kayıtları oluştukça otomatik güncellenir.',
     metrics: [
       { label: 'İş Emri', value: '0' },

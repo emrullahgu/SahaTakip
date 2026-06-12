@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { localDateISO } from '../utils/date';
 import {
   View,
   Text,
@@ -182,7 +183,7 @@ export default function NewQuoteScreen() {
       customerName: customer.shortName,
       customerTitle: customer.title,
       title,
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateISO(),
       engineer: engineerName,
       lines,
       status: 'Taslak',

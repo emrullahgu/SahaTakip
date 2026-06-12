@@ -1,5 +1,6 @@
 // CalendarEventFormScreen — POZ-DEV-311 Etkinlik oluştur/düzenle
 import React, { useCallback, useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ export default function CalendarEventFormScreen() {
   const { employees } = useAppContext();
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<CalendarEventKind>('meeting');
-  const [date, setDate] = useState(route.params?.date || new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(route.params?.date || localDateISO());
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [allDay, setAllDay] = useState(false);

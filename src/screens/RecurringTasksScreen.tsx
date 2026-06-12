@@ -4,6 +4,7 @@
 // ====================================================================
 
 import React, { useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import {
   View,
   Text,
@@ -76,7 +77,7 @@ export default function RecurringTasksScreen() {
     client: '',
     priority: 'Normal',
     intervalDays: 30,
-    nextRunDate: new Date().toISOString().slice(0, 10),
+    nextRunDate: localDateISO(),
     active: true,
   });
 

@@ -1,5 +1,6 @@
 // ReportingHubScreen — POZ-DEV-170 Raporlama & Dashboard merkez
 import React, { useEffect, useMemo, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +44,7 @@ export default function ReportingHubScreen() {
 
   const slaCount = useMemo(() => listSlaItems(workOrders).length, [workOrders]);
   const todayCount = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateISO();
     return workOrders.filter(w => (w.date || '').slice(0, 10) === today).length;
   }, [workOrders]);
   const openCount = useMemo(

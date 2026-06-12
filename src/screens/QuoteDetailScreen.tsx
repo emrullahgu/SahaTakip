@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Share, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,7 +68,7 @@ export default function QuoteDetailScreen() {
       id: newUuid(),
       number: generateQuoteNumber(),
       status: 'Taslak',
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateISO(),
       revision: 0,
       generatedWorkOrderId: undefined,
       title: `${quote.title} (Kopya)`,

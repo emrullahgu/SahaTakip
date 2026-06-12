@@ -1,5 +1,6 @@
 // Faz 42 — FieldShiftPlanScreen
 import React, { useCallback, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ export default function FieldShiftPlanScreen() {
 
   const onAdd = async () => {
     if (!name.trim() || !zoneId) { Alert.alert('Eksik', 'Ad ve bölge zorunlu.'); return; }
-    await addPlan({ zoneId, userId: 'u-' + Date.now(), userName: name, date: new Date().toISOString().slice(0, 10), startTime: start, endTime: end });
+    await addPlan({ zoneId, userId: 'u-' + Date.now(), userName: name, date: localDateISO(), startTime: start, endTime: end });
     setName(''); setZoneId(''); setModal(false); load();
   };
 

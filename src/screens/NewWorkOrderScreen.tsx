@@ -3,6 +3,7 @@
 // iş BAŞLAMADAN önce yapılacak işi tanımlar: müşteri + hizmet + öncelik + tarih
 // + (opsiyonel) personel ataması. Status 'Bekliyor' / atanırsa 'Atandı'.
 import React, { useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,7 +43,7 @@ export default function NewWorkOrderScreen() {
       id,
       client: customer.shortName,
       serviceName: serviceName.trim(),
-      date: plannedDate.trim() || new Date().toISOString().slice(0, 10),
+      date: plannedDate.trim() || localDateISO(),
       engineer: assignee?.name || '',
       materials: [],
       otherCost: 0, laborCost: 0, materialCost: 0, quoteAmount: 0, profit: 0,
