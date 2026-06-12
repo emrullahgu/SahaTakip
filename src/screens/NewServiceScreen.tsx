@@ -194,9 +194,15 @@ export default function NewServiceScreen() {
   const rawMaterialCost = selectedMaterials.reduce((s, m) => s + lineTotal(m), 0);
   const defaultServiceFee = selectedService?.price ?? 0;
   const defaultMaterialFee = Math.round(rawMaterialCost * MATERIAL_MARKUP);
-  const effServiceFee = serviceFeeOverride.trim() !== '' ? (parseFloat(serviceFeeOverride) || 0) : defaultServiceFee;
-  const effMaterialFee = materialFeeOverride.trim() !== '' ? (parseFloat(materialFeeOverride) || 0) : defaultMaterialFee;
-  const effExtraCost = parseFloat(otherCost) || 0;
+  // tr-TR para girişi: binlik '.' kaldır, ondalık ',' → '.' . parseFloat('1.500')=1,5
+  // hatasını önler (kullanıcı '1.500' yazınca 1500 TL olur, 1,5 değil).
+  const parseTL = (s: string) => {
+    const n = parseFloat(String(s).replace(/[.\s]/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const effServiceFee = serviceFeeOverride.trim() !== '' ? parseTL(serviceFeeOverride) : defaultServiceFee;
+  const effMaterialFee = materialFeeOverride.trim() !== '' ? parseTL(materialFeeOverride) : defaultMaterialFee;
+  const effExtraCost = parseTL(otherCost);
   // Teklif tek noktada yuvarlanır → quoteAmount ve profit aynı değerden türetilir (tutarlı).
   const calculatedQuote = Math.round(effServiceFee + effMaterialFee + effExtraCost);
 

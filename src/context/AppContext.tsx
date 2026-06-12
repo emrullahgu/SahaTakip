@@ -421,18 +421,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       serviceName: q.title,
       date: localDateISO(),
       engineer: q.engineer,
+      // qty (quantity DEĞİL) — recomputeWorkOrderCosts m.qty okuyor; 'quantity'
+      // yazılınca timer durunca materialCost/profit NaN oluyordu. discountPct de
+      // taşınır ki maliyet iskontoyu yansıtsın.
       materials: q.lines.map(l => ({
         id: l.pozId,
         name: l.pozName,
         unit: l.unit,
-        quantity: l.quantity,
+        qty: l.quantity,
         price: l.materialPrice,
+        discountPct: l.discountPct ?? 0,
       })) as any,
       otherCost: 0,
-      laborCost: q.lines.reduce((s, l) => s + l.installPrice * l.quantity, 0),
-      materialCost: q.lines.reduce((s, l) => s + l.materialPrice * l.quantity, 0),
+      // Maliyetler satır iskontosunu yansıtır; profit artık sabit 0 değil — gerçek marj.
+      laborCost: Math.round(q.lines.reduce((s, l) => s + l.installPrice * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0)),
+      materialCost: Math.round(q.lines.reduce((s, l) => s + l.materialPrice * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0)),
       quoteAmount: q.grandTotal,
-      profit: 0,
+      profit: Math.round(q.grandTotal - q.lines.reduce((s, l) => s + (l.installPrice + l.materialPrice) * l.quantity * (1 - (l.discountPct ?? 0) / 100), 0)),
       status: 'Bekliyor',
       beforePhoto: '',
       afterPhoto: '',

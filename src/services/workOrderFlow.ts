@@ -151,9 +151,14 @@ export function totalLabourMinutes(logs?: WorkOrder['timeLogs']): number {
 export function recomputeWorkOrderCosts(w: WorkOrder, dailyRatePerHour = 250): WorkOrder {
   const minutes = totalLabourMinutes(w.timeLogs);
   const computedLabor = minutes > 0 ? Math.round((minutes / 60) * dailyRatePerHour) : w.laborCost;
-  // İskontoyu UYGULA — NewServiceScreen iskontolu materialCost kaydeder; iskontosuz
-  // yeniden hesap timer durunca doğru maliyeti/karı bozuyordu (denetim).
-  const materialCost = w.materials.reduce((s, m: any) => s + m.price * m.qty * (1 - (m.discountPct ?? 0) / 100), 0);
+  // İskontoyu UYGULA + SAVUNMACI oku — bazı kayıtlar qty yerine quantity kullaniyor
+  // (teklif-kabul yolu); ham çarpım NaN/negatif tutar üretmesin (denetim).
+  const materialCost = w.materials.reduce((s, m: any) => {
+    const price = Number(m.price) || 0;
+    const qty = Number(m.qty ?? m.quantity) || 0;
+    const disc = Math.min(100, Math.max(0, Number(m.discountPct) || 0));
+    return s + price * qty * (1 - disc / 100);
+  }, 0);
   return {
     ...w,
     actualLaborMinutes: minutes,

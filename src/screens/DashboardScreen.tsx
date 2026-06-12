@@ -3,6 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { localDateISO } from '../utils/date';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -37,7 +38,7 @@ export default function DashboardScreen() {
     const days: ReportBucket[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = localDateISO(d); // yerel gün anahtarı (UTC kayması yok; w.date ile tutarlı)
       const count = workOrders.filter(w => (w.date ?? '').slice(0, 10) === iso).length;
       days.push({
         label: d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }),

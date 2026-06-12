@@ -4,7 +4,7 @@
 // Kullanıcı işlemlerini audit_log tablosuna kaydeder.
 // Hata fırlatmaz — sessiz başarısızlık (log etmesi denemesi UI'ı bozmasın).
 
-import { supabase, isOnlineMode } from './repository';
+import { supabase, isOnlineMode, enqueueSync, newUuid } from './repository';
 
 export interface AuditEvent {
   action: string;          // 'quote.create', 'customer.delete', 'shift.start', vb.
@@ -26,27 +26,34 @@ export interface AuditLogRow {
 
 export const auditRepo = {
   async log(userId: string | null, e: AuditEvent): Promise<void> {
-    if (!isOnlineMode() || !userId) return;
+    if (!userId) return;
+    const row = {
+      user_id: userId,
+      action: e.action,
+      table_name: e.tableName ?? null,
+      ref_id: e.refId ?? null,
+      meta: e.meta ?? {},
+    };
+    // Offline: denetim izini KAYBETME — sync kuyruğuna al, online olunca yazılır
+    // (denetim G5: offline'da da iz birak). syncDrain audit_log insert'i isler.
+    if (!isOnlineMode()) {
+      try { await enqueueSync({ id: newUuid(), table: 'audit_log', action: 'insert', payload: row }); } catch { /* sessiz */ }
+      return;
+    }
     try {
-      await supabase.from('audit_log').insert({
-        user_id: userId,
-        action: e.action,
-        table_name: e.tableName ?? null,
-        ref_id: e.refId ?? null,
-        meta: e.meta ?? {},
-      });
+      await supabase.from('audit_log').insert(row);
     } catch {
       /* sessiz */
     }
   },
 
   /** Aktif kullanıcıyı kendi çözerek loglar — React context'i olmayan servisler
-   *  (payments/stock/cashRegister/payroll vb.) için kolaylık (denetim M9). */
+   *  (payments/stock/cashRegister/payroll vb.) için kolaylık (denetim M9).
+   *  getSession() yereldir (ağ gerektirmez) → offline'da da kullanıcı çözülür. */
   async logCurrent(e: AuditEvent): Promise<void> {
-    if (!isOnlineMode()) return;
     try {
-      const { data } = await supabase.auth.getUser();
-      await this.log(data?.user?.id ?? null, e);
+      const { data } = await supabase.auth.getSession();
+      await this.log(data?.session?.user?.id ?? null, e);
     } catch {
       /* sessiz */
     }
