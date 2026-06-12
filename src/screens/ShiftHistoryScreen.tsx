@@ -152,7 +152,8 @@ function ShiftHistoryInner() {
       })
       .filter((r) => {
         if (filter === 'completed') return r.status === 'completed';
-        if (filter === 'today') return r.startAt.slice(0, 10) === todayKey;
+        // startAt UTC zaman damgası — yerel güne çevirip karşılaştır (gece yarısı kayması).
+        if (filter === 'today') return r.startAt && localDateISO(new Date(r.startAt)) === todayKey;
         return true;
       })
       .sort((a, b) => (a.startAt < b.startAt ? 1 : -1));

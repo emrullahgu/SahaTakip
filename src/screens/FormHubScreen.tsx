@@ -49,7 +49,8 @@ export default function FormHubScreen() {
         setSeedCount(tpls.filter(t => t.isSeed).length);
         setRespCount(resps.length);
         const today = localDateISO();
-        setTodayCount(resps.filter(r => (r.createdAt || '').slice(0, 10) === today).length);
+        // UTC slice yerine yerel gün karşılaştır (gece yarısı UTC+3 kayması).
+        setTodayCount(resps.filter(r => r.createdAt && localDateISO(new Date(r.createdAt)) === today).length);
       } catch {}
     })();
   }, []);

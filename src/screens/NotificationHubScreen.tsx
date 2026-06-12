@@ -46,7 +46,9 @@ export default function NotificationHubScreen() {
         const todayStr = localDateISO();
         setTotal(all.length);
         setUnread(un);
-        setToday(all.filter(n => (n.createdAt || '').slice(0, 10) === todayStr).length);
+        // createdAt UTC zaman damgası; .slice(0,10) UTC gününü verir, todayStr ise
+        // yerel gün → UTC+3'te gece yarısı civarı uyuşmazlık. Kaydı da yerele çevir.
+        setToday(all.filter(n => n.createdAt && localDateISO(new Date(n.createdAt)) === todayStr).length);
       } catch {}
     })();
   }, []);
