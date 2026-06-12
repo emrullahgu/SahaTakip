@@ -2,6 +2,7 @@
 // İş emirlerinden / tekliflerden / müşterilerden günlük/haftalık/aylık özet üretir.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { localDateISO } from '../utils/date';
 import type {
   Report,
   ReportPeriod,
@@ -50,7 +51,7 @@ export async function deleteReport(id: string) {
 
 // -------- yardımcılar --------
 function isoDay(d: Date | string) {
-  return new Date(d).toISOString().slice(0, 10);
+  return localDateISO(new Date(d));
 }
 
 function inRange(dateStr: string | undefined, start: string, end: string) {

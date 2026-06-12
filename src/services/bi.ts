@@ -1,5 +1,6 @@
 // bi.ts — BI & Karar Destek (gerçek Supabase verisinden agregasyon)
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { localDateISO } from '../utils/date';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import type {
   KpiCard, DepartmentKpiSnapshot, StaffPerformanceRecord, VehicleCostRecord,
@@ -462,7 +463,7 @@ export async function listBudgetVsActual(): Promise<BudgetVsActualRow[]> {
       .select('category,amount,date').gte('date', pStart).lt('date', pEnd);
     const byCat = new Map<string, number>();
     for (const e of (data || [])) byCat.set(e.category || 'Diğer', (byCat.get(e.category || 'Diğer') || 0) + safeNum(e.amount));
-    const prevStart = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const prevStart = localDateISO(new Date(Date.now() - 90 * 86400000));
     const { data: prev } = await supabase.from('expenses')
       .select('category,amount,date').gte('date', prevStart).lt('date', pStart);
     const prevByCat = new Map<string, number>();

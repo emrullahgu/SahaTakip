@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import {
   View,
   Text,
@@ -50,7 +51,7 @@ export default function ExpensesScreen() {
       await addExpense({
         type,
         amount: parsed,
-        date: new Date().toISOString().split('T')[0],
+        date: localDateISO(),
         description,
       });
       setAmount('');

@@ -1,5 +1,6 @@
 // IncomeReportScreen — POZ-DEV-185 Dönemsel gelir analizi
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,11 +74,11 @@ function IncomeReportScreenInner() {
     const dayMap = new Map<string, number>();
     const cursor = new Date(start);
     while (cursor.getTime() <= end.getTime()) {
-      dayMap.set(cursor.toISOString().slice(0, 10), 0);
+      dayMap.set(localDateISO(cursor), 0);
       cursor.setDate(cursor.getDate() + 1);
     }
     for (const p of inRange.filter(x => x.status === 'received')) {
-      const k = (p.receivedAt || '').slice(0, 10);
+      const k = p.receivedAt ? localDateISO(new Date(p.receivedAt)) : '';
       if (dayMap.has(k)) dayMap.set(k, (dayMap.get(k) || 0) + p.amount);
     }
 

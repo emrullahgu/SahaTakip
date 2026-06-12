@@ -88,7 +88,7 @@ export async function deleteTemplate(id: string): Promise<void> {
 function addDays(date: string, days: number): string {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateISO(d);
 }
 
 /**

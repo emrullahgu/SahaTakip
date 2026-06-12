@@ -1,5 +1,6 @@
 // NotificationStatsScreen — POZ-DEV-178 Bildirim olay & kanal dağılımı
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,13 +93,13 @@ export default function NotificationStatsScreen() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      last7.set(d.toISOString().slice(0, 10), 0);
+      last7.set(localDateISO(d), 0);
     }
     for (const n of rows) {
       ev.set(n.type, (ev.get(n.type) || 0) + 1);
       for (const c of n.channels || []) ch.set(c, (ch.get(c) || 0) + 1);
       if (!n.read) un++;
-      const day = (n.createdAt || '').slice(0, 10);
+      const day = n.createdAt ? localDateISO(new Date(n.createdAt)) : '';
       if (last7.has(day)) last7.set(day, (last7.get(day) || 0) + 1);
     }
     return {
