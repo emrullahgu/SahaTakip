@@ -261,7 +261,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return { ...emp, attendance: updatedAttendance, daysWorked };
       });
       const target = updated.find(e => e.id === empId);
-      if (target) employeesRepo.update(empId, target).catch(e => console.warn(e));
+      if (target) {
+        employeesRepo.update(empId, target).catch(e => console.warn(e));
+        // Puantaj değişimi bordroyu etkiler → denetim izi şart (denetim G5).
+        auditRepo.log(userId, { action: 'employee.attendance', tableName: 'employees', refId: empId, meta: { day, status: nextStatus } });
+      }
       return updated;
     });
   };

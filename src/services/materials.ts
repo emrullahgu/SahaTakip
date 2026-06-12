@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Material } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 const KEY = '@SahaTakip:materials';
 
@@ -100,6 +101,7 @@ export async function upsertMaterial(m: Material) {
   if (idx >= 0) all[idx] = saved;
   else all.unshift(saved);
   await saveMaterials(all);
+  void auditRepo.logCurrent({ action: 'material.upsert', tableName: 'materials', refId: saved.id, meta: { code: saved.code, name: saved.name, price: (saved as any).price ?? (saved as any).unitPrice } });
 }
 
 export async function deleteMaterial(id: string) {
@@ -108,6 +110,7 @@ export async function deleteMaterial(id: string) {
   }
   const all = await listMaterials();
   await saveMaterials(all.filter(m => m.id !== id));
+  void auditRepo.logCurrent({ action: 'material.delete', tableName: 'materials', refId: id });
 }
 
 export function newMaterial(): Material {

@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VehicleDamage } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 const KEY = '@SahaTakip:vehicle_damages';
 
@@ -103,6 +104,7 @@ export async function upsertDamage(d: VehicleDamage) {
   if (idx >= 0) all[idx] = saved;
   else all.unshift(saved);
   await saveAll(all);
+  void auditRepo.logCurrent({ action: 'vehicle_damage.upsert', tableName: 'vehicle_damages', refId: saved.id, meta: { vehicleId: saved.vehicleId } });
 }
 
 export async function deleteDamage(id: string) {
@@ -111,6 +113,7 @@ export async function deleteDamage(id: string) {
   }
   const all = await listDamages();
   await saveAll(all.filter(d => d.id !== id));
+  void auditRepo.logCurrent({ action: 'vehicle_damage.delete', tableName: 'vehicle_damages', refId: id });
 }
 
 export function newDamage(vehicleId: string): VehicleDamage {

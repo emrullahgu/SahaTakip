@@ -3,6 +3,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Asset, AssetType } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { auditRepo } from './data/auditRepo';
 
 const KEY = '@SahaTakip:assets';
 
@@ -95,6 +96,7 @@ export async function createAsset(input: Omit<Asset, 'id' | 'createdAt'>): Promi
   const all = await listAssets();
   all.unshift(next);
   await AsyncStorage.setItem(KEY, JSON.stringify(all));
+  void auditRepo.logCurrent({ action: 'asset.create', tableName: 'assets', refId: next.id, meta: { type: next.type, name: (next as any).name } });
   return next;
 }
 
@@ -116,6 +118,7 @@ export async function updateAsset(id: string, patch: Partial<Asset>): Promise<As
   }
   all[i] = merged;
   await AsyncStorage.setItem(KEY, JSON.stringify(all));
+  void auditRepo.logCurrent({ action: 'asset.update', tableName: 'assets', refId: id });
   return all[i];
 }
 
@@ -126,6 +129,7 @@ export async function deleteAsset(id: string): Promise<void> {
   const all = await listAssets();
   const next = all.filter(a => a.id !== id);
   await AsyncStorage.setItem(KEY, JSON.stringify(next));
+  void auditRepo.logCurrent({ action: 'asset.delete', tableName: 'assets', refId: id });
 }
 
 export async function listByCustomer(customerId: string): Promise<Asset[]> {
