@@ -37,6 +37,7 @@ import { newUuid } from '../services/data/repository';
 import { upsertMaterial } from '../services/materials';
 import { listPricingRules, applyPricingRules, type BrandPricingRule } from '../services/productPricing';
 import { matchesAnyField } from '../utils/search';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'NewQuote'>;
 type NewQuoteRoute = RouteProp<RootStackParamList, 'NewQuote'>;
@@ -215,8 +216,11 @@ export default function NewQuoteScreen() {
     return customers.filter(c => matchesAnyField([c.shortName, c.title, c.taxNumber, c.phone], q));
   }, [customers, customerSearch]);
 
+  // 13K+ ürünlük katalog filtresi her tuş vuruşunda değil, yazım durunca çalışsın
+  // (debounce) — Android'de arama gecikmesini önler. TextInput value'su hızlı kalır.
+  const debouncedProductSearch = useDebouncedValue(productSearch, 250);
   const filteredProducts = useMemo(() => {
-    const q = productSearch.trim();
+    const q = debouncedProductSearch.trim();
     let base = [...customProds, ...applyOverrides(MATERIAL_CATALOG, catOverrides)];
     if (productCategory) base = base.filter(m => m.category === productCategory);
     if (productBrand) base = base.filter(m => m.brand === productBrand);
@@ -226,7 +230,7 @@ export default function NewQuoteScreen() {
     }
     // Toplu fiyat/iskonto kurallarını uygula → eklenecek fiyat indirimli gelir.
     return applyPricingRules(base.slice(0, 400), productRules);
-  }, [productSearch, productCategory, productBrand, productRules, catOverrides, customProds]);
+  }, [debouncedProductSearch, productCategory, productBrand, productRules, catOverrides, customProds]);
 
   const addProductLine = (p: typeof MATERIAL_CATALOG[number]) => {
     const newLine: QuoteLine = {

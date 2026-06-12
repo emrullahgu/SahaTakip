@@ -1,6 +1,7 @@
 // ProductCatalogScreen — 13K+ ürünü kategorize/marka filtreli arama + toplu fiyat/iskonto
 import React, { useCallback, useMemo, useState } from 'react';
 import { matchesAnyField } from '../utils/search';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -48,16 +49,18 @@ export default function ProductCatalogScreen() {
     [overrides, custom],
   );
 
+  // 13K+ ürün her tuşta değil yazım durunca filtrelensin (debounce) — arama gecikmesi yok.
+  const debouncedSearch = useDebouncedValue(search, 250);
   const filtered = useMemo(() => {
     let base = effectiveCatalog;
     if (category) base = base.filter(m => m.category === category);
     if (brand) base = base.filter(m => m.brand === brand);
-    if (search.trim()) {
-      base = base.filter(m => matchesAnyField([m.name, m.code, m.brand, m.category], search));
+    if (debouncedSearch.trim()) {
+      base = base.filter(m => matchesAnyField([m.name, m.code, m.brand, m.category], debouncedSearch));
     }
     // Toplu fiyat kurallarını yalnızca görünen ≤500 ürüne uygula (ucuz).
     return applyPricingRules(base.slice(0, 500), rules);
-  }, [search, category, brand, rules, effectiveCatalog]);
+  }, [debouncedSearch, category, brand, rules, effectiveCatalog]);
 
   const saveEdit = async () => {
     if (!editItem) return;
