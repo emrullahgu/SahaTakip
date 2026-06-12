@@ -1,5 +1,6 @@
 // Faz 43 — PozLibraryScreen
 import React, { useCallback, useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,7 @@ export default function PozLibraryScreen() {
   const load = useCallback(async () => { setItems(await listPoz()); }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const filtered = items.filter(i => !q || i.code.toLowerCase().includes(q.toLowerCase()) || i.name.toLowerCase().includes(q.toLowerCase()) || i.category.toLowerCase().includes(q.toLowerCase()));
+  const filtered = items.filter(i => matchesAnyField([i.code, i.name, i.category], q));
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>

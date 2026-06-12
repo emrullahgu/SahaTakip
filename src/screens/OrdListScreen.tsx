@@ -1,5 +1,6 @@
 // Faz 59 — OrdListScreen (POZ-DEV-292)
 import React, { useState, useCallback } from 'react';
+import { matchesAnyField } from '../utils/search';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +26,7 @@ export default function OrdListScreen() {
 
   const filtered = items.filter(o => {
     if (filter !== 'all' && o.status !== filter) return false;
-    if (search && !o.customerName.toLowerCase().includes(search.toLowerCase()) && !o.code.toLowerCase().includes(search.toLowerCase())) return false;
+    if (!matchesAnyField([o.customerName, o.code], search)) return false;
     return true;
   });
 

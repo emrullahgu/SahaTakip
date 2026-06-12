@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import {
   View,
   Text,
@@ -99,10 +100,7 @@ export default function ManagerScreen() {
 
   const filteredArchive = workOrders.filter(o => {
     const matchYear = archiveYear === 'Hepsi' || o.date.startsWith(archiveYear);
-    const matchSearch =
-      o.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.serviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.engineer.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = matchesAnyField([o.client, o.serviceName, o.engineer], searchQuery);
     return matchYear && matchSearch;
   });
 

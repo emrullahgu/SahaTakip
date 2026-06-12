@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import {
   View,
   Text,
@@ -61,9 +62,7 @@ export default function WorkOrdersScreen() {
       activeFilter === 'Tümü' ||
       o.status === activeFilter ||
       (activeFilter === 'Gecikti' && o.breached);
-    const matchSearch =
-      o.title.toLowerCase().includes(searchText.toLowerCase()) ||
-      o.location.toLowerCase().includes(searchText.toLowerCase());
+    const matchSearch = matchesAnyField([o.title, o.location], searchText);
     return matchFilter && matchSearch;
   });
 

@@ -1,5 +1,6 @@
 // TasksScreen — POZ-DEV-233 Görev listesi + filtre
 import React, { useCallback, useMemo, useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import { localDateISO } from '../utils/date';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,10 +33,9 @@ export default function TasksScreen() {
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const filtered = useMemo(() => {
-    const s = search.toLowerCase().trim();
     return items.filter(t => {
       if (filterStatus !== 'all' && t.status !== filterStatus) return false;
-      if (s && !(t.title.toLowerCase().includes(s) || (t.description || '').toLowerCase().includes(s))) return false;
+      if (!matchesAnyField([t.title, t.description], search)) return false;
       return true;
     });
   }, [items, filterStatus, search]);

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { matchesAnyField } from '../utils/search';
 import {
   View,
   Text,
@@ -90,10 +91,7 @@ export default function QuotesScreen() {
     () =>
       quotes.filter(q => {
         const matchFilter = filter === 'Tümü' || q.status === filter;
-        const matchSearch =
-          q.customerName.toLowerCase().includes(search.toLowerCase()) ||
-          q.title.toLowerCase().includes(search.toLowerCase()) ||
-          q.number.toLowerCase().includes(search.toLowerCase());
+        const matchSearch = matchesAnyField([q.customerName, q.title, q.number], search);
         const matchFrom = !dateFrom || q.date >= dateFrom;
         const matchTo = !dateTo || q.date <= dateTo;
         return matchFilter && matchSearch && matchFrom && matchTo;

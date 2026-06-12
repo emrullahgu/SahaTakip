@@ -1,5 +1,6 @@
 // UsersAdminScreen — POZ-DEV-096..098 users with bulk + filter + role mgmt
 import React, { useCallback, useMemo, useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, useWindowDimensions, FlatList} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,11 +51,9 @@ export default function UsersAdminScreen() {
   }, [users]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return users.filter(u => {
       if (roleFilter !== 'all' && u.role !== roleFilter) return false;
-      if (!q) return true;
-      return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+      return matchesAnyField([u.name, u.email], query);
     });
   }, [users, query, roleFilter]);
 

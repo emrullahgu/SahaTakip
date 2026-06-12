@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { a11yButton, a11yInput } from '../utils/a11y';
+import { matchesAnyField } from '../utils/search';
 import {
   listMaterials,
   deleteMaterial,
@@ -54,16 +55,8 @@ export default function MaterialsScreen() {
     }, [load]),
   );
 
-  const filtered = items.filter(m => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      m.name.toLowerCase().includes(q) ||
-      m.code.toLowerCase().includes(q) ||
-      (m.barcode ?? '').toLowerCase().includes(q) ||
-      (m.category ?? '').toLowerCase().includes(q)
-    );
-  });
+  // Aksan-toleranslı + kelime-bazlı (kontaktor→Kontaktör, sıra serbest).
+  const filtered = items.filter(m => matchesAnyField([m.name, m.code, m.barcode, m.category], search));
 
   const onDelete = (m: Material) => {
     Alert.alert('Sil', `"${m.name}" silinsin mi?`, [

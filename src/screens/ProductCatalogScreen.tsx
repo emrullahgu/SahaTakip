@@ -1,5 +1,6 @@
 // ProductCatalogScreen — 13K+ ürünü kategorize/marka filtreli arama + toplu fiyat/iskonto
 import React, { useCallback, useMemo, useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -48,17 +49,11 @@ export default function ProductCatalogScreen() {
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase('tr-TR');
     let base = effectiveCatalog;
     if (category) base = base.filter(m => m.category === category);
     if (brand) base = base.filter(m => m.brand === brand);
-    if (q) {
-      base = base.filter(m =>
-        (m.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.code || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.brand || '').toLocaleLowerCase('tr-TR').includes(q) ||
-        (m.category || '').toLocaleLowerCase('tr-TR').includes(q),
-      );
+    if (search.trim()) {
+      base = base.filter(m => matchesAnyField([m.name, m.code, m.brand, m.category], search));
     }
     // Toplu fiyat kurallarını yalnızca görünen ≤500 ürüne uygula (ucuz).
     return applyPricingRules(base.slice(0, 500), rules);

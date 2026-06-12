@@ -2,6 +2,7 @@
 // Araç listesi + plaka arama + vade uyarı bandı.
 
 import React, { useCallback, useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import {
   View,
   Text,
@@ -58,16 +59,7 @@ export default function VehiclesScreen() {
     }, [load]),
   );
 
-  const filtered = items.filter(v => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      v.plate.toLowerCase().includes(q) ||
-      (v.brand ?? '').toLowerCase().includes(q) ||
-      (v.model ?? '').toLowerCase().includes(q) ||
-      (v.driverName ?? '').toLowerCase().includes(q)
-    );
-  });
+  const filtered = items.filter(v => matchesAnyField([v.plate, v.brand, v.model, v.driverName], search));
 
   const onDelete = (v: Vehicle) => {
     Alert.alert('Sil', `"${v.plate}" aracı silinsin mi?`, [

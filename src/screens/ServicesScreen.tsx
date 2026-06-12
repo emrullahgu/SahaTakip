@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { matchesAnyField } from '../utils/search';
 import {
   View,
   Text,
@@ -26,12 +27,7 @@ export default function ServicesScreen() {
   const [searchText, setSearchText] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<WorkOrder | null>(null);
 
-  const filtered = workOrders.filter(
-    o =>
-      o.client.toLowerCase().includes(searchText.toLowerCase()) ||
-      o.serviceName.toLowerCase().includes(searchText.toLowerCase()) ||
-      o.id.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filtered = workOrders.filter(o => matchesAnyField([o.client, o.serviceName, o.id], searchText));
 
   const total = workOrders.length;
   const completed = workOrders.filter(w => w.status === 'Faturalandırıldı').length;
