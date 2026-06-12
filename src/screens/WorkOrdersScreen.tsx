@@ -171,7 +171,7 @@ export default function WorkOrdersScreen() {
           renderItem={({ item }) => (
             <PressableScale
               onPress={() =>
-                realOrders.find(r => r.id === item.id) &&
+                item &&
                 navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
               }
               style={[
@@ -203,7 +203,7 @@ export default function WorkOrdersScreen() {
                         label: 'Detay',
                         icon: 'open-outline',
                         onPress: () =>
-                          realOrders.find(r => r.id === item.id)
+                          item
                             ? navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
                             : Alert.alert('Demo Verisi', 'Bu bir örnek iş emridir, detayı bulunmamaktadır.'),
                       },
@@ -228,7 +228,7 @@ export default function WorkOrdersScreen() {
                   <TouchableOpacity
                     style={styles.actionBtn}
                     onPress={() =>
-                      realOrders.find(r => r.id === item.id)
+                      item
                         ? navigation.navigate('WorkOrderDetail', { workOrderId: item.id })
                         : navigation.navigate('NewService')
                     }
