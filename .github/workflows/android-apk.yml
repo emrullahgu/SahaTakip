@@ -1,0 +1,66 @@
+name: Android APK (ücretsiz CI build)
+
+# EAS ücretsiz build kotası tükendiğinde alternatif: GitHub Actions ücretsiz
+# runner'da APK derler. Elle tetiklenir (Actions sekmesi → bu workflow → Run workflow),
+# böylece her push'ta CI dakikası harcanmaz. Çıktı APK, "Artifacts" altından indirilir.
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Derleme tipi"
+        required: true
+        default: "release"
+        type: choice
+        options: [release, debug]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # EXPO_PUBLIC_* değerleri istemciye gömülüdür (publishable/anon) — eas.json ile aynı.
+    # Daha sıkı isterseniz repo Secrets'a taşıyıp ${{ secrets.* }} ile referans verin.
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://mdwcasycfssdkogdlbyh.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_U-ETT9DDji_bbzYMd3KABQ_ENfXfGYa
+      EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20 kurulumu
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Bağımlılıklar (npm ci)
+        run: npm ci
+
+      - name: JDK 17 kurulumu
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Android SDK kurulumu
+        uses: android-actions/setup-android@v3
+
+      - name: Native android/ üret (expo prebuild)
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Gradle ile APK derle
+        run: |
+          cd android
+          if [ "${{ github.event.inputs.build_type }}" = "debug" ]; then
+            ./gradlew assembleDebug --no-daemon --console=plain
+          else
+            ./gradlew assembleRelease --no-daemon --console=plain
+          fi
+
+      - name: APK'yı artifact olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: sahatakip-${{ github.event.inputs.build_type }}-apk
+          if-no-files-found: error
+          retention-days: 14
+          path: android/app/build/outputs/apk/**/*.apk

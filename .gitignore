@@ -37,3 +37,4 @@ build-android-run.log
 
 # Local Netlify folder
 .netlify
+android-build.log
