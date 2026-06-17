@@ -17,6 +17,8 @@ eas-build-start.log
 web-build/
 android/
 ios/
+build-apk/
+*.apk
 
 # Local env files
 .env
