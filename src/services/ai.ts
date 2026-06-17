@@ -1098,6 +1098,21 @@ export function parseClaudeToolResponse(json: any): ChatWithToolsResult {
  * Agent loop OpenAI formatında konuşur; Gemini/Claude için format çevirisi
  * şeffaf yapılır. (Önceden Gemini/Claude sessizce text-only'a düşüyordu.)
  */
+// OpenAI/Groq: HER mesajın `content`'i string olmalı; YALNIZ tool_calls'lu
+// assistant mesajında null kabul edilir. Ajan döngüsü boş-tur/araçsız adımda
+// content:null tutabiliyordu → "Invalid value for 'content': expected a string,
+// got null" (HTTP 400). Burada gönderimden önce null/undefined content'i ''e çevir
+// (tool_calls korunur; '' + tool_calls OpenAI tarafından kabul edilir).
+function sanitizeOpenAiMessages(messages: ChatMessage[]): any[] {
+  return messages.map(m => {
+    const content = (m as any).content;
+    if (content === null || content === undefined) {
+      return { ...m, content: '' };
+    }
+    return m;
+  });
+}
+
 export async function chatWithTools(
   messages: ChatMessage[],
   tools: ToolSchema[],
@@ -1126,7 +1141,7 @@ export async function chatWithTools(
       },
       body: JSON.stringify({
         model,
-        messages,
+        messages: sanitizeOpenAiMessages(messages),
         tools: tools.length ? tools : undefined,
         tool_choice: tools.length ? 'auto' : undefined,
         temperature: 0.2,

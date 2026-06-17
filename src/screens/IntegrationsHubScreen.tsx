@@ -26,6 +26,7 @@ const SECTIONS: Section[] = [
       { label: 'Webhook', desc: 'Olay tabanlı dış sistem bildirimi', icon: 'send-outline', color: '#8b5cf6', route: 'Webhooks', poz: 'POZ-DEV-102' },
       { label: 'Excel İçe Aktar', desc: 'Müşteri, POZ ve personel toplu yükleme', icon: 'cloud-upload-outline', color: '#16a34a', route: 'ExcelImport', poz: 'POZ-DEV-103' },
       { label: 'ERP / CRM', desc: 'Logo, Netsis, Mikro adaptörleri', icon: 'cube-outline', color: '#f59e0b', route: 'ErpAdapters', poz: 'POZ-DEV-104' },
+      { label: 'Paraşüt', desc: 'Muhasebe: fatura/cari/ürün/harcama (salt-okunur)', icon: 'calculator-outline', color: '#16a34a', route: 'ParasutSettings', poz: 'POZ-DEV-109' },
     ],
   },
   {

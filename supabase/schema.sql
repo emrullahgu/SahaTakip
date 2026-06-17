@@ -325,7 +325,12 @@ create index if not exists idx_locations_user_time on public.locations(user_id, 
 create index if not exists idx_locations_recorded on public.locations(recorded_at desc);
 
 -- En son konum view'i (haritada hızlı çekim)
-create or replace view public.latest_locations as
+-- GÜVENLİK: security_invoker=on → view, SORGULAYAN kullanıcının RLS'iyle çalışır.
+-- Aksi halde view owner (postgres) hakkıyla çalışıp locations RLS'ini bypass eder
+-- ve field rolü HERKESİN son konumunu görebilir (PII sızıntısı). invoker ile field
+-- yalnız kendi satırını, admin/manager hepsini görür (locations_self_or_manager_read).
+create or replace view public.latest_locations
+  with (security_invoker = on) as
 select distinct on (user_id) *
 from public.locations
 order by user_id, recorded_at desc;

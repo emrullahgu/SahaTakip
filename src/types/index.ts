@@ -3992,6 +3992,7 @@ export type RootStackParamList = {
   ScheduledEmails: undefined;
   LiveTracking: undefined;
   IntegrationsHub: undefined;
+  ParasutSettings: undefined;
   ApiKeys: undefined;
   Webhooks: undefined;
   ExcelImport: undefined;

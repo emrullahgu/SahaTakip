@@ -127,6 +127,7 @@ import ExternalApiKeysScreen from '../screens/ExternalApiKeysScreen';
 import ScheduledEmailsScreen from '../screens/ScheduledEmailsScreen';
 import LiveTrackingScreen from '../screens/LiveTrackingScreen';
 import IntegrationsHubScreen from '../screens/IntegrationsHubScreen';
+import ParasutSettingsScreen from '../screens/ParasutSettingsScreen';
 import ApiKeysScreen from '../screens/ApiKeysScreen';
 import WebhooksScreen from '../screens/WebhooksScreen';
 import ExcelImportScreen from '../screens/ExcelImportScreen';
@@ -1469,6 +1470,7 @@ function MainStack() {
       <Stack.Screen name="Webhooks" component={WebhooksScreen} options={{ headerShown: true, title: 'Webhook', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ExcelImport" component={ExcelImportScreen} options={{ headerShown: true, title: 'Excel İçe Aktarma', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ErpAdapters" component={ErpAdaptersScreen} options={{ headerShown: true, title: 'ERP / CRM', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="ParasutSettings" component={ParasutSettingsScreen} options={{ headerShown: true, title: 'Paraşüt', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="Kvkk" component={KvkkScreen} options={{ headerShown: true, title: 'KVKK', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="Backup" component={BackupScreen} options={{ headerShown: true, title: 'Yedekleme', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="TwoFactor" component={TwoFactorScreen} options={{ headerShown: true, title: 'İki Adımlı Doğrulama', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

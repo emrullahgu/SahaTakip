@@ -119,6 +119,29 @@ describe('sistem-farkındalığı read-tool\'ları (agent tüm sistemi tanır)',
   });
 });
 
+describe('search_poz — kelime-bazlı eşleşme + yumuşak kategori (trafo demontaj regresyonu)', () => {
+  it('çok kelimeli sorgu bitişik olmasa da bulur ve YANLIŞ kategori sonucu sıfırlamaz', async () => {
+    // Adında >=3 kelime olan bir poz seç; ilk ve son (>=3 harf) kelimesiyle ara.
+    const sample = POZ_CATALOG.find(p => p.name.trim().split(/\s+/).filter(w => w.length >= 3).length >= 2)!;
+    const words = sample.name.trim().split(/\s+/).filter(w => w.length >= 3);
+    const query = `${words[0]} ${words[words.length - 1]}`;
+    // Kasıtlı YANLIŞ kategori — yumuşak fallback sayesinde yine bulunmalı.
+    const res = await AGENT_TOOLS['search_poz'].handler({ query, category: 'Ulaşım' }, ctx);
+    expect(res.total).toBeGreaterThan(0);
+    expect(res.items.some((i: any) => i.id === sample.id)).toBe(true);
+  });
+
+  it('"demontaj montaj" gibi ayrık kelimeler tek pozda eşleşir', async () => {
+    const res = await AGENT_TOOLS['search_poz'].handler({ query: 'demontaj montaj' }, ctx);
+    expect(res.total).toBeGreaterThan(0);
+  });
+
+  it('boş sorgu güvenli dizi döner (çökmez)', async () => {
+    const res = await AGENT_TOOLS['search_poz'].handler({ query: '' }, ctx);
+    expect(Array.isArray(res.items)).toBe(true);
+  });
+});
+
 describe('analyze_system_health — pasif personele atanmış iş (assignedToId kanonik alan)', () => {
   it('assignedToId pasif (attendance boş) personele işaret ediyorsa bulgu üretir', async () => {
     const inactiveEmp: any = { id: 'emp-1', name: 'Pasif Usta', role: 'Usta', attendance: {} };

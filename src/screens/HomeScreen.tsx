@@ -160,7 +160,7 @@ export default function HomeScreen() {
           </View>
         </FadeInView>
 
-        {expiringQuotes > 0 && (
+        {!isField && expiringQuotes > 0 && (
           <FadeInView delay={80}>
             <TouchableOpacity
               style={styles.alertCard}
@@ -178,9 +178,39 @@ export default function HomeScreen() {
         )}
 
         {/* Quick Actions Grid */}
-        <Text style={styles.sectionLabel}>Hızlı Erişim</Text>
+        <Text style={styles.sectionLabel}>{isField ? 'Saha İşlemleri' : 'Hızlı Erişim'}</Text>
         <FadeInView delay={120}>
         <View style={styles.grid}>
+          {isField ? (
+            /* USTA MODU — saha personeli için yalnız 4 büyük, kafa karıştırmayan buton */
+            <>
+              <TouchableOpacity style={styles.fieldItem} onPress={() => navigation.navigate('WorkOrders')} activeOpacity={0.8}>
+                <View style={[styles.fieldIcon, { backgroundColor: colors.indigo.bg }]}>
+                  <Ionicons name="clipboard-outline" size={40} color={colors.indigo.default} />
+                </View>
+                <Text style={styles.fieldLabel}>İş Emirlerim</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.fieldItem} onPress={() => navigation.navigate('NewService')} activeOpacity={0.8}>
+                <View style={[styles.fieldIcon, { backgroundColor: colors.emerald.bg }]}>
+                  <Ionicons name="document-text-outline" size={40} color={colors.emerald.default} />
+                </View>
+                <Text style={styles.fieldLabel}>Saha Formu</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.fieldItem} onPress={() => navigation.navigate('StockHub')} activeOpacity={0.8}>
+                <View style={[styles.fieldIcon, { backgroundColor: colors.emerald.bg }]}>
+                  <Ionicons name="cube-outline" size={40} color={colors.emerald.default} />
+                </View>
+                <Text style={styles.fieldLabel}>Stok Takip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.fieldItem} onPress={() => navigation.navigate('CheckinScanner')} activeOpacity={0.8}>
+                <View style={[styles.fieldIcon, { backgroundColor: colors.blue.bg }]}>
+                  <Ionicons name="location-outline" size={40} color={colors.blue.default} />
+                </View>
+                <Text style={styles.fieldLabel}>Check-in / Konum</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+          <>
           <TouchableOpacity
             style={styles.gridItem}
             onPress={() => navigation.navigate('WorkOrders')}
@@ -437,6 +467,8 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.gridLabel}>Yapılacaklar</Text>
           </TouchableOpacity>
+          </>
+          )}
         </View>
         </FadeInView>
 
@@ -601,6 +633,33 @@ const styles = StyleSheet.create({
     fontSize: typography.sm,
     color: colors.text.secondary,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  // USTA MODU — büyük, sade dokunma hedefleri (2x2)
+  fieldItem: {
+    width: '47%',
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    minHeight: 140,
+    justifyContent: 'center',
+  },
+  fieldIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  fieldLabel: {
+    fontSize: typography.md,
+    color: colors.text.primary,
+    fontWeight: '800',
     textAlign: 'center',
   },
   cta: {

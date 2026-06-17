@@ -762,14 +762,17 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       function: {
         name: 'search_poz',
         description:
-          'POZ katalogunda ara. Teklif kalemleri (iş tanımları + birim fiyat + işçilik) bulmak için kullan. Kategoriye göre filtrelenebilir.',
+          'POZ katalogunda ara. Teklif kalemleri (iş tanımları + birim fiyat + işçilik) bulmak için kullan. ' +
+          'Eşleşme KELIME-BAZLIDIR (sorgudaki her kelime ayrı aranır, bitişik olmak zorunda değil) — ör. "trafo demontaj" ' +
+          'sorgusu "...TRAFO...(Demontaj ve Montaj...)" pozunu bulur. category OPSİYONELDİR ve YUMUŞAKTIR: ' +
+          'kategoriyle sonuç çıkmazsa otomatik tüm katalog taranır. Çok kalemli liste için match_poz_bulk tercih et.',
         parameters: {
           type: 'object',
           properties: {
-            query: { type: 'string', description: 'Aranacak metin (poz id / iş tanımı)' },
+            query: { type: 'string', description: 'Aranacak metin (poz id / iş tanımı / anahtar kelimeler)' },
             category: {
               type: 'string',
-              description: '"Malzeme"|"İşçilik"|"Servis"|"Mühendislik"|"Ulaşım"|"Diğer"',
+              description: 'OPSİYONEL yumuşak filtre: "Malzeme"|"İşçilik"|"Servis"|"Mühendislik"|"Ulaşım"|"Diğer". Emin değilsen BOŞ bırak.',
             },
             limit: { type: 'number' },
           },
@@ -777,18 +780,28 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       },
     },
     handler: async (args) => {
-      let res: PozItem[] = POZ_CATALOG;
-      if (args.category) res = res.filter(p => p.category === args.category);
-      if (args.query) {
-        const q = String(args.query).toLocaleLowerCase('tr-TR');
-        res = res.filter(p =>
-          (p.id + ' ' + p.name + ' ' + (p.description || '')).toLocaleLowerCase('tr-TR').includes(q),
-        );
-      }
+      // KELIME-BAZLI skorlama: sorgu kelimelerini ayır, her birinin poz metninde
+      // (id+ad+açıklama+kategori) geçişini say. Önceki naive "tüm sorgu bitişik
+      // substring" araması "trafo demontaj" gibi çok kelimeli sorgularda 0 dönüyordu.
+      const tokens = TR_LC(String(args.query ?? '')).split(/\s+/).filter(t => t.length >= 2);
+      const scoreOf = (p: PozItem): number => {
+        if (!tokens.length) return 1;
+        const hay = TR_LC(`${p.id} ${p.name} ${(p as any).description || ''} ${p.category || ''}`);
+        let s = 0;
+        for (const t of tokens) if (hay.includes(t)) s++;
+        return s;
+      };
+      const rank = (pool: PozItem[]) =>
+        pool.map(p => ({ p, s: scoreOf(p) })).filter(x => x.s > 0).sort((a, b) => b.s - a.s);
+      const inCat = (p: PozItem) => !args.category || p.category === args.category;
+      // Önce (varsa) kategoriyle; hiç sonuç yoksa kategoriyi GEVŞET — yanlış kategori
+      // tahmini (ör. "Servis" sanılan trafo kalemi) sonucu sıfırlamasın.
+      let ranked = rank(POZ_CATALOG.filter(inCat));
+      if (!ranked.length) ranked = rank(POZ_CATALOG);
       const limit = Math.max(1, Math.min(30, Number(args.limit) || 10));
       return {
-        total: res.length,
-        items: res.slice(0, limit).map(p => ({
+        total: ranked.length,
+        items: ranked.slice(0, limit).map(({ p }) => ({
           id: p.id,
           name: p.name,
           category: p.category,
@@ -874,7 +887,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
           ' ' +
           (qt.lines || []).map(l => l.pozName + ' ' + l.pozId).join(' ')
         ).toLocaleLowerCase('tr-TR');
-        const score = tokens.reduce((s, t) => s + (hay.includes(t) ? 1 : 0), 0);
+        let score = tokens.reduce((s, t) => s + (hay.includes(t) ? 1 : 0), 0);
+        // KABUL EDİLMİŞ/FATURALANMIŞ teklifler güvenilir fiyat referansıdır →
+        // eşit skorda öne çıkar (yeni teklif hazırlarken gerçek kabul fiyatı esas).
+        if (score > 0 && (qt.status === 'Kabul Edildi' || qt.status === 'Faturalandırıldı')) score += 0.5;
         return { qt, score };
       });
       scored.sort((a, b) => b.score - a.score);

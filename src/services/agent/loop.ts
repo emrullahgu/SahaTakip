@@ -128,12 +128,16 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
 
     if (content) onEvent({ type: 'thought', content });
 
-    // Assistant mesajını history'ye ekle (tool_calls dahil)
-    messages.push({
-      role: 'assistant',
-      content: content ?? null,
-      tool_calls: toolCalls.length ? toolCalls : undefined,
-    });
+    // Assistant mesajını history'ye ekle (tool_calls dahil). İçerik de tool_call da
+    // YOKKEN ekleme: content:null + tool_calls yok = OpenAI'de geçersiz mesaj
+    // (HTTP 400 "content expected string, got null") ve zaten bilgi taşımaz.
+    if (content || toolCalls.length) {
+      messages.push({
+        role: 'assistant',
+        content: content ?? null,
+        tool_calls: toolCalls.length ? toolCalls : undefined,
+      });
+    }
 
     // Tool çağrısı yoksa: anlamlı içerik varsa bitir; boşsa dürt (büyük/karmaşık
     // istekte sağlayıcı bazen boş yanıt döndürür — "(boş)" göstermek yerine yeniden dene).

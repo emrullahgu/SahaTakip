@@ -1,11 +1,13 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { requestAndGetPosition, GeoPosition } from '../services/location';
 import { locationsRepo, LocationRow } from '../services/data/locationsRepo';
 
@@ -27,11 +29,18 @@ function getMockCoord(client: string, idx: number): { lat: number; lon: number }
 
 export default function MapScreen() {
   const { workOrders, employees } = useAppContext();
+  const { hasPermission } = useAuth();
+  // Saha ekip konumları YALNIZ yönetici/müdüre (employees:R) gösterilir; field
+  // kullanıcı yalnız kendi konumunu görür. (RLS de DB'de aynı sınırı uygular.)
+  const canSeeStaff = hasPermission('employees', 'R');
   const mapRef = useRef<MapView | null>(null);
   const [me, setMe] = useState<GeoPosition | null>(null);
   const [loading, setLoading] = useState(true);
   const [staffLocs, setStaffLocs] = useState<LocationRow[]>([]);
-  const [showStaff, setShowStaff] = useState(true);
+  const [showStaff, setShowStaff] = useState(canSeeStaff);
+  // Canlılık tick'i: "N dk önce" etiketlerinin ekranda otomatik tazelenmesi için
+  // 30 sn'de bir re-render (ağ çağrısı yapmaz). Aksi halde etiket donar.
+  const [, setNowTick] = useState(0);
 
   const ensureLocation = async () => {
     setLoading(true);
@@ -66,24 +75,38 @@ export default function MapScreen() {
     ensureLocation();
   }, []);
 
-  // POZ-DEV-015 — Canlı personel konumları + realtime
+  // POZ-DEV-015 — Canlı personel konumları. Her odaklanmada latestAll ile TAZELE
+  // (realtime kopması/arka plandan dönüş sonrası kayıp güncellemeleri toparlar).
+  useFocusEffect(
+    useCallback(() => {
+      if (!canSeeStaff) return;
+      let alive = true;
+      (async () => {
+        const list = await locationsRepo.latestAll();
+        if (alive) setStaffLocs(list);
+      })();
+      return () => { alive = false; };
+    }, [canSeeStaff]),
+  );
+
+  // Realtime INSERT aboneliği (yalnız yönetici) — yeni konum gelince marker güncellenir.
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      const list = await locationsRepo.latestAll();
-      if (alive) setStaffLocs(list);
-    })();
+    if (!canSeeStaff) return;
     const unsub = locationsRepo.subscribeRealtime(loc => {
       setStaffLocs(prev => {
         const filtered = prev.filter(p => p.userId !== loc.userId);
         return [loc, ...filtered];
       });
     });
-    return () => {
-      alive = false;
-      unsub();
-    };
-  }, []);
+    return () => { unsub(); };
+  }, [canSeeStaff]);
+
+  // 30 sn'lik canlılık tick'i — tazelik etiketlerini güncel tutar.
+  useEffect(() => {
+    if (!canSeeStaff) return;
+    const t = setInterval(() => setNowTick(n => n + 1), 30000);
+    return () => clearInterval(t);
+  }, [canSeeStaff]);
 
   // Active orders (not completed)
   const activeOrders = workOrders.filter(w => w.status !== 'Faturalandırıldı');
@@ -127,14 +150,15 @@ export default function MapScreen() {
             );
           })}
 
-          {/* POZ-DEV-015 — Canlı personel pinleri */}
-          {showStaff &&
+          {/* POZ-DEV-015 — Canlı personel pinleri (yalnız yönetici) */}
+          {showStaff && canSeeStaff &&
             staffLocs.map(loc => {
               const emp = employees.find(e => e.id === loc.employeeId || e.id === loc.userId);
               const label = emp?.name ?? 'Personel';
               const now = Date.now();
               const age = (now - new Date(loc.recordedAt).getTime()) / 60000; // dakika
               const isFresh = age < 5;
+              const clock = new Date(loc.recordedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
               return (
                 <Marker
                   key={'staff-' + loc.userId}
@@ -142,8 +166,8 @@ export default function MapScreen() {
                   title={`👤 ${label}`}
                   description={
                     isFresh
-                      ? `Canlı · ${age.toFixed(0)} dk önce`
-                      : `${age.toFixed(0)} dk önce`
+                      ? `🟢 Canlı · ${age.toFixed(0)} dk önce (${clock})`
+                      : `Son görülme: ${age.toFixed(0)} dk önce (${clock})`
                   }
                   pinColor={isFresh ? '#10b981' : '#64748b'}
                 />
@@ -163,14 +187,16 @@ export default function MapScreen() {
           <Ionicons name="locate" size={22} color="#fff" />
         </TouchableOpacity>
 
-        {/* Personel toggle FAB */}
-        <TouchableOpacity
-          style={[styles.fab, styles.fabStaff, !showStaff && styles.fabStaffOff]}
-          onPress={() => setShowStaff(s => !s)}
-          activeOpacity={0.85}
-        >
-          <Ionicons name={showStaff ? 'people' : 'people-outline'} size={20} color="#fff" />
-        </TouchableOpacity>
+        {/* Personel toggle FAB — yalnız yönetici */}
+        {canSeeStaff && (
+          <TouchableOpacity
+            style={[styles.fab, styles.fabStaff, !showStaff && styles.fabStaffOff]}
+            onPress={() => setShowStaff(s => !s)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name={showStaff ? 'people' : 'people-outline'} size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
 
         {/* Legend */}
         <View style={styles.legend}>
