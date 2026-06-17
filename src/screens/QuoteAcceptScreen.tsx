@@ -39,12 +39,13 @@ export default function QuoteAcceptScreen({ route, navigation }: Props) {
     );
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (!signedBy.trim() || !signatureText.trim()) {
       Alert.alert('Eksik', 'Lütfen ad ve imza (yazılı onay metni) girin.');
       return;
     }
-    const woId = acceptQuoteAndCreateWorkOrder(quote.id, signedBy, signatureText);
+    // DB yazımı await edilir; woId yalnız iş emri GERÇEKTEN oluştuğunda döner (Req#3).
+    const woId = await acceptQuoteAndCreateWorkOrder(quote.id, signedBy, signatureText);
     if (woId) {
       Alert.alert('Teşekkürler', `Teklif kabul edildi. İş emri: ${woId}`);
       showToast('Teklif kabul alındı.');

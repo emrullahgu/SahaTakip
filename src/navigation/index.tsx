@@ -28,6 +28,7 @@ import QuotesScreen from '../screens/QuotesScreen';
 import NewQuoteScreen from '../screens/NewQuoteScreen';
 import QuoteDetailScreen from '../screens/QuoteDetailScreen';
 import CustomersScreen from '../screens/CustomersScreen';
+import GlobalSearchScreen from '../screens/GlobalSearchScreen';
 import CustomerFormScreen from '../screens/CustomerFormScreen';
 import MapScreen from '../screens/MapScreen';
 import ShiftScreen from '../screens/ShiftScreen';
@@ -753,6 +754,11 @@ function MainStack() {
           headerTintColor: colors.text.primary,
           headerTitleStyle: { fontWeight: '700' },
         }}
+      />
+      <Stack.Screen
+        name="GlobalSearch"
+        component={GlobalSearchScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CustomerForm"

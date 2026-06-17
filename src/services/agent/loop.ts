@@ -95,6 +95,20 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
   ];
 
   let emptyTurns = 0; // sağlayıcı içerik+tool olmadan boş dönerse sayar
+  // DÜRÜSTLÜK (Req#3): bir yazma/destructive tool {ok:false} dönerse veya throw
+  // ederse işaretle. finish özeti (LLM serbest metni) "oluşturuldu/gönderildi"
+  // dese bile, bu işaretle deterministik bir UYARI eklenir → kullanıcı sahte
+  // başarı görmez. Bireysel ❌ adımlar konsolda görünüyor ama final balon onları
+  // geçersizleştirebiliyordu.
+  let anyWriteFailed = false;
+  let lastWriteError = '';
+  const withFailureNotice = (summary: string): string =>
+    anyWriteFailed
+      ? summary +
+        '\n\n⚠ DİKKAT: Bu görevde en az bir yazma/gönderme işlemi BAŞARISIZ oldu (' +
+        (lastWriteError || 'kayıt yapılamadı') +
+        '). Yukarıdaki ❌ adımları kontrol edin; iddia edilen değişiklik gerçekleşmemiş olabilir.'
+      : summary;
   for (let i = 1; i <= maxIterations; i++) {
     if (shouldStop?.()) {
       onEvent({ type: 'stop', reason: 'Kullanıcı durdurdu' });
@@ -127,7 +141,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       const text = (content ?? '').trim();
       if (text) {
         if (finishReason === 'stop' || finishReason === 'length') {
-          onEvent({ type: 'final', content: text });
+          onEvent({ type: 'final', content: withFailureNotice(text) });
           return;
         }
         // İçerik var ama bitmedi — devam etmesini iste
@@ -190,15 +204,28 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
 
       try {
         const result = await def.handler(args, ctx);
-        onEvent({ type: 'tool_result', id: tc.id, name, result, ok: true });
+        // Aracın GERÇEK sonucunu yansıt: handler {ok:false,...} döndürdüyse olay da
+        // ok:false olmalı. Önceden ok:true hardcode'du → kaydedilemeyen teklif /
+        // gönderilemeyen e-posta konsolda yeşil ✅ + "oluşturuldu" görünüyordu
+        // (Req#3: asla yalan söyleme). create_quote_draft addQuote başarısızsa
+        // {ok:false} döndürür; bunu artık ❌ olarak gösteriyoruz.
+        const failed = !!result && typeof result === 'object' && (result as any).ok === false;
+        const err = failed
+          ? String((result as any).error || (result as any).message || 'İşlem başarısız')
+          : undefined;
+        // Yalnız yazma/destructive tool başarısızlığını "write failed" say — read
+        // tool'larda ok:false beklenen bir "bulunamadı" olabilir, onu sayma.
+        if (failed && def.destructive) { anyWriteFailed = true; lastWriteError = err || lastWriteError; }
+        onEvent({ type: 'tool_result', id: tc.id, name, result, ok: !failed, error: err });
         messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result ?? null) });
         if (name === 'finish') {
-          onEvent({ type: 'final', content: result?.summary || 'Tamamlandı' });
+          onEvent({ type: 'final', content: withFailureNotice(String(result?.summary || 'Tamamlandı')) });
           finished = true;
           break;
         }
       } catch (e: any) {
         const err = e?.message || String(e);
+        if (def.destructive) { anyWriteFailed = true; lastWriteError = err || lastWriteError; }
         onEvent({ type: 'tool_result', id: tc.id, name, result: { error: err }, ok: false, error: err });
         messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: err }) });
       }

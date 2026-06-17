@@ -170,6 +170,14 @@ async function sendResend(to: string[], subject: string, html: string): Promise<
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
+  // GÜVENLİK: kimliksiz POST cron'u erken/mükerrer tetikleyip vadesi gelen raporları
+  // tekrar gönderebilir (Resend kota tüketimi). Paylaşılan secret ile kapı (webhook
+  // kalıbı). REPORTS_CRON_TOKEN tanımlı değilse fonksiyon devre dışı (fail-closed).
+  const CRON_TOKEN = Deno.env.get('REPORTS_CRON_TOKEN') ?? '';
+  if (!CRON_TOKEN) return json(503, { error: 'disabled: REPORTS_CRON_TOKEN not set' });
+  const got = (req.headers.get('authorization') ?? req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+  if (got !== CRON_TOKEN) return json(403, { error: 'forbidden' });
+
   try {
     const due = await rpc<EmailSchedule[]>('due_email_schedules');
     const results: Array<{ id: string; status: string; error?: string }> = [];

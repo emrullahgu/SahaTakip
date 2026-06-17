@@ -56,3 +56,33 @@ describe('buildQuoteHtml — markalama', () => {
     expect(evil).toContain('&lt;script&gt;');
   });
 });
+
+describe('buildQuoteHtml — kalem açıklaması (per-line not)', () => {
+  it('kullanıcı açıklaması kalemin altında görünür', () => {
+    const html = buildQuoteHtml({
+      ...sampleQuote,
+      lines: [{ ...sampleQuote.lines[0], notes: 'Garanti 2 yıl, montaj dahil.' }],
+    });
+    // .line-note CSS sınıfı her zaman <style>'da var; render edilen div'i kontrol et.
+    expect(html).toContain('<div class="line-note">');
+    expect(html).toContain('Garanti 2 yıl, montaj dahil.');
+  });
+
+  it('sistem uyarısı (⚠ ile başlayan) müşteri PDF\'ine BASILMAZ', () => {
+    const html = buildQuoteHtml({
+      ...sampleQuote,
+      lines: [{ ...sampleQuote.lines[0], notes: '⚠ Birim fiyat girilmeli (katalogda yok)' }],
+    });
+    expect(html).not.toContain('Birim fiyat girilmeli');
+    expect(html).not.toContain('<div class="line-note">');
+  });
+
+  it('açıklama da escapeHtml ile kaçışlanır (XSS)', () => {
+    const html = buildQuoteHtml({
+      ...sampleQuote,
+      lines: [{ ...sampleQuote.lines[0], notes: '<img src=x onerror=alert(1)>' }],
+    });
+    expect(html).not.toContain('<img src=x onerror=alert(1)>');
+    expect(html).toContain('&lt;img');
+  });
+});

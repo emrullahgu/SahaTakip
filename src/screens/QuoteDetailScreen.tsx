@@ -95,8 +95,8 @@ export default function QuoteDetailScreen() {
           { text: 'Vazgeç', style: 'cancel' },
           {
             text: 'Kabul Et',
-            onPress: () => {
-              const woId = acceptQuoteAndCreateWorkOrder(quote.id, quote.engineer);
+            onPress: async () => {
+              const woId = await acceptQuoteAndCreateWorkOrder(quote.id, quote.engineer);
               if (woId) showToast(`Kabul edildi · İş emri: ${woId}`);
             },
           },
@@ -400,8 +400,8 @@ export default function QuoteDetailScreen() {
                     { text: 'Vazgeç', style: 'cancel' },
                     {
                       text: 'Kabul Et',
-                      onPress: () => {
-                        const woId = acceptQuoteAndCreateWorkOrder(quote.id, quote.engineer);
+                      onPress: async () => {
+                        const woId = await acceptQuoteAndCreateWorkOrder(quote.id, quote.engineer);
                         if (woId) {
                           Alert.alert('Tamam', `İş emri: ${woId}`);
                         }

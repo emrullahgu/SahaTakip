@@ -18,11 +18,14 @@
 //   GMAIL_SA_PRIVATE_KEY
 //   GMAIL_IMPERSONATE
 //
-// Deploy: supabase functions deploy gmail-send --no-verify-jwt
+// Deploy: supabase functions deploy gmail-send
+// GÜVENLİK: Fonksiyon kendi içinde requireUser ile kimlik doğrular (admin/manager/engineer
+// + onaylı VEYA internal service_role). Artık kimliksiz/anon çağrı mail atamaz.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { create as jwtCreate, getNumericDate } from 'https://deno.land/x/djwt@v3.0.2/mod.ts';
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
+import { requireUser } from '../_shared/auth.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -146,6 +149,15 @@ function buildRaw(opts: {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+
+  // GÜVENLİK: şirket adına e-posta gönderir → kimliksiz/anon çağrı reddedilir.
+  // Önceden HİÇ auth yoktu; anon key tutan herkes mail atabiliyordu (denetim).
+  const auth = await requireUser(req, { roles: ['admin', 'manager', 'engineer'], requireApproved: true, allowServiceRole: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status, headers: { ...CORS, 'content-type': 'application/json' },
+    });
+  }
 
   try {
     const body = await req.json();

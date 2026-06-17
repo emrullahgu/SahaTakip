@@ -14,6 +14,7 @@
 //   { report, kpis, email_sent, gchat_sent, model }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireUser } from '../_shared/auth.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -220,6 +221,24 @@ async function sendGChat(text: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
+  // GÜVENLİK: paralı OpenAI + e-posta/Chat gönderir. Önceden kimliksiz çağrılabiliyor ve
+  // body.to_email saldırgan-kontrollü olduğundan KEYFİ e-posta broadcast yapılabiliyordu.
+  // İzin: ya cron/internal (service_role bearer) ya da admin/manager (onaylı). to_email
+  // override yalnız service veya admin'e; diğerleri env varsayılanına sabitlenir.
+  const bearer = (req.headers.get('Authorization') || req.headers.get('authorization') || '')
+    .replace(/^Bearer\s+/i, '').trim();
+  const isService = !!SERVICE_KEY && bearer === SERVICE_KEY;
+  let isAdmin = false;
+  if (!isService) {
+    const auth = await requireUser(req, { roles: ['admin', 'manager'], requireApproved: true });
+    if (!auth.ok) {
+      return new Response(JSON.stringify({ error: auth.error }), {
+        status: auth.status, headers: { ...CORS, 'content-type': 'application/json' },
+      });
+    }
+    isAdmin = auth.role === 'admin';
+  }
+
   let opts: any = {};
   if (req.method === 'POST') {
     try { opts = await req.json(); } catch { /* boş gövde ok */ }
@@ -230,7 +249,9 @@ Deno.serve(async (req) => {
     const sendEmailFlag = opts.send_email !== false;
     const sendChatFlag = opts.send_gchat !== false;
     const dryRun = opts.dry_run === true;
-    const toEmail = opts.to_email ?? Deno.env.get('INSIGHTS_EMAIL_TO') ?? Deno.env.get('GMAIL_SMTP_USER');
+    const envDefaultTo = Deno.env.get('INSIGHTS_EMAIL_TO') ?? Deno.env.get('GMAIL_SMTP_USER');
+    // to_email override yalnız güvenilir çağırana (cron/admin); aksi halde env'e sabit.
+    const toEmail = (isService || isAdmin) ? (opts.to_email ?? envDefaultTo) : envDefaultTo;
 
     const kpis = await collectKpis(days);
     const ai = await aiSummarize(kpis);

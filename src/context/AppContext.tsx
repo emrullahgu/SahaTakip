@@ -78,7 +78,7 @@ export interface AppContextType {
   clientAccept: (id: string) => void;
   addWorkOrder: (order: WorkOrder) => void;
   // FAZ 3
-  updateWorkOrderStatus: (id: string, status: WorkOrder['status']) => boolean;
+  updateWorkOrderStatus: (id: string, status: WorkOrder['status']) => Promise<WriteResult>;
   assignWorkOrder: (id: string, employeeId: string, employeeName: string) => void;
   respondAssignment: (id: string, accept: boolean, reason?: string) => void;
   transferWorkOrder: (id: string, employeeId: string, employeeName: string) => void;
@@ -97,7 +97,7 @@ export interface AppContextType {
   deleteQuote: (id: string) => void;
   setQuoteStatus: (id: string, status: QuoteStatus) => Promise<WriteResult>;
   // FAZ 4
-  acceptQuoteAndCreateWorkOrder: (quoteId: string, signedBy?: string, signature?: string) => string | null;
+  acceptQuoteAndCreateWorkOrder: (quoteId: string, signedBy?: string, signature?: string) => Promise<string | null>;
   reviseQuote: (q: Quote, reason?: string) => Promise<void>;
   generateQuoteShareToken: (quoteId: string) => string | null;
   generateQuoteNumber: () => string;
@@ -373,6 +373,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return { ok: false, error: e?.message || 'güncelleme başarısız' };
     }
     auditRepo.log(userId, { action: 'quote.status', tableName: 'quotes', refId: id, meta: { status } });
+    // Durum geçişlerinde ekibe bildirim (önceden tanımlı ama HİÇ çağrılmıyordu — Req#7).
+    if (status === 'Müşteriye Gönderildi') void Notify.quoteSent(target.customerName, id);
+    else if (status === 'Kabul Edildi') void Notify.quoteAccepted(target.customerName, id);
     showToast(`Teklif durumu: ${status}`);
     return { ok: true };
   };
@@ -398,11 +401,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // FAZ 4 — Teklif kabul edilince iş emri oluştur (POZ-DEV-039 + 040)
-  const acceptQuoteAndCreateWorkOrder = (
+  const acceptQuoteAndCreateWorkOrder = async (
     quoteId: string,
     signedBy?: string,
     signature?: string,
-  ): string | null => {
+  ): Promise<string | null> => {
     const q = quotes.find(x => x.id === quoteId);
     if (!q) return null;
     // İDEMPOTENT KORUMA: zaten kabul edilmiş teklif tekrar iş emri ÜRETMEZ
@@ -464,12 +467,31 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       notes: `Teklif ${q.number} kabulünden oluşturuldu.`,
       priority: 'Normal',
       assignmentStatus: 'Atanmadı',
+      // Kaynak teklif izi → DB'de partial-unique index (uq_work_orders_source_quote)
+      // bir teklikten çoklu cihaz/oturumda ikinci bir iş emri üretilmesini engeller.
+      sourceQuoteId: q.id,
     };
+    // DÜRÜSTLÜK (Req#3): iş emri DB'ye GERÇEKTEN yazılana kadar kabul akışı
+    // tamamlanmış SAYILMAZ. İnsert await edilir; başarısızsa optimistik WO geri alınır,
+    // teklif KABUL EDİLMİŞ işaretlenmez ve null dönülür (sahte "kabul edildi" yok).
     setWorkOrders(prev => [newWo, ...prev]);
-    workOrdersRepo.insert(newWo).catch(e => {
+    try {
+      await workOrdersRepo.insert(newWo);
+    } catch (e: any) {
+      setWorkOrders(prev => prev.filter(w => w.id !== woId)); // rollback
+      // ÇOKLU CİHAZ YARIŞI: başka bir cihaz/oturum bu teklikten zaten iş emri
+      // üretmişse DB'deki uq_work_orders_source_quote unique index 23505 verir.
+      // Bu sahte bir hata değil — teklif zaten kabul edilmiş demektir; kullanıcıya
+      // doğru mesajı ver, mevcut WO id'sini dön (varsa).
+      const code = e?.code || e?.details;
+      if (code === '23505' || /uq_work_orders_source_quote|duplicate key/i.test(e?.message || '')) {
+        showToast('Bu teklif başka bir cihazda zaten kabul edilmiş.', 'error');
+        return q.generatedWorkOrderId ?? null;
+      }
       console.warn('[wo.insert.fromQuote]', e);
-      showToast('⚠️ İş emri kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+      showToast('⚠️ İş emri kaydedilemedi, teklif kabul edilmedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+      return null;
+    }
     // İş emri oluşumu da loglanır + bildirilir (manuel addWorkOrder ile tutarlı;
     // önceden yalnız 'quote.accept' loglanıyordu — iş emri sessizce doğuyordu).
     auditRepo.log(userId, { action: 'work_order.create', tableName: 'work_orders', refId: woId, meta: { fromQuote: q.id } });
@@ -484,16 +506,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       generatedWorkOrderId: woId,
     };
     setQuotes(prev => prev.map(x => (x.id === q.id ? acceptedQuote : x)));
-    quotesRepo.update(q.id, acceptedQuote).catch(e => {
+    try {
+      await quotesRepo.update(q.id, acceptedQuote);
+    } catch (e: any) {
+      // İş emri oluştu ama teklif kabul durumu yazılamadı — kullanıcıyı AÇIKÇA uyar
+      // (sessiz başarı yok). WO mevcut olduğundan woId yine dönülür.
       console.warn('[quote.accept]', e);
-      showToast('⚠️ Teklif kabul kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
-    });
+      showToast('⚠️ İş emri oluştu ama teklif kabul durumu kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+    }
     auditRepo.log(userId, {
       action: 'quote.accept',
       tableName: 'quotes',
       refId: q.id,
       meta: { workOrderId: woId, signedBy },
     });
+    void Notify.quoteAccepted(q.customerTitle || q.customerName, q.id);
     showToast(`Teklif kabul edildi → ${woId}`);
     return woId;
   };
@@ -567,36 +594,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const persistWorkOrder = (
     w: WorkOrder,
     opts?: { successMsg?: string; successType?: 'success' | 'error'; rollback?: () => void },
-  ) => {
-    workOrdersRepo.update(w.id, w)
-      .then(() => { if (opts?.successMsg) showToast(opts.successMsg, opts.successType); })
-      .catch(e => {
+  ): Promise<WriteResult> => {
+    return workOrdersRepo.update(w.id, w)
+      .then((): WriteResult => { if (opts?.successMsg) showToast(opts.successMsg, opts.successType); return { ok: true }; })
+      .catch((e): WriteResult => {
         console.warn('[wo.update]', e);
         opts?.rollback?.();
         showToast('⚠️ İş emri güncellenemedi: ' + (e?.message || 'bilinmeyen hata'), 'error');
+        return { ok: false, error: e?.message || 'güncelleme başarısız' };
       });
   };
 
-  const updateWorkOrderStatus = (id: string, status: WorkOrder['status']): boolean => {
+  // DB yazımını AWAIT eder; başarı toast'ı + audit + bildirim YALNIZ yazım gerçekten
+  // başarılıysa. Ajan bu sonucu await edip "Durum güncellendi" derken yalan söylemesin
+  // (Req#3): RLS reddi/offline'da {ok:false} döner, ajan da başarısızlığı raporlar.
+  const updateWorkOrderStatus = async (id: string, status: WorkOrder['status']): Promise<WriteResult> => {
     const current = workOrders.find(w => w.id === id);
-    if (!current) return false;
+    if (!current) return { ok: false, error: 'İş emri bulunamadı' };
     if (!canTransition(current.status, status)) {
       showToast(`Geçersiz geçiş: ${current.status} → ${status}`, 'error');
-      return false;
+      return { ok: false, error: `Geçersiz geçiş: ${current.status} → ${status}` };
     }
-    // Yan etki (DB yazımı) setState updater DIŞINDA (StrictMode çift-yazım önlenir);
-    // başarı toast'ı yalnız yazım başarılıysa, hata → eski duruma rollback.
     const next: WorkOrder = { ...current, status };
     setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
-    persistWorkOrder(next, {
+    const res = await persistWorkOrder(next, {
       successMsg: `Durum: ${status}`,
       rollback: () => setWorkOrders(prev => prev.map(w => (w.id === id ? current : w))),
     });
+    if (!res.ok) return res; // DB başarısız → audit/bildirim YOK, dürüst hata dön
     auditRepo.log(userId, { action: 'work_order.status', tableName: 'work_orders', refId: id, meta: { status } });
     // Tüm ekibe durum bildirimi (her iş herkese bildirim olarak gider).
     if (status === 'Başladı') void Notify.workOrderStarted(current.client, id);
     else if (status === 'Tamamlandı') void Notify.workOrderCompleted(current.client, id);
-    return true;
+    return { ok: true };
   };
 
   const assignWorkOrder = (id: string, employeeId: string, employeeName: string) => {

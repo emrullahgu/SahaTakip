@@ -42,6 +42,16 @@ export function buildWorkOrderHtml(wo: WorkOrder): string {
     ...(wo.formPhoto ? [photoBox('SERVİS FORMU', wo.formPhoto)] : []),
   ].join('');
 
+  // İmza: SignaturePad onu data:application/json (stroke koordinatları) olarak üretir.
+  // <img> bunu render EDEMEZ → her imzalı belgede bozuk-görsel ikonu çıkıyordu.
+  // Stroke'ları inline SVG'ye çevir; zaten data:image/* veya http ise <img> kullan.
+  const sigSvg = signatureToSvg(wo.signatureUri);
+  const sigHtml = sigSvg
+    ? sigSvg
+    : (wo.signatureUri && /^(data:image\/|https?:)/i.test(wo.signatureUri)
+        ? `<img src="${escapeHtml(wo.signatureUri)}"/>`
+        : '<div style="height:60px"></div>');
+
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -148,7 +158,7 @@ export function buildWorkOrderHtml(wo: WorkOrder): string {
     </div>
     <div class="sign">
       <div class="l">Müşteri Onayı</div>
-      ${wo.signatureUri ? `<img src="${wo.signatureUri}"/>` : '<div style="height:60px"></div>'}
+      ${sigHtml}
       <div>Kaşe / İmza</div>
     </div>
   </div>
@@ -169,8 +179,101 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#039;');
 }
 
+/** base64 → utf-8 string (atob / Buffer fallback; SignaturePad'in toBase64'ünün tersi). */
+function decodeBase64(b64: string): string {
+  const g: any = globalThis as any;
+  if (typeof atob === 'function') {
+    try { return decodeURIComponent(escape(atob(b64))); } catch { try { return atob(b64); } catch { /* fallthrough */ } }
+  }
+  if (g.Buffer) { try { return g.Buffer.from(b64, 'base64').toString('utf-8'); } catch { /* fallthrough */ } }
+  return '';
+}
+
+/**
+ * SignaturePad imzasını (data:application/json;base64 → {w,h,strokes}) inline SVG'ye çevirir.
+ * Saf fonksiyon → test edilebilir. expo-print <img src="data:application/json"> render edemez;
+ * bu yüzden stroke'ları SVG path'lerine dökeriz (native + web + offline'da görünür).
+ * Girdi JSON-imza değilse (data:image/*, http, boş) null döner → çağıran <img> kullanır.
+ */
+export function signatureToSvg(dataUri: string | undefined, opts?: { stroke?: string }): string | null {
+  if (!dataUri || !dataUri.startsWith('data:application/json')) return null;
+  try {
+    const b64 = dataUri.split(',')[1] || '';
+    const payload = JSON.parse(decodeBase64(b64)) as {
+      w?: number; h?: number; strokes?: { x: number; y: number; start?: boolean }[];
+    };
+    const strokes = Array.isArray(payload.strokes) ? payload.strokes : [];
+    if (strokes.length < 2) return null;
+    const w = Number(payload.w) || 300;
+    const h = Number(payload.h) || 150;
+    // Stroke'ları `start` bayrağına göre ayrı path'lere böl (kalem kaldırılınca yeni çizgi).
+    const paths: string[] = [];
+    let cur: string[] = [];
+    for (const p of strokes) {
+      const x = Number(p.x); const y = Number(p.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      if (p.start && cur.length) { paths.push(cur.join(' ')); cur = []; }
+      cur.push(`${cur.length === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    if (cur.length) paths.push(cur.join(' '));
+    if (!paths.length) return null;
+    const stroke = opts?.stroke || '#1f2937';
+    const ds = paths
+      .map(d => `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`)
+      .join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="100%" preserveAspectRatio="xMidYMid meet" style="max-height:60px">${ds}</svg>`;
+  } catch {
+    return null;
+  }
+}
+
+/** Uzak http(s) görselini base64 data-URI'ye indirir. expo-print native render'ı uzak
+ *  URL'leri güvenilir indirmiyor (offline/auth bucket'ta boş çıkıyordu) → gömülü base64. */
+async function toDataUri(src?: string): Promise<string | undefined> {
+  if (!src || src.startsWith('data:') || !/^https?:/i.test(src)) return src;
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const dataUri: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return dataUri || src;
+  } catch {
+    return src; // indirilemezse orijinali bırak (en azından çevrimiçi web'de çalışır)
+  }
+}
+
+/** PDF'ten önce tüm foto/imza URL'lerini base64'e gömer (saf builder'ı bozmadan). */
+async function inlineWorkOrderImages(wo: WorkOrder): Promise<WorkOrder> {
+  const resolveArr = async (arr?: string[]) =>
+    arr && arr.length ? (await Promise.all(arr.map(toDataUri))).filter((x): x is string => !!x) : arr;
+  const [beforePhotos, afterPhotos, beforePhoto, afterPhoto, formPhoto, signatureUri] = await Promise.all([
+    resolveArr(wo.beforePhotos),
+    resolveArr(wo.afterPhotos),
+    toDataUri(wo.beforePhoto),
+    toDataUri(wo.afterPhoto),
+    toDataUri(wo.formPhoto),
+    // İmza JSON-stroke ise dokunma (SVG'ye çevrilecek); yalnız http görsel imzayı göm.
+    wo.signatureUri && /^https?:/i.test(wo.signatureUri) ? toDataUri(wo.signatureUri) : Promise.resolve(wo.signatureUri),
+  ]);
+  return {
+    ...wo,
+    beforePhotos,
+    afterPhotos,
+    beforePhoto: beforePhoto ?? '',   // tip: beforePhoto/afterPhoto zorunlu string
+    afterPhoto: afterPhoto ?? '',
+    formPhoto,
+    signatureUri,
+  };
+}
+
 export async function generateAndShareWorkOrderPdf(wo: WorkOrder): Promise<{ uri: string }> {
-  const html = buildWorkOrderHtml(wo);
+  // Görselleri önce base64'e göm — native/offline yazdırmada boş kutu çıkmasın.
+  const resolved = await inlineWorkOrderImages(wo);
+  const html = buildWorkOrderHtml(resolved);
   return deliverPdf(html, {
     fileName: `Servis-Formu-${wo.id}.pdf`,
     dialogTitle: `Servis Formu ${wo.id}`,

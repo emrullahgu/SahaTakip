@@ -22,6 +22,14 @@ export const quoteFromRow = (row: any, lines: any[] = []): Quote => ({
   subtotal: Number(row.subtotal) || 0,
   vatTotal: Number(row.vat_total) || 0,
   grandTotal: Number(row.grand_total) || 0,
+  // FAZ 4 kabul metadata'sı — önceden serialize EDİLMİYORDU: refresh/relogin sonrası
+  // 'Üretilmiş İş Emri' linki, yasal imza kanıtı ve idempotency anahtarı kayboluyordu.
+  revision: row.revision != null ? Number(row.revision) : undefined,
+  acceptedAt: row.accepted_at ?? undefined,
+  acceptedBy: row.accepted_by ?? undefined,
+  acceptSignature: row.accept_signature ?? undefined,
+  generatedWorkOrderId: row.generated_work_order_id ?? undefined,
+  shareToken: row.share_token ?? undefined,
   lines: lines.map(quoteLineFromRow).sort((a, b) => a.lineNo - b.lineNo),
 });
 
@@ -56,6 +64,13 @@ export const quoteToRow = (q: Quote, userId?: string) => ({
   subtotal: q.subtotal,
   vat_total: q.vatTotal,
   grand_total: q.grandTotal,
+  // FAZ 4 kabul metadata'sı (kolonlar schema.sql:561-567'de mevcut).
+  revision: q.revision ?? null,
+  accepted_at: q.acceptedAt ?? null,
+  accepted_by: q.acceptedBy ?? null,
+  accept_signature: q.acceptSignature ?? null,
+  generated_work_order_id: q.generatedWorkOrderId ?? null,
+  share_token: q.shareToken ?? null,
   created_by: userId ?? null,
 });
 
@@ -146,6 +161,7 @@ export const workOrderFromRow = (row: any): WorkOrder => ({
   audioUri: row.audio_uri ?? undefined,
   signatureUri: row.signature_uri ?? undefined,
   templateId: row.template_id ?? undefined,
+  sourceQuoteId: row.source_quote_id ?? undefined,
   jobType: row.job_type ?? 'FIELD',
 });
 
@@ -187,6 +203,7 @@ export const workOrderToRow = (w: WorkOrder, userId?: string) => ({
   audio_uri: w.audioUri ?? null,
   signature_uri: w.signatureUri ?? null,
   template_id: w.templateId ?? null,
+  source_quote_id: w.sourceQuoteId ?? null,
   job_type: w.jobType ?? 'FIELD',
 });
 

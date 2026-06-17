@@ -32,6 +32,71 @@ export interface CopilotSnapshot {
   currentUserName?: string;
 }
 
+/**
+ * Danışman sohbetinin ürettiği YAPISAL teklif taslağı. Sohbet kayıt yapamaz;
+ * bunun yerine bir fiyat teklifi hazırladığında yanıtının sonuna makine-okunur
+ * bir `quotedraft` bloğu ekler. ChatbotFAB bu bloğu ayıklayıp "Yeni Teklif"
+ * ekranını önceden doldurur — kaydı kullanıcı orada (deterministik, dürüst yol)
+ * yapar. Böylece "gösterilen tutar == kaydedilen tutar" olur.
+ */
+export interface QuoteDraftLineSeed {
+  pozId?: string;      // Katalog kalemiyse POZ id; manuel hizmet bedeliyse boş.
+  name: string;        // İş / kalem tanımı.
+  unit?: string;       // Adet, Mt, m² ...
+  quantity: number;
+  unitPrice: number;   // KDV HARİÇ nihai birim fiyat (tabloda gösterilen).
+}
+export interface QuoteDraftSeed {
+  customerName?: string;
+  title?: string;
+  notes?: string;
+  lines: QuoteDraftLineSeed[];
+}
+
+/**
+ * Asistan yanıtından ```quotedraft kod bloğunu ayıklar. Saf fonksiyon → test edilebilir.
+ * - `text`: blok çıkarılmış, kullanıcıya gösterilecek metin.
+ * - `draft`: blok geçerli JSON + en az 1 kalemse taslak; aksi halde null.
+ * Blok yoksa metin değişmeden döner (regresyon yok); blok bozuksa metinden temizlenir
+ * ama draft null olur (kullanıcıya ham JSON gösterilmez).
+ */
+export function extractQuoteDraft(reply: string): { text: string; draft: QuoteDraftSeed | null } {
+  if (!reply) return { text: reply || '', draft: null };
+  const m = reply.match(/```quotedraft\s*([\s\S]*?)```/i);
+  if (!m) return { text: reply, draft: null };
+  const idx = m.index ?? 0;
+  const text = (reply.slice(0, idx) + reply.slice(idx + m[0].length)).trim();
+  try {
+    const raw = JSON.parse(m[1].trim());
+    const linesIn = Array.isArray(raw?.lines) ? raw.lines : [];
+    const lines: QuoteDraftLineSeed[] = linesIn
+      .map((l: any): QuoteDraftLineSeed => {
+        const q = Number(l?.quantity);
+        const p = Number(l?.unitPrice);
+        return {
+          pozId: l?.pozId ? String(l.pozId) : undefined,
+          name: String(l?.name ?? l?.pozName ?? '').trim(),
+          unit: l?.unit ? String(l.unit) : undefined,
+          quantity: Number.isFinite(q) && q > 0 ? q : 1,
+          unitPrice: Number.isFinite(p) && p >= 0 ? p : 0,
+        };
+      })
+      .filter((l: QuoteDraftLineSeed) => !!l.name);
+    if (!lines.length) return { text, draft: null };
+    return {
+      text,
+      draft: {
+        customerName: raw?.customerName ? String(raw.customerName) : undefined,
+        title: raw?.title ? String(raw.title) : undefined,
+        notes: raw?.notes ? String(raw.notes) : undefined,
+        lines,
+      },
+    };
+  } catch {
+    return { text, draft: null };
+  }
+}
+
 function uid() { return 'm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6); }
 function todayKey() { return localDateISO(); }
 
@@ -204,6 +269,14 @@ YETKİN — ÇOK ÖNEMLİ (asla yalan söyleme):
 - Bu yüzden ASLA "oluşturdum / kaydettim / gönderdim / güncelledim / sildim / planladım" deme. Bunları YAPMADIN — bu sohbette böyle bir yeteneğin yok. Yaptığını iddia etmek yalandır.
 - Kullanıcı gerçek bir işlem isterse (teklif/iş emri/müşteri oluştur, durum değiştir, mesaj gönder): istediği içeriği TASLAK olarak metinle hazırla, sonra şöyle yönlendir: "Bunu gerçekten kaydetmek/uygulamak için **Otonom Ajan** ekranını kullan ya da ilgili ekrandan (örn. Yeni Teklif) ekle." Otonom Ajan bu işlemleri gerçekten yapabilen tek yerdir.
 - Emin değilsen "bunu ben uygulayamam, şu ekrandan yapabilirsin" de — uydurma onay verme.
+
+TEKLİF TASLAĞI AKTARIMI (kayıt değil — kullanıcı kaydeder):
+- Bir FİYAT TEKLİFİ hazırladığında (kalem + birim fiyat içeren), normal Türkçe yanıtının (tablo dahil) EN SONUNA tek bir makine-okunur blok ekle:
+\`\`\`quotedraft
+{"customerName":"Müşteri adı","title":"Teklif başlığı","notes":"kapsam/varsayım notu","lines":[{"name":"İş tanımı","unit":"Adet","quantity":1,"unitPrice":2500}]}
+\`\`\`
+- unitPrice = tabloda gösterdiğin KDV HARİÇ NİHAİ birim fiyat (yalnız sayı; ₺ koyma, binlik ayırıcı koyma, KDV ekleme). Katalog kalemiyse "pozId" ekle; manuel/katalog-dışı hizmet bedeliyse pozId YAZMA.
+- Bu blok kullanıcıya GÖSTERİLMEZ; uygulama onu okuyup "Yeni Teklif" ekranını önceden doldurur. Bloktan söz etme, "kaydettim/oluşturdum" DEME — kaydı kullanıcı o ekranda yapacak. Blok yalnızca somut fiyatlı bir teklif kurduğunda eklenir; fiyatı bilinmeyen kalem olursa o satıra unitPrice:0 ver.
 
 ÇIKTI BİÇİMİ:
 - Türkçe. Kısa cevapta düz, akıcı metin kullan; liste/tablo GERÇEKTEN işe yarıyorsa markdown'a geç — her cevabı zorla başlık/madde yapma.

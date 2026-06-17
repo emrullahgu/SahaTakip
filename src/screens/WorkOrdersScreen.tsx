@@ -27,6 +27,9 @@ import { TabParamList, RootStackParamList } from '../types';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { a11yButton, a11yInput } from '../utils/a11y';
 import { statusColor, priorityColor, isSlaBreached } from '../services/workOrderFlow';
+import { buildCsv, shareCsv } from '../services/csvExport';
+import { workOrdersToRows } from '../utils/exportRows';
+import { localDateISO } from '../utils/date';
 
 type WorkOrdersNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'WorkOrders'>,
@@ -38,7 +41,7 @@ const FILTERS = ['Tümü', 'Bekliyor', 'Tamamlandı', 'Gecikti'];
 // Mock work orders assigned to field worker
 export default function WorkOrdersScreen() {
   const navigation = useNavigation<WorkOrdersNavProp>();
-  const { workOrders, deleteWorkOrder, refresh } = useAppContext();
+  const { workOrders, deleteWorkOrder, refresh, showToast } = useAppContext();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => { setRefreshing(true); try { await refresh(); } finally { setRefreshing(false); } };
   const [activeFilter, setActiveFilter] = useState('Tümü');
@@ -66,6 +69,18 @@ export default function WorkOrdersScreen() {
     return matchFilter && matchSearch;
   });
 
+  const handleExport = async () => {
+    if (!filtered.length) { showToast('Aktarılacak iş emri yok', 'error'); return; }
+    // Filtrelenen kümeyi TAM WorkOrder verisiyle (tutar/kâr dahil) dışa aktar.
+    const ids = new Set(filtered.map(o => o.id));
+    const rows = workOrdersToRows(workOrders.filter(w => ids.has(w.id)));
+    try {
+      await shareCsv('is_emirleri_' + localDateISO(), buildCsv(rows));
+    } catch {
+      showToast('CSV oluşturulamadı', 'error');
+    }
+  };
+
   const total = source.length;
   const done = source.filter(o => o.status?.trim().toLowerCase() === 'tamamlandı').length;
   const waiting = source.filter(o => {
@@ -88,6 +103,15 @@ export default function WorkOrdersScreen() {
             <Text style={styles.title}>İş Emirlerim</Text>
             <Text style={styles.subtitle}>Tarafınıza atanan iş emirleri</Text>
           </View>
+          <TouchableOpacity
+            style={styles.exportBtn}
+            onPress={handleExport}
+            activeOpacity={0.85}
+            hitSlop={8}
+            {...a11yButton('İş emirlerini CSV olarak dışa aktar')}
+          >
+            <Ionicons name="download-outline" size={18} color={colors.emerald.default} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.addBtn}
             onPress={() => navigation.navigate('NewWorkOrder')}
@@ -273,6 +297,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   addBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
+  exportBtn: {
+    width: 40,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.emerald.bg,
+    borderWidth: 1,
+    borderColor: colors.emerald.border,
+    borderRadius: radius.full,
+  },
   title: { fontSize: typography.xl, color: colors.text.primary, fontWeight: '900' },
   subtitle: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },
   searchBox: {

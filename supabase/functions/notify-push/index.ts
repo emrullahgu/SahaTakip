@@ -32,6 +32,32 @@ function isExpoPushToken(t: unknown): t is string {
   return typeof t === 'string' && /^Expo(nent)?PushToken\[.+\]$/.test(t.trim());
 }
 
+// E-posta YALNIZ kritik olaylarda gönderilir — "her iş herkese" yayınında tüm
+// ekibe koşulsuz e-posta KVKK/spam riski. (channel_enabled.email DEFAULT false.)
+const CRITICAL_EMAIL_TYPES = new Set(['sla_breach', 'quote_accepted', 'payment_received']);
+
+// Kullanıcı push kanalını kapatmış mı? Tercih satırı yoksa varsayılan AÇIK
+// (channel_enabled DEFAULT {"push":true}). event_channels[type] tanımlıysa
+// olay-bazlı matris kazanır.
+function pushEnabled(pref: any, evType: string): boolean {
+  if (!pref) return true;
+  const ch = pref.channel_enabled ?? {};
+  const ev = pref.event_channels ?? {};
+  const list = ev[evType];
+  if (Array.isArray(list) && list.length) return list.includes('push');
+  return ch.push !== false;
+}
+
+// E-posta kanalı açık mı? DEFAULT false → opt-in olmayan kullanıcıya gönderilmez.
+function emailEnabled(pref: any, evType: string): boolean {
+  if (!pref) return false;
+  const ch = pref.channel_enabled ?? {};
+  const ev = pref.event_channels ?? {};
+  const list = ev[evType];
+  if (Array.isArray(list) && list.length) return list.includes('email');
+  return ch.email === true;
+}
+
 function json(payload: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
@@ -102,12 +128,27 @@ Deno.serve(async (req) => {
   const ids = Array.from(targetIds);
   if (!ids.length) return json({ ok: true, sent: 0, targets: 0, note: 'Eşleşen kullanıcı yok' });
 
-  // 2) Token'ları topla (push_tokens + fallback notification_preferences)
+  // 1.5) Bildirim tercihlerini çek (kanal opt-out + olay matrisi) → user_id bazlı map
+  const prefById = new Map<string, any>();
+  {
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('user_id, push_token, channel_enabled, event_channels')
+      .in('user_id', ids);
+    for (const p of prefs ?? []) if (p?.user_id) prefById.set(p.user_id, p);
+  }
+
+  // 2) Token'ları topla (push_tokens + fallback notification_preferences) — YALNIZ
+  // push kanalı AÇIK olan kullanıcıların token'ları. Opt-out edene token toplanmaz.
   const tokens: string[] = [];
-  const { data: pt } = await supabase.from('push_tokens').select('token').in('user_id', ids);
-  for (const r of pt ?? []) if (r?.token) tokens.push(r.token);
-  const { data: np } = await supabase.from('notification_preferences').select('push_token').in('user_id', ids);
-  for (const r of np ?? []) if (r?.push_token) tokens.push(r.push_token);
+  const { data: pt } = await supabase.from('push_tokens').select('user_id, token').in('user_id', ids);
+  for (const r of pt ?? []) {
+    if (r?.token && pushEnabled(prefById.get(r.user_id), type)) tokens.push(r.token);
+  }
+  for (const uid of ids) {
+    const pref = prefById.get(uid);
+    if (pref?.push_token && pushEnabled(pref, type)) tokens.push(pref.push_token);
+  }
 
   // 3) Expo push
   const { sent, errors } = await sendExpo(tokens, title, body, { type, relatedId });
@@ -125,17 +166,20 @@ Deno.serve(async (req) => {
   const { error: insErr } = await supabase.from('notifications').insert(rows);
   if (insErr) errors.push(`notifications insert: ${insErr.message}`);
 
-  // 5) E-POSTA yayını (email===true): tüm hedef kullanıcılara Resend ile mail.
-  // RESEND_API_KEY yoksa sessizce atlanır (push + in-app yine çalışır).
+  // 5) E-POSTA yayını: YALNIZ kritik olay tiplerinde VE e-posta kanalını açmış
+  // (opt-in) kullanıcılara. Aksi halde "her iş herkese" yayını tüm ekibe koşulsuz
+  // e-posta = KVKK/spam. RESEND_API_KEY yoksa sessizce atlanır (push + in-app çalışır).
   let emailsSent = 0;
-  if (payload.email === true) {
+  const emailAllowed = payload.email === true && CRITICAL_EMAIL_TYPES.has(type);
+  if (emailAllowed) {
     try {
       const resendKey = Deno.env.get('RESEND_API_KEY');
-      if (resendKey && ids.length) {
-        const idSet = new Set(ids);
+      // Yalnız e-posta kanalı açık (opt-in) kullanıcı id'leri.
+      const optInIds = new Set(ids.filter(uid => emailEnabled(prefById.get(uid), type)));
+      if (resendKey && optInIds.size) {
         const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
         const emails = (list?.users ?? [])
-          .filter((u: any) => idSet.has(u.id) && u.email)
+          .filter((u: any) => optInIds.has(u.id) && u.email)
           .map((u: any) => u.email as string);
         if (emails.length) {
           const from = Deno.env.get('RESEND_FROM') || 'SahaTakip <onboarding@resend.dev>';

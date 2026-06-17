@@ -5,6 +5,7 @@ import type { Quote } from '../types';
 import { calcLineTotal } from '../context/AppContext';
 import { BRAND } from '../config/brand';
 import { LOGO_DATA_URI } from '../config/logoBase64';
+import { escapeCell } from './csvExport';
 
 const COMPANY = BRAND.company;
 
@@ -63,10 +64,14 @@ export function buildQuoteHtml(quote: Quote): string {
     .map((line, idx) => {
       const calc = calcLineTotal(line);
       const overheadAmt = calc.withOverhead - calc.afterDiscount;
+      // Kalem açıklaması (opsiyonel). Sistem uyarıları (⚠ ile başlayan, ör. "fiyat
+      // girilmeli") müşteriye giden PDF'e BASILMAZ — yalnız kullanıcının yazdığı not görünür.
+      const lineNote = (line.notes || '').trim();
+      const showNote = lineNote && !lineNote.startsWith('⚠');
       return `
         <tr>
           <td class="center">${idx + 1}</td>
-          <td>${escapeHtml(line.pozName || 'Kalem')}</td>
+          <td>${escapeHtml(line.pozName || 'Kalem')}${showNote ? `<div class="line-note">${escapeHtml(lineNote)}</div>` : ''}</td>
           <td class="center">${line.quantity} ${escapeHtml(line.unit)}</td>
           <td class="right">${fmt(line.materialPrice)} ₺</td>
           <td class="right">${fmt(line.installPrice)} ₺</td>
@@ -156,6 +161,7 @@ export function buildQuoteHtml(quote: Quote): string {
   td.center { text-align: center; }
   td.right { text-align: right; font-variant-numeric: tabular-nums; }
   small { color: #6b7280; font-size: 9px; }
+  .line-note { font-size: 9px; color: #6b7280; margin-top: 3px; white-space: pre-wrap; font-style: italic; }
   .muted { color: #9ca3af; }
   .totals {
     margin-top: 18px;
@@ -580,8 +586,9 @@ export async function generateAndShareAttendanceCsv(
     const paidDays = geldi + izinli + tatil + egitim + yarim * 0.5;
     const wage = paidDays * (e.dailyRate || 0);
     return [
-      `"${e.name}"`,
-      `"${e.role}"`,
+      // GÜVENLİK: ad/ünvan kullanıcı girdisi → CSV formül enjeksiyonuna karşı escapeCell
+      escapeCell(e.name),
+      escapeCell(e.role),
       ...cells,
       String(geldi), String(yarim), String(izinli), String(raporlu),
       String(tatil), String(egitim), String(mazeretsiz), String(gelmedi),

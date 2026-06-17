@@ -24,12 +24,15 @@ import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { matchesAnyField } from '../utils/search';
 import { a11yButton, a11yInput, HIT_SLOP_8 } from '../utils/a11y';
 import type { Customer, RootStackParamList } from '../types';
+import { buildCsv, shareCsv } from '../services/csvExport';
+import { customersToRows } from '../utils/exportRows';
+import { localDateISO } from '../utils/date';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Customers'>;
 
 export default function CustomersScreen() {
   const navigation = useNavigation<NavProp>();
-  const { customers, deleteCustomer, refresh } = useAppContext();
+  const { customers, deleteCustomer, refresh, showToast } = useAppContext();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => { setRefreshing(true); try { await refresh(); } finally { setRefreshing(false); } };
   const { hasPermission } = useAuth();
@@ -43,6 +46,15 @@ export default function CustomersScreen() {
     // Aksan-toleranslı + kelime-bazlı (dimes→DİMES, "ege boru" sıra serbest).
     return customers.filter(c => matchesAnyField([c.shortName, c.title, c.city, c.phone, c.taxNumber], q));
   }, [customers, query]);
+
+  const handleExport = async () => {
+    if (!filtered.length) { showToast('Aktarılacak müşteri yok', 'error'); return; }
+    try {
+      await shareCsv('musteriler_' + localDateISO(), buildCsv(customersToRows(filtered)));
+    } catch {
+      showToast('CSV oluşturulamadı', 'error');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -66,6 +78,14 @@ export default function CustomersScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: colors.emerald.bg, borderWidth: 1, borderColor: colors.emerald.border }]}
+          onPress={handleExport}
+          activeOpacity={0.85}
+          {...a11yButton('Müşterileri CSV olarak dışa aktar')}
+        >
+          <Ionicons name="download-outline" size={18} color={colors.emerald.default} />
+        </TouchableOpacity>
         {canWrite && (
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.indigo.default }]}

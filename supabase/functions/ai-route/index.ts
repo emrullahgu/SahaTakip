@@ -17,6 +17,8 @@
 //
 // Env: OPENAI_API_KEY
 
+import { requireUser } from '../_shared/auth.ts';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -40,6 +42,13 @@ function distKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+
+  // GÜVENLİK: kimliksiz/anon çağrı reddedilir — paralı OpenAI çağrısı maliyet
+  // suistimaline açıktı (ai-vision/ai-sql/ai-proxy ile aynı kalıp).
+  const auth = await requireUser(req, { requireApproved: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { ...CORS, 'content-type': 'application/json' } });
+  }
 
   try {
     const body = await req.json();

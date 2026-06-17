@@ -27,6 +27,7 @@ import StatusBadge from '../components/StatusBadge';
 import FadeInView from '../components/FadeInView';
 import EmptyState from '../components/EmptyState';
 import { RootStackParamList, TabParamList } from '../types';
+import { quoteValidity } from '../utils/quoteValidity';
 
 type HomeNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'Home'>,
@@ -35,7 +36,12 @@ type HomeNavProp = CompositeNavigationProp<
 
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNavProp>();
-  const { workOrders, toast } = useAppContext();
+  const { workOrders, quotes, toast } = useAppContext();
+  // Süresi dolan/dolmak üzere olan açık teklifler — kaybedilen satış uyarısı.
+  const expiringQuotes = quotes.filter(q => {
+    const v = quoteValidity(q);
+    return v === 'expired' || v === 'expiringSoon';
+  }).length;
   const { profile, user, signOut, isDemoMode, updateProfile } = useAuth();
   const { mode, setMode } = useTheme();
   const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
@@ -100,6 +106,14 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity
+            onPress={() => navigation.navigate('GlobalSearch')}
+            style={styles.logoutBtn}
+            activeOpacity={0.7}
+            accessibilityLabel="Genel arama"
+          >
+            <Ionicons name="search-outline" size={22} color={colors.text.muted} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={toggleTheme}
             style={styles.logoutBtn}
             activeOpacity={0.7}
@@ -145,6 +159,23 @@ export default function HomeScreen() {
             </View>
           </View>
         </FadeInView>
+
+        {expiringQuotes > 0 && (
+          <FadeInView delay={80}>
+            <TouchableOpacity
+              style={styles.alertCard}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('Quotes')}
+              accessibilityLabel="Süresi dolan teklifleri gör"
+            >
+              <Ionicons name="time-outline" size={20} color={colors.amber.default} />
+              <Text style={styles.alertCardText}>
+                {expiringQuotes} teklifin geçerlilik süresi doluyor/doldu — kovalayın
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.amber.default} />
+            </TouchableOpacity>
+          </FadeInView>
+        )}
 
         {/* Quick Actions Grid */}
         <Text style={styles.sectionLabel}>Hızlı Erişim</Text>
@@ -518,6 +549,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
   },
+  alertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.amber.bg,
+    borderWidth: 1,
+    borderColor: colors.amber.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  alertCardText: { flex: 1, color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   statItem: { alignItems: 'center' },
   statValue: { fontSize: typography.xxl, fontWeight: '900' },
   statLabel: { fontSize: typography.xs, color: colors.text.muted, marginTop: 2 },

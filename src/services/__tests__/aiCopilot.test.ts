@@ -1,5 +1,5 @@
 // aiCopilot.formatKbContext — bütçe-farkında KB bağlam biçimleme.
-import { formatKbContext, queryTokens, pickRelevant } from '../aiCopilot';
+import { formatKbContext, queryTokens, pickRelevant, extractQuoteDraft } from '../aiCopilot';
 
 describe('formatKbContext — KB bağlam bütçesi', () => {
   it('boş liste → boş string', () => {
@@ -83,5 +83,66 @@ describe('pickRelevant — sorguyla eşleşen kayıt seçimi', () => {
   it('max sınırına uyar', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ id: String(i), name: 'trafo ' + i }));
     expect(pickRelevant(many, ['trafo'], it => it.name, 6)).toHaveLength(6);
+  });
+});
+
+describe('extractQuoteDraft — sohbet→teklif yapısal aktarım', () => {
+  it('blok yoksa metni aynen döndürür, draft null', () => {
+    const r = extractQuoteDraft('Merhaba, nasıl yardımcı olabilirim?');
+    expect(r.draft).toBeNull();
+    expect(r.text).toBe('Merhaba, nasıl yardımcı olabilirim?');
+  });
+
+  it('geçerli bloğu ayıklar, metinden temizler, kalemleri normalize eder', () => {
+    const reply = [
+      'İşte teklif tablosu:',
+      '| Kalem | Tutar |',
+      '```quotedraft',
+      JSON.stringify({
+        customerName: 'Mert Çelik Metal',
+        title: 'Elektrik bakım',
+        notes: 'kapsam notu',
+        lines: [
+          { name: 'Saha tespit', unit: 'Adet', quantity: 1, unitPrice: 2500 },
+          { name: 'Harmonik ölçüm', quantity: 2, unitPrice: 7500 },
+        ],
+      }),
+      '```',
+    ].join('\n');
+    const { text, draft } = extractQuoteDraft(reply);
+    expect(text).toContain('İşte teklif tablosu');
+    expect(text).not.toContain('quotedraft');
+    expect(text).not.toContain('Mert Çelik Metal"'); // ham JSON sızmadı
+    expect(draft).not.toBeNull();
+    expect(draft!.customerName).toBe('Mert Çelik Metal');
+    expect(draft!.title).toBe('Elektrik bakım');
+    expect(draft!.notes).toBe('kapsam notu');
+    expect(draft!.lines).toHaveLength(2);
+    expect(draft!.lines[1]).toMatchObject({ name: 'Harmonik ölçüm', quantity: 2, unitPrice: 7500 });
+  });
+
+  it('bozuk JSON → draft null ama blok metinden temizlenir (ham JSON gösterilmez)', () => {
+    const reply = 'Taslak:\n```quotedraft\n{bozuk json,,,}\n```';
+    const { text, draft } = extractQuoteDraft(reply);
+    expect(draft).toBeNull();
+    expect(text).toBe('Taslak:');
+    expect(text).not.toContain('bozuk json');
+  });
+
+  it('negatif/eksik miktar ve fiyatı güvenli değere çeker', () => {
+    const reply = '```quotedraft\n' + JSON.stringify({
+      lines: [
+        { name: 'A', quantity: -3, unitPrice: -100 },  // qty→1, price→0
+        { name: 'B', quantity: 'iki', unitPrice: 1000 }, // qty→1
+      ],
+    }) + '\n```';
+    const { draft } = extractQuoteDraft(reply);
+    expect(draft!.lines[0]).toMatchObject({ quantity: 1, unitPrice: 0 });
+    expect(draft!.lines[1]).toMatchObject({ quantity: 1, unitPrice: 1000 });
+  });
+
+  it('adı olmayan kalemleri eler; hiç geçerli kalem yoksa draft null', () => {
+    const reply = '```quotedraft\n' + JSON.stringify({ lines: [{ quantity: 1, unitPrice: 5 }] }) + '\n```';
+    expect(extractQuoteDraft(reply).draft).toBeNull();
   });
 });

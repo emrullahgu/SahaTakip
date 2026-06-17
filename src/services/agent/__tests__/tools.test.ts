@@ -119,6 +119,22 @@ describe('sistem-farkındalığı read-tool\'ları (agent tüm sistemi tanır)',
   });
 });
 
+describe('analyze_system_health — pasif personele atanmış iş (assignedToId kanonik alan)', () => {
+  it('assignedToId pasif (attendance boş) personele işaret ediyorsa bulgu üretir', async () => {
+    const inactiveEmp: any = { id: 'emp-1', name: 'Pasif Usta', role: 'Usta', attendance: {} };
+    // Kanonik alan assignedToId; legacy assignedTo boş bırakıldı (gerçek veride böyle).
+    const wo: any = { id: 'IE-2026-001', client: 'ACME', serviceName: 'Bakım', status: 'Bekliyor', assignedToId: 'emp-1' };
+    const c: any = {
+      ...ctx,
+      app: { employees: [inactiveEmp], workOrders: [wo], quotes: [], customers: [], materials: [] },
+    };
+    const res = await AGENT_TOOLS['analyze_system_health'].handler({}, c);
+    const orphanFinding = (res.findings || []).find((f: any) => /Pasif personele atanmış/.test(f.title));
+    expect(orphanFinding).toBeTruthy();
+    expect(orphanFinding.count).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe('create_quote_draft — fiyat uydurma YASAK (yalnız katalogtan)', () => {
   it('katalog dışı kaleme ajan fiyat verse bile 0 yazılır + manualPriceLines\'da işaretlenir', async () => {
     let saved: any = null;

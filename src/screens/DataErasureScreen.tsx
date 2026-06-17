@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
 import { listErasureJobs, addErasureJob, SEC_JOB_LABEL, SEC_JOB_COLOR } from '../services/secCenter';
+import { supabase } from '../services/supabase';
 import type { DataErasureJob } from '../types';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
@@ -33,9 +34,30 @@ export default function DataErasureScreen() {
         text: 'Onayla',
         style: 'destructive',
         onPress: async () => {
-          await addErasureJob(user.trim(), scope);
+          // 'Tam Silme' için kullanıcıyı tam ada göre çöz → gerçek sunucu silmesi.
+          let userId: string | undefined;
+          if (scope === 'full') {
+            try {
+              const { data } = await supabase.from('profiles').select('id, full_name').ilike('full_name', user.trim());
+              if (data && data.length === 1) {
+                userId = (data[0] as any).id;
+              } else if (data && data.length > 1) {
+                Alert.alert('Belirsiz kullanıcı', 'Bu ada birden fazla kayıt uyuyor; lütfen tam adı girin.');
+                return;
+              }
+            } catch { /* çözülemezse aşağıda kuyruğa düşer */ }
+          }
+          const job = await addErasureJob(user.trim(), scope, userId);
           setUser(''); setScope('anonymize'); setModal(false);
           load();
+          // DÜRÜST geri bildirim — sahte "başlatıldı" yok.
+          if (job.status === 'completed') {
+            Alert.alert('Silme tamamlandı', `${job.affectedRecords ?? 0} kayıt (konum/vardiya/check-in) kalıcı olarak silindi.`);
+          } else if (job.status === 'failed') {
+            Alert.alert('Silme başarısız', 'Sunucu işlemi reddetti (yetki/bağlantı). Kayıt başarısız olarak işaretlendi.');
+          } else if (scope === 'full') {
+            Alert.alert('Kuyruğa alındı', 'Kullanıcı tam adla eşleşmedi; gerçek silme yapılamadı, talep kuyruğa alındı.');
+          }
         },
       },
     ]);

@@ -10,12 +10,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { askCopilot, askCopilotWithAttachment, type CopilotMessage } from '../services/aiCopilot';
-import type { RootStackParamList } from '../types';
+import { askCopilot, askCopilotWithAttachment, extractQuoteDraft, type CopilotMessage, type QuoteDraftSeed } from '../services/aiCopilot';
+import { newUuid } from '../services/data/repository';
+import type { RootStackParamList, QuoteLine } from '../types';
 import MarkdownText from './MarkdownText';
 import { resizeForUpload } from '../utils/image';
 
-interface Msg { role: 'user' | 'bot'; text: string; ts: string }
+interface Msg { role: 'user' | 'bot'; text: string; ts: string; draft?: QuoteDraftSeed }
 interface Pending { base64: string; mimeType: string; kind: 'image' | 'pdf'; name: string }
 
 /** Bir uri'yi (web blob/data veya native dosya) base64'e çevirir. */
@@ -73,6 +74,37 @@ export default function ChatbotFAB() {
   };
   const userName = profile?.full_name || profile?.email || user?.email || 'Kullanıcı';
 
+  // Sohbet asistanı kayıt YAPAMAZ (dürüstlük kuralı). Bir fiyat teklifi hazırladığında
+  // yapısal taslağı "Yeni Teklif" ekranına aktarır; kullanıcı orada görüp kaydeder.
+  // overhead/profit=0 + installPrice=nihai birim fiyat → ekranda gösterilen tutar ile
+  // sohbette gösterilen tutar BİREBİR aynı olur (Req#3: gösterilen == kaydedilen).
+  const openInNewQuote = (draft: QuoteDraftSeed) => {
+    const lines: QuoteLine[] = draft.lines.map((l, i) => {
+      const priced = Number.isFinite(l.unitPrice) && l.unitPrice > 0;
+      return {
+        id: newUuid(),
+        lineNo: i + 1,
+        pozId: l.pozId || 'MANUAL-' + (i + 1),
+        pozName: l.name,
+        unit: l.unit || 'Adet',
+        quantity: l.quantity > 0 ? l.quantity : 1,
+        materialPrice: 0,
+        installPrice: priced ? l.unitPrice : 0,
+        dismantlePrice: 0,
+        withDismantle: false,
+        overheadPct: 0,
+        profitPct: 0,
+        vatPct: 20,
+        discountPct: 0,
+        notes: priced ? undefined : '⚠ Birim fiyat girilmeli',
+      };
+    });
+    setOpen(false);
+    nav.navigate('NewQuote', {
+      prefill: { customerName: draft.customerName, title: draft.title, notes: draft.notes, lines },
+    });
+  };
+
   useEffect(() => {
     if (open) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [open, msgs.length]);
@@ -124,7 +156,10 @@ export default function ChatbotFAB() {
         const r = await askCopilot(t, snap, [...history, { id: ts, role: 'user', content: t, createdAt: ts }]);
         reply = r.reply;
       }
-      setMsgs(m => [...m, { role: 'bot', text: reply || 'Tamamlandı.', ts: new Date().toISOString() }]);
+      // Yanıttan yapısal teklif taslağını ayıkla (varsa). Blok metinden temizlenir;
+      // taslak varsa balonun altında "Yeni Teklif'te aç" butonu gösterilir.
+      const { text: shown, draft } = extractQuoteDraft(reply);
+      setMsgs(m => [...m, { role: 'bot', text: shown || 'Tamamlandı.', ts: new Date().toISOString(), draft: draft || undefined }]);
     } catch (e: any) {
       setMsgs(m => [...m, { role: 'bot', text: getReply(t), ts: new Date().toISOString() }]);
     } finally {
@@ -153,11 +188,19 @@ export default function ChatbotFAB() {
             </View>
             <ScrollView ref={scrollRef} style={s.body} contentContainerStyle={{ padding: spacing.sm, gap: 6 }}>
               {msgs.map((m, i) => (
-                <View key={i} style={[s.bubble, m.role === 'user' ? s.userBubble : s.botBubble]}>
-                  {m.role === 'user'
-                    ? <Text style={[s.bubbleText, { color: '#fff' }]}>{m.text}</Text>
-                    : <MarkdownText content={m.text} color={colors.text.primary} size={typography.sm} />}
-                </View>
+                <React.Fragment key={i}>
+                  <View style={[s.bubble, m.role === 'user' ? s.userBubble : s.botBubble]}>
+                    {m.role === 'user'
+                      ? <Text style={[s.bubbleText, { color: '#fff' }]}>{m.text}</Text>
+                      : <MarkdownText content={m.text} color={colors.text.primary} size={typography.sm} />}
+                  </View>
+                  {m.role === 'bot' && m.draft && (
+                    <TouchableOpacity style={s.draftBtn} onPress={() => openInNewQuote(m.draft!)} activeOpacity={0.85}>
+                      <Ionicons name="document-text" size={14} color="#fff" />
+                      <Text style={s.draftBtnText}>Yeni Teklif'te aç ({m.draft.lines.length} kalem)</Text>
+                    </TouchableOpacity>
+                  )}
+                </React.Fragment>
               ))}
             </ScrollView>
             {pending && (
@@ -214,4 +257,6 @@ const s = StyleSheet.create({
   sendBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
   agentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#7c3aed', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.md },
   agentBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '800' },
+  draftBtn: { flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', gap: 6, backgroundColor: '#22c55e', paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.md, marginTop: 2, marginBottom: 2 },
+  draftBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '800' },
 });

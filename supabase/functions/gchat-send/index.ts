@@ -11,6 +11,7 @@
 // Deploy: supabase functions deploy gchat-send
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireUser } from '../_shared/auth.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +27,15 @@ const supabase = createClient(
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+
+  // GÜVENLİK: şirket Google Chat alanına mesaj atar → kimliksiz/anon çağrı reddedilir.
+  const auth = await requireUser(req, { roles: ['admin', 'manager', 'engineer'], requireApproved: true, allowServiceRole: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status, headers: { ...CORS, 'content-type': 'application/json' },
+    });
+  }
+
   try {
     const body = await req.json();
     const spaceKey = String(body.space ?? 'default').toUpperCase();

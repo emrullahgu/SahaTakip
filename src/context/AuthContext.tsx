@@ -210,8 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { error: error.message };
     // Supabase e-posta onayı kapalı (mailer_autoconfirm) → otomatik oturum oluşur.
     // Bu kısa oturumun JWT'siyle (signOut'tan ÖNCE) kullanıcıya KENDİ
-    // sistemimizden (gmail-send) hoş-geldin/onay-bekliyor e-postası gönderiyoruz;
-    // Supabase artık doğrulama maili atmadığı için bilgilendirme bizden gider.
+    // sistemimizden (gmail-send) hoş-geldin/onay-bekliyor e-postası gönderiyoruz.
+    // NOT: gmail-send artık requireUser(admin/manager/engineer + onaylı) istiyor
+    // (spam/keyfi-mail açığını kapatmak için). Yeni kayıt 'field'+onaysız olduğundan
+    // bu mail 403 alıp gönderilemeyebilir — BEST-EFFORT (akışı durdurmaz; uygulama içi
+    // 'onay bekliyor' ekranı zaten bilgilendirir). Kalıcı çözüm: sunucu-taraflı signup
+    // hook'u (kullanıcının yalnız kendi adresine yazan, kendi-yetkilendiren edge fn).
     if (data.session) {
       try { await sendWelcomeEmail(email, fullName); } catch { /* mail başarısız akışı durdurmasın */ }
       await supabase.auth.signOut();

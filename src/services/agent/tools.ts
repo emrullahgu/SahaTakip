@@ -50,7 +50,7 @@ const slim = <T extends Record<string, any>>(o: T, keys: (keyof T)[]) =>
   keys.reduce((a, k) => ((a as any)[k] = o[k], a), {} as Partial<T>);
 
 const slimWO = (w: WorkOrder) =>
-  slim(w, ['id', 'client', 'serviceName', 'status', 'date', 'plannedStart', 'plannedEnd', 'assignedTo', 'quoteAmount']);
+  slim(w, ['id', 'client', 'serviceName', 'status', 'date', 'plannedStart', 'plannedEnd', 'assignedTo', 'assignedToId', 'quoteAmount']);
 const slimCust = (c: Customer) =>
   slim(c, ['id', 'shortName', 'title', 'phone', 'email', 'taxNumber', 'address', 'type']);
 const slimQuote = (q: Quote) =>
@@ -534,8 +534,11 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       },
     },
     handler: async (args, ctx) => {
-      const ok = ctx.app.updateWorkOrderStatus(String(args.id), args.status);
-      return { ok, message: ok ? 'Durum güncellendi' : 'Güncelleme reddedildi (geçersiz geçiş veya kayıt yok)' };
+      // DB sonucunu AWAIT et — ajan "Durum güncellendi" derken yalan söylemesin (Req#3).
+      const res = await ctx.app.updateWorkOrderStatus(String(args.id), args.status);
+      return res.ok
+        ? { ok: true, message: 'Durum güncellendi' }
+        : { ok: false, message: 'Durum güncellenemedi: ' + (res.error || 'geçersiz geçiş veya kayıt yok') };
     },
   },
 
@@ -660,9 +663,13 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
       const inactiveIds = new Set(
         ctx.app.employees.filter(e => !e.attendance || Object.keys(e.attendance).length === 0).map(e => e.id),
       );
-      const orphan = ctx.app.workOrders.filter(
-        w => w.status !== 'Tamamlandı' && w.assignedTo && inactiveIds.has((w as any).assignedTo),
-      );
+      // Atama kanonik olarak assignedToId'ye yazılır (FAZ3); legacy assignedTo
+      // çoğu kayıtta boştur. Yalnız assignedTo okumak bulguyu sessizce boş
+      // döndürüyordu → kanonik alanı birincil, legacy'yi fallback al.
+      const orphan = ctx.app.workOrders.filter(w => {
+        const aid = (w as any).assignedToId ?? (w as any).assignedTo;
+        return w.status !== 'Tamamlandı' && !!aid && inactiveIds.has(aid);
+      });
       if (orphan.length)
         findings.push({
           kind: 'workflow',

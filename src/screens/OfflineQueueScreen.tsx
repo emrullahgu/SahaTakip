@@ -60,10 +60,16 @@ export default function OfflineQueueScreen() {
   };
 
   const doSync = async () => {
+    // DÜRÜSTLÜK: runSync() yalnız DEMO kuyruğunu (offline_ops) işler, Supabase'e
+    // HİÇBİR ŞEY göndermez. Gerçek gönderim 'Şimdi Gönder' (doDrain → drainSyncQueue).
+    // Eskiden ikisi de 'Senkron Tamamlandı' diyordu → kullanıcı gerçek/sahte ayıramıyordu.
     setSyncing(true);
     const result = await runSync();
     setSyncing(false);
-    Alert.alert('Senkron Tamamlandı', `${result.succeeded} başarılı · ${result.failed} hata · ${result.conflicts} çakışma`);
+    Alert.alert(
+      'Demo Senkron (Sunucuya gönderilmedi)',
+      `Yerel demo işlemleri işlendi: ${result.succeeded} başarılı · ${result.failed} hata · ${result.conflicts} çakışma.\n\nNot: Bu yalnızca demo kuyruğudur. Gerçek gönderim için "Şimdi Gönder" kullanın.`,
+    );
     load();
   };
 
@@ -117,9 +123,9 @@ export default function OfflineQueueScreen() {
             <Ionicons name="trash-outline" size={14} color="#fff" />
             <Text style={s.btnTxt}>Temizle</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.btn, { backgroundColor: '#22c55e' }]} onPress={doSync} disabled={syncing}>
-            {syncing ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="sync-outline" size={14} color="#fff" />}
-            <Text style={s.btnTxt}>Sync</Text>
+          <TouchableOpacity style={[s.btn, { backgroundColor: '#8b5cf6' }]} onPress={doSync} disabled={syncing}>
+            {syncing ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="flask-outline" size={14} color="#fff" />}
+            <Text style={s.btnTxt}>Demo Sync</Text>
           </TouchableOpacity>
         </View>
       </View>

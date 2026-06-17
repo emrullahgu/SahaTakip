@@ -6,6 +6,8 @@
 //
 // Env: OPENAI_API_KEY
 
+import { requireUser } from '../_shared/auth.ts';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -95,6 +97,15 @@ const PROMPTS: Record<Mode, { system: string; schema: string }> = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: CORS });
+
+  // GÜVENLİK: paralı OpenAI Vision çağırır → kimliksiz/anon çağrı maliyet suistimaline
+  // açıktı. Onaylı kullanıcı şart (rol fark etmez; saha kullanıcısı da foto okutur).
+  const auth = await requireUser(req, { requireApproved: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status, headers: { ...CORS, 'content-type': 'application/json' },
+    });
+  }
 
   try {
     const t0 = Date.now();

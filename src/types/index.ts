@@ -90,6 +90,9 @@ export interface WorkOrder {
   audioUri?: string;
   signatureUri?: string;
   templateId?: string;
+  /** Bu iş emrinin üretildiği teklif id'si (POZ-DEV-039 idempotency).
+   *  DB'de partial-unique index ile bir teklikten yalnız BIR iş emri garanti edilir. */
+  sourceQuoteId?: string;
   /** İş türü: FIELD=saha (check-in zorunlu), OFFICE=ofis (lokasyon yok),
    *  REMOTE=uzaktan destek. Varsayılan FIELD. */
   jobType?: WorkOrderJobType;
@@ -3886,8 +3889,9 @@ export type RootStackParamList = {
   Expenses: undefined;
   Services: undefined;
   Customers: undefined;
+  GlobalSearch: undefined;
   CustomerForm: { customerId?: string } | undefined;
-  NewQuote: { quoteId?: string; prefill?: { customerName?: string; title?: string; lines: QuoteLine[] } } | undefined;
+  NewQuote: { quoteId?: string; prefill?: { customerName?: string; title?: string; notes?: string; lines: QuoteLine[] } } | undefined;
   Todo: undefined;
   QuoteDetail: { quoteId: string };
   WorkOrderDetail: { workOrderId: string };

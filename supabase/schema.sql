@@ -510,7 +510,15 @@ ALTER TABLE work_orders
   ADD COLUMN IF NOT EXISTS video_uri text,
   ADD COLUMN IF NOT EXISTS audio_uri text,
   ADD COLUMN IF NOT EXISTS signature_uri text,
-  ADD COLUMN IF NOT EXISTS template_id text;
+  ADD COLUMN IF NOT EXISTS template_id text,
+  ADD COLUMN IF NOT EXISTS source_quote_id text;
+
+-- POZ-DEV-039 idempotency: bir teklikten en fazla BIR iş emri. Partial unique
+-- index NULL kaynakları (manuel iş emirleri) kısıtlamaz; çoklu cihaz/oturum
+-- yarışında ikinci accept'i 23505 ile reddeder (sahte çift iş emri önlenir).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_work_orders_source_quote
+  ON public.work_orders(source_quote_id)
+  WHERE source_quote_id IS NOT NULL;
 
 ALTER TABLE work_orders DROP CONSTRAINT IF EXISTS work_orders_status_check;
 ALTER TABLE work_orders ADD CONSTRAINT work_orders_status_check CHECK (
@@ -1610,9 +1618,21 @@ create table if not exists public.app_settings (
 
 alter table public.app_settings enable row level security;
 
+-- GUVENLIK: 'ai_settings' satiri canli LLM API anahtarini (value.keys) tutar.
+-- Onceki "tum authenticated okuyabilir" politikasi en dusuk yetkili kullanicinin bile
+-- `select value from app_settings where key='ai_settings'` ile parali anahtari sizdirmasina
+-- izin veriyordu. Artik hassas satir YALNIZ admin'e; diger ayarlar herkese acik.
+-- Non-admin AI cagrilari ai-proxy edge fonksiyonu uzerinden gitmeli (EXPO_PUBLIC_AI_USE_PROXY=true).
 drop policy if exists "app_settings_read_all_auth" on public.app_settings;
-create policy "app_settings_read_all_auth" on public.app_settings
-  for select using (auth.role() = 'authenticated');
+drop policy if exists "app_settings_read_nonsecret" on public.app_settings;
+create policy "app_settings_read_nonsecret" on public.app_settings
+  for select using (auth.role() = 'authenticated' and key <> 'ai_settings');
+drop policy if exists "app_settings_read_secret_admin" on public.app_settings;
+create policy "app_settings_read_secret_admin" on public.app_settings
+  for select using (
+    key = 'ai_settings'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+  );
 
 drop policy if exists "app_settings_admin_write" on public.app_settings;
 create policy "app_settings_admin_write" on public.app_settings
@@ -1706,3 +1726,95 @@ create policy "wo_owner_write" on public.work_orders
     or assigned_to_id = auth.uid()
     or public.user_role() in ('admin','manager')
   );
+
+-- ====================================================================
+-- RLS SENKRONU (deploy-pending migration'lar schema.sql'e taşındı)
+-- schema.sql tek-kaynak olarak yeniden uygulanırsa hassas tabloların açık
+-- kalmaması için 20260623/20260624 + KVKK + chat-attachments policy'lerini
+-- burada da tanımlıyoruz. Tüm ifadeler idempotent (drop if exists). user_role()
+-- yukarıda tanımlı.
+-- ====================================================================
+
+-- notifications + push_tokens — kullanıcı-bazlı (20260624 ile aynı)
+alter table public.notifications enable row level security;
+drop policy if exists "notifications_auth_all" on public.notifications;
+drop policy if exists "notifications_self" on public.notifications;
+create policy "notifications_self" on public.notifications
+  for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+alter table public.push_tokens enable row level security;
+drop policy if exists "push_tokens_auth_all" on public.push_tokens;
+drop policy if exists "push_tokens_self" on public.push_tokens;
+create policy "push_tokens_self" on public.push_tokens
+  for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- app_users / two_factor / kvkk_consents / kvkk_settings / access_rules / backups
+-- (20260623 ile aynı). NOT: bu tablolar schema.sql'de CREATE ediliyorsa RLS'leri
+-- yoktu; tek-kaynak tutarlılığı için ekleniyor.
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='app_users') then
+    execute 'alter table public.app_users enable row level security';
+    execute 'drop policy if exists "app_users_read" on public.app_users';
+    execute 'create policy "app_users_read" on public.app_users for select to authenticated using (auth.uid() is not null)';
+    execute 'drop policy if exists "app_users_write" on public.app_users';
+    execute 'create policy "app_users_write" on public.app_users for all to authenticated using (public.user_role() in (''admin'',''manager'')) with check (public.user_role() in (''admin'',''manager''))';
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='two_factor') then
+    execute 'alter table public.two_factor enable row level security';
+    execute 'drop policy if exists "two_factor_self" on public.two_factor';
+    execute 'create policy "two_factor_self" on public.two_factor for all to authenticated using (user_id = auth.uid()::text) with check (user_id = auth.uid()::text)';
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='kvkk_consents') then
+    execute 'alter table public.kvkk_consents enable row level security';
+    execute 'drop policy if exists "kvkk_consents_select" on public.kvkk_consents';
+    execute 'create policy "kvkk_consents_select" on public.kvkk_consents for select to authenticated using (user_id = auth.uid()::text or public.user_role() in (''admin'',''manager''))';
+    execute 'drop policy if exists "kvkk_consents_insert" on public.kvkk_consents';
+    execute 'create policy "kvkk_consents_insert" on public.kvkk_consents for insert to authenticated with check (user_id = auth.uid()::text)';
+    execute 'drop policy if exists "kvkk_consents_admin" on public.kvkk_consents';
+    execute 'create policy "kvkk_consents_admin" on public.kvkk_consents for all to authenticated using (public.user_role() = ''admin'') with check (public.user_role() = ''admin'')';
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='kvkk_settings') then
+    execute 'alter table public.kvkk_settings enable row level security';
+    execute 'drop policy if exists "kvkk_settings_read" on public.kvkk_settings';
+    execute 'create policy "kvkk_settings_read" on public.kvkk_settings for select to authenticated using (auth.uid() is not null)';
+    execute 'drop policy if exists "kvkk_settings_admin" on public.kvkk_settings';
+    execute 'create policy "kvkk_settings_admin" on public.kvkk_settings for all to authenticated using (public.user_role() = ''admin'') with check (public.user_role() = ''admin'')';
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='access_rules') then
+    execute 'alter table public.access_rules enable row level security';
+    execute 'drop policy if exists "access_rules_admin" on public.access_rules';
+    execute 'create policy "access_rules_admin" on public.access_rules for all to authenticated using (public.user_role() = ''admin'') with check (public.user_role() = ''admin'')';
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='backups') then
+    execute 'alter table public.backups enable row level security';
+    execute 'drop policy if exists "backups_admin" on public.backups';
+    execute 'create policy "backups_admin" on public.backups for all to authenticated using (public.user_role() = ''admin'') with check (public.user_role() = ''admin'')';
+  end if;
+end $$;
+
+-- locations DELETE (KVKK silme) — 20260628000002 ile aynı
+drop policy if exists "locations_self_or_manager_delete" on public.locations;
+create policy "locations_self_or_manager_delete" on public.locations
+  for delete using (user_id = auth.uid() or public.user_role() in ('admin','manager'));
+
+-- chat-attachments — katılımcı-scope'lu (20260628000001 ile aynı). messages tablosu
+-- ve is_conversation_participant fonksiyonu yukarıda/migration'da tanımlı olmalı.
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='messages')
+     and exists (select 1 from pg_proc where proname='is_conversation_participant') then
+    execute 'drop policy if exists "chat_attach_read" on storage.objects';
+    execute 'create policy "chat_attach_read" on storage.objects for select to authenticated using (bucket_id = ''chat-attachments'' and exists (select 1 from public.messages m where m.attachment_url = storage.objects.name and public.is_conversation_participant(m.conversation_id)))';
+    execute 'drop policy if exists "chat_attach_write" on storage.objects';
+    execute 'create policy "chat_attach_write" on storage.objects for insert to authenticated with check (bucket_id = ''chat-attachments'' and (storage.foldername(name))[1] = auth.uid()::text)';
+    execute 'drop policy if exists "chat_attach_delete" on storage.objects';
+    execute 'create policy "chat_attach_delete" on storage.objects for delete to authenticated using (bucket_id = ''chat-attachments'' and (storage.foldername(name))[1] = auth.uid()::text)';
+  end if;
+end $$;
+
+-- NOT: AI RAG sohbet tabloları (ai_documents/ai_chunks/ai_conversations/ai_messages/
+-- channel_messages), pgvector extension ve RLS'leri YALNIZ migration'larda tutulur
+-- (20260602000000_ai_rag.sql + 20260626000000_ai_rls_secdef_hardening.sql); schema.sql
+-- bunları içermez (pgvector bağımlılığı). ai_messages with-check katılımcı-kontrollü
+-- versiyonu 20260626'dadır.

@@ -93,6 +93,16 @@ export async function applyOp(op: { table: string; action: string; payload: any 
   const keyCol = table === 'work_orders' ? 'number' : 'id';
 
   if (action === 'delete') {
+    // employees ONLINE yolda SOFT delete (active=false; employeesRepo.delete).
+    // Offline drenajda da AYNI semantik uygulanmalı: aksi halde HARD delete
+    // (a) attendance/payroll/payslip cascade ile geçmişi siler, (b) locations/
+    // shifts NO ACTION FK'siyle reddedilip op'u sonsuza dek kuyrukta tıkar
+    // (poison-op). employees'te deleted_at kolonu YOK; active kolonu var.
+    if (table === 'employees') {
+      const { error } = await supabase.from('employees').update({ active: false }).eq('id', payload.id);
+      if (error) throw new Error(error.message);
+      return;
+    }
     // quotes/work_orders/customers soft-delete kullanır (deleted_at). Diğerleri hard delete.
     const SOFT = table === 'quotes' || table === 'work_orders' || table === 'customers';
     const { error } = SOFT

@@ -12,6 +12,8 @@
 //   supabase functions deploy apollo-proxy
 //   (sunucu sırrı için: supabase secrets set APOLLO_API_KEY=...)
 
+import { requireUser } from '../_shared/auth.ts';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -31,6 +33,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Yalnız POST' }), { status: 405, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+
+  // GÜVENLİK: kimliksiz/anon çağrı reddedilir — aksi halde paralı Apollo API'sine
+  // açık röle (maliyet suistimali). Diğer AI proxy'leriyle (ai-proxy/ai-vision/ai-sql)
+  // aynı in-function requireUser kalıbı; gateway verify_jwt'ye güvenilmez.
+  const auth = await requireUser(req, { requireApproved: true });
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { ...CORS, 'Content-Type': 'application/json' } });
   }
 
   let parsed: ReqBody;

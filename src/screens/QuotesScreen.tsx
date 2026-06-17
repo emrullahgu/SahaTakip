@@ -26,6 +26,10 @@ import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { a11yButton, a11yInput } from '../utils/a11y';
 import { supabase } from '../services/supabase';
 import { quoteFromRow } from '../services/data/mappers';
+import { buildCsv, shareCsv } from '../services/csvExport';
+import { quotesToRows } from '../utils/exportRows';
+import { localDateISO } from '../utils/date';
+import { validityBadge, quoteValidity } from '../utils/quoteValidity';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -99,6 +103,15 @@ export default function QuotesScreen() {
     [quotes, filter, search, dateFrom, dateTo]
   );
 
+  const handleExport = async () => {
+    if (!filtered.length) { showToast('Aktarılacak teklif yok', 'error'); return; }
+    try {
+      await shareCsv('teklifler_' + localDateISO(), buildCsv(quotesToRows(filtered)));
+    } catch {
+      showToast('CSV oluşturulamadı', 'error');
+    }
+  };
+
   const stats = useMemo(() => {
     const total = quotes.length;
     const accepted = quotes.filter(q => q.status === 'Kabul Edildi' || q.status === 'Faturalandırıldı').length;
@@ -118,15 +131,25 @@ export default function QuotesScreen() {
           <Text style={styles.title}>Teklifler</Text>
           <Text style={styles.subtitle}>Keşif metrajı ve fiyatlandırma</Text>
         </View>
-        <TouchableOpacity
-          style={styles.newBtn}
-          onPress={() => navigation.navigate('NewQuote')}
-          activeOpacity={0.85}
-          {...a11yButton('Yeni teklif oluştur')}
-        >
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.newBtnText}>Yeni Teklif</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <TouchableOpacity
+            style={styles.exportBtn}
+            onPress={handleExport}
+            activeOpacity={0.85}
+            {...a11yButton('Teklifleri CSV olarak dışa aktar')}
+          >
+            <Ionicons name="download-outline" size={18} color={colors.emerald.default} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.newBtn}
+            onPress={() => navigation.navigate('NewQuote')}
+            activeOpacity={0.85}
+            {...a11yButton('Yeni teklif oluştur')}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.newBtnText}>Yeni Teklif</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats */}
@@ -266,6 +289,8 @@ function QuoteCard({
   // Bilinmeyen/boş status (ör. ajan veya dış kaynaklı kayıt) gelirse Taslak'a düş —
   // aksi halde STATUS_COLORS[status] undefined olur ve tüm Teklifler ekranı çöker.
   const sc = STATUS_COLORS[quote.status] ?? STATUS_COLORS['Taslak'];
+  const vBadge = validityBadge(quote);
+  const vExpired = quoteValidity(quote) === 'expired';
   return (
     <PressableScale style={styles.card} onPress={onPress}>
       <View style={styles.cardTop}>
@@ -283,6 +308,13 @@ function QuoteCard({
           <Text style={[styles.statusText, { color: sc.fg }]}>{quote.status}</Text>
         </View>
       </View>
+
+      {vBadge && (
+        <View style={[styles.validityBadge, { backgroundColor: vExpired ? colors.rose.bg : colors.amber.bg, borderColor: vExpired ? colors.rose.border : colors.amber.border }]}>
+          <Ionicons name="time-outline" size={12} color={vExpired ? colors.rose.default : colors.amber.default} />
+          <Text style={[styles.validityText, { color: vExpired ? colors.rose.default : colors.amber.default }]}>{vBadge}</Text>
+        </View>
+      )}
 
       <View style={styles.cardMeta}>
         <View style={styles.metaItem}>
@@ -346,6 +378,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   newBtnText: { color: '#fff', fontWeight: '800', fontSize: typography.xs },
+  exportBtn: {
+    width: 40,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.emerald.bg,
+    borderWidth: 1,
+    borderColor: colors.emerald.border,
+    borderRadius: radius.md,
+  },
 
   stats: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginVertical: spacing.sm },
   statCard: {
@@ -439,6 +481,8 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 9, fontWeight: '800' },
 
+  validityBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: spacing.sm },
+  validityText: { fontSize: typography.xs, fontWeight: '800' },
   cardMeta: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm, marginBottom: spacing.sm },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 10, color: colors.text.faint },

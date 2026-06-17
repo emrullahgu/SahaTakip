@@ -227,11 +227,16 @@ async function execTool(name: string, args: any): Promise<any> {
   switch (name) {
     case 'find_customer': {
       const q = String(args.query ?? '').trim();
-      if (!q) return { matches: [] };
+      // GÜVENLİK: q PostgREST .or() GRAMERİNE ham giriyor (değer değil). ',' '(' ')'
+      // '.' operatör/ayraç token'ları + '*'/'%' wildcard → filter-grammar injection
+      // (service_role ile RLS bypass). Whitelist: yalnız Unicode harf/rakam/boşluk
+      // bırak (Türkçe adlar + telefon/vergi-no rakamları korunur), gerisi boşluğa.
+      const safeQ = q.replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
+      if (!safeQ) return { matches: [] };
       const { data, error } = await supabase
         .from('customers')
         .select('id, short_name, title, phone, email, city')
-        .or(`short_name.ilike.%${q}%,title.ilike.%${q}%,phone.ilike.%${q}%,tax_number.ilike.%${q}%`)
+        .or(`short_name.ilike.%${safeQ}%,title.ilike.%${safeQ}%,phone.ilike.%${safeQ}%,tax_number.ilike.%${safeQ}%`)
         .limit(10);
       if (error) return { error: error.message };
       return { matches: data ?? [] };

@@ -1,5 +1,6 @@
 // Faz 49 — Güvenlik, KVKK ve Kurumsal Dayanıklılık servisi
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabase';
 import type {
   SecClassificationItem, SecSensitivity,
   KvkkRequest, KvkkRequestType, KvkkRequestStatus,
@@ -162,12 +163,41 @@ export async function addExportJob(userName: string, format: DataExportJob['form
 }
 
 export const listErasureJobs = () => get<DataErasureJob[]>(K.era, seedEra);
-export async function addErasureJob(userName: string, scope: DataErasureJob['scope']): Promise<void> {
+// scope==='full' + userId verilirse GERÇEK silme yapılır: sunucu RPC'si
+// (kvkk_erase_user) veri sahibinin konum/vardiya/check-in/geofence PII'sini
+// atomik siler ve job 'completed'/'failed' olarak işaretlenir (önceden her zaman
+// 'queued' kalıp hiçbir şey yapmıyordu — Req#3 dürüstlük ihlali). Diğer kapsamlar
+// (anonymize/partial) veya userId yoksa eski 'queued' davranışı korunur.
+export async function addErasureJob(
+  userName: string,
+  scope: DataErasureJob['scope'],
+  userId?: string,
+): Promise<DataErasureJob> {
   const list = await listErasureJobs();
-  const fresh: DataErasureJob = {
+  const base: DataErasureJob = {
     id: 'r' + Date.now(), userName, scope, status: 'queued', requestedAt: new Date().toISOString(),
   };
-  await set(K.era, [fresh, ...list]);
+
+  if (scope === 'full' && userId) {
+    try {
+      const { data, error } = await supabase.rpc('kvkk_erase_user', { p_user: userId });
+      if (error) throw new Error(error.message);
+      const affected = data && typeof data === 'object'
+        ? Object.values(data as Record<string, unknown>).reduce<number>((a, b) => a + (Number(b) || 0), 0)
+        : 0;
+      const done: DataErasureJob = { ...base, status: 'completed', completedAt: new Date().toISOString(), affectedRecords: affected };
+      await set(K.era, [done, ...list]);
+      return done;
+    } catch (e) {
+      console.warn('[kvkk.erase]', e);
+      const failed: DataErasureJob = { ...base, status: 'failed', completedAt: new Date().toISOString() };
+      await set(K.era, [failed, ...list]);
+      return failed;
+    }
+  }
+
+  await set(K.era, [base, ...list]);
+  return base;
 }
 
 export const listDevices = () => get<SecDevice[]>(K.dev, seedDev);

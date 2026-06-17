@@ -54,10 +54,13 @@ describe('applyOp — delete dalı', () => {
     expect(mockCalls.find(c => c.op === 'update.eq')).toMatchObject({ table: 'customers', col: 'id', val: 'cu-1' });
   });
 
-  it('employees delete → HARD delete (soft değil)', async () => {
+  it('employees delete → SOFT (active=false), keyCol "id" (online ile özdeş, poison-op yok)', async () => {
     await applyOp({ table: 'employees', action: 'delete', payload: { id: 'e-1' } });
-    expect(mockCalls.find(c => c.op === 'delete.eq')).toMatchObject({ table: 'employees', col: 'id', val: 'e-1' });
-    expect(mockCalls.find(c => c.op === 'update.eq')).toBeUndefined();
+    const eq = mockCalls.find(c => c.op === 'update.eq');
+    expect(eq).toMatchObject({ table: 'employees', col: 'id', val: 'e-1' });
+    const upd = mockCalls.find(c => c.op === 'update' && c.table === 'employees');
+    expect(upd.row).toMatchObject({ active: false });
+    expect(mockCalls.find(c => c.op === 'delete.eq')).toBeUndefined(); // HARD delete olmamalı
   });
 });
 

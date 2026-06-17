@@ -5,10 +5,17 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-function escapeCell(v: unknown): string {
+// GÜVENLİK: CSV formül enjeksiyonu + RFC4180 kaçışı.
+// Excel/Google Sheets '=', '+', '-', '@', TAB veya CR ile başlayan bir hücreyi
+// FORMÜL olarak çalıştırır (ör. ad="=HYPERLINK(...)" veya "=cmd|'...'"). Personel/
+// müşteri adları kullanıcı girdisi olduğundan, dışa aktarılan CSV'de bu tehlikeli.
+// Tehlikeli prefix'i tek tırnakla nötralize et; ayrıca ; " ve satır sonu içeren
+// hücreyi tırnakla (içteki tırnağı ikile).
+export function escapeCell(v: unknown): string {
   if (v === null || v === undefined) return '';
-  const s = String(v);
-  if (s.includes(';') || s.includes('"') || s.includes('\n')) {
+  let s = String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  if (s.includes(';') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
     return '"' + s.replace(/"/g, '""') + '"';
   }
   return s;

@@ -2,6 +2,7 @@
 // SQL: schema.sql sonunda tanımlı `list_all_users` + `set_user_role` + `set_user_approval` RPC'leri.
 
 import { supabase } from './supabase';
+import { auditRepo } from './data/auditRepo';
 import type { ApprovalStatus, UserRole } from '../context/AuthContext';
 
 const SUPABASE_CONFIGURED: boolean = !!(
@@ -39,6 +40,9 @@ export async function setUserRole(
     target_id: userId,
     new_role: role,
   });
+  // İzsiz ayrıcalık-verme yolunu kapat: kim kime hangi rolü verdi denetime yazılır.
+  // (Sunucu RPC'si de loglamalı; bu client-tarafı stopgap aktörü hemen kaydeder.)
+  if (!error) void auditRepo.logCurrent({ action: 'user.role.set', tableName: 'profiles', refId: userId, meta: { role } });
   return { error: error?.message ?? null };
 }
 
@@ -53,5 +57,6 @@ export async function setUserApprovalStatus(
     new_status: status,
     reason: reason || null,
   });
+  if (!error) void auditRepo.logCurrent({ action: 'user.approval.set', tableName: 'profiles', refId: userId, meta: { status, reason: reason || null } });
   return { error: error?.message ?? null };
 }

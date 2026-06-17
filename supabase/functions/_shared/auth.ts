@@ -21,11 +21,21 @@ export interface AuthResult {
 
 export async function requireUser(
   req: Request,
-  opts: { roles?: string[]; requireApproved?: boolean } = {},
+  opts: { roles?: string[]; requireApproved?: boolean; allowServiceRole?: boolean } = {},
 ): Promise<AuthResult> {
   const authHeader = req.headers.get('Authorization') || req.headers.get('authorization') || '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+
+  // Internal/cron çağrıları: service_role anahtarı GÜVENİLİR (yalnız sunucu env'inde
+  // bulunur, client bundle'ında ASLA yer almaz). Fonksiyon-içi çağrılar (ör. ai-insights
+  // → gmail-send) bunu kullanır. allowServiceRole olmayan fonksiyonlarda yine reddedilir.
+  if (opts.allowServiceRole) {
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    if (serviceKey && jwt === serviceKey) {
+      return { ok: true, status: 200, role: 'service_role' };
+    }
+  }
 
   // Boş ya da anon key → kimliksiz; reddet.
   if (!jwt || jwt === anonKey) {

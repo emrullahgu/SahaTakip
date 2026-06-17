@@ -72,7 +72,11 @@ export async function clearSynced(): Promise<number> {
   return list.length - remaining.length;
 }
 
-// ── Sync runner (mock — flips pending → synced unless `forceFail` payload) ───
+// ── Sync runner ──────────────────────────────────────────────────────────
+// DEMO-ONLY: Bu fonksiyon GERÇEK sunucu senkronu DEĞİLDİR. Yalnız yerel demo
+// kuyruğu (offline_ops_v1) üzerinde çalışır ve pending → synced olarak işaretler
+// (forceFail/forceConflict mock bayrakları hariç); Supabase'e HİÇBİR çağrı yapmaz.
+// Gerçek offline→online senkron için: services/data/syncDrain.ts → drainSyncQueue().
 export async function runSync(): Promise<SyncLogEntry> {
   const startedAt = new Date().toISOString();
   const t0 = Date.now();

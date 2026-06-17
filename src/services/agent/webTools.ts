@@ -361,7 +361,23 @@ export const check_regulation_updates: ToolDef = {
       const res = await fetch_url.handler({ url: p.url, maxChars }, { app: null as any, confirm: async () => true, log: () => {} });
       out.push({ label: p.label, url: p.url, ...res });
     }
-    return { ok: true, category: key, name: src.name, fetchedAt: new Date().toISOString(), sources: out };
+    // DÜRÜSTLÜK (Req#3): tüm kaynak fetch'leri başarısızsa (CORS/zaman aşımı/4xx)
+    // koşulsuz ok:true dönmek ajanın "mevzuat tarandı" diye yalan söylemesine yol
+    // açıyordu. En az bir kaynak indiyse kısmi başarı geçerli; hiçbiri inmediyse
+    // ok:false + error → ajan başarısızlığı bilir.
+    const fetched = out.filter((o: any) => o && o.ok).length;
+    return {
+      ok: fetched > 0,
+      category: key,
+      name: src.name,
+      fetchedAt: new Date().toISOString(),
+      fetched,
+      failed: out.length - fetched,
+      sources: out,
+      ...(fetched === 0
+        ? { error: 'Hiçbir mevzuat kaynağı indirilemedi (CORS/zaman aşımı/erişim). Sonuçlar güvenilir değil.' }
+        : {}),
+    };
   },
 };
 

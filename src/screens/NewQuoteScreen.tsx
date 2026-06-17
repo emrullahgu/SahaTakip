@@ -11,8 +11,12 @@ import {
   FlatList,
   Alert,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { HIT_SLOP_8 } from '../utils/a11y';
+import { formatTRY } from '../utils/money';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -78,7 +82,7 @@ export default function NewQuoteScreen() {
     return null;
   });
   const [title, setTitle] = useState(editingQuote?.title ?? prefill?.title ?? '');
-  const [notes, setNotes] = useState(editingQuote?.notes ?? '');
+  const [notes, setNotes] = useState(editingQuote?.notes ?? prefill?.notes ?? '');
   const [lines, setLines] = useState<QuoteLine[]>(editingQuote?.lines ?? prefill?.lines ?? []);
   const [recents, setRecents] = useState<RecentPoz[]>([]);
   const [showRecents, setShowRecents] = useState(false);
@@ -280,7 +284,14 @@ export default function NewQuoteScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-
+      {/* iOS'ta klavye Notlar/manuel fiyat girişinde save bar'ı ve aktif input'u
+          örtüyordu (CustomerFormScreen'deki kanıtlanmış desen). Android'de
+          undefined → mevcut window-resize davranışı korunur. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* === MÜŞTERİ === */}
         <View style={styles.section}>
@@ -440,19 +451,19 @@ export default function NewQuoteScreen() {
           <View style={styles.totalRow}>
             <Text style={styles.totalRowLabel}>Ara Toplam (KDV Hariç)</Text>
             <Text style={styles.totalRowValue}>
-              ₺{totals.subtotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+              {formatTRY(totals.subtotal)}
             </Text>
           </View>
           <View style={styles.totalRow}>
             <Text style={styles.totalRowLabel}>KDV Toplamı</Text>
             <Text style={styles.totalRowValue}>
-              ₺{totals.vatTotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+              {formatTRY(totals.vatTotal)}
             </Text>
           </View>
           <View style={[styles.totalRow, styles.grandTotalRow]}>
             <Text style={styles.grandLabel}>GENEL TOPLAM</Text>
             <Text style={styles.grandValue}>
-              ₺{totals.grandTotal.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+              {formatTRY(totals.grandTotal)}
             </Text>
           </View>
         </View>
@@ -468,6 +479,7 @@ export default function NewQuoteScreen() {
           <Text style={styles.saveBtnText}>{editingQuote ? 'Değişiklikleri Kaydet' : 'Teklifi Kaydet'}</Text>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       {/* CUSTOMER MODAL */}
       <Modal
@@ -492,7 +504,7 @@ export default function NewQuoteScreen() {
                   <Ionicons name="add" size={16} color="#fff" />
                   <Text style={styles.newCustomerBtnText}>Yeni Müşteri</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowCustomerModal(false)}>
+                <TouchableOpacity onPress={() => setShowCustomerModal(false)} hitSlop={HIT_SLOP_8}>
                   <Ionicons name="close" size={22} color={colors.text.muted} />
                 </TouchableOpacity>
               </View>
@@ -559,7 +571,7 @@ export default function NewQuoteScreen() {
           <View style={[styles.modalSheet, { height: '85%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Poz Seç ({POZ_CATALOG.length} kalem)</Text>
-              <TouchableOpacity onPress={() => setShowPozModal(false)}>
+              <TouchableOpacity onPress={() => setShowPozModal(false)} hitSlop={HIT_SLOP_8}>
                 <Ionicons name="close" size={22} color={colors.text.muted} />
               </TouchableOpacity>
             </View>
@@ -643,7 +655,7 @@ export default function NewQuoteScreen() {
               <Text style={styles.modalTitle}>
                 Ürün Seç ({MATERIAL_CATALOG.length.toLocaleString('tr-TR')} ürün)
               </Text>
-              <TouchableOpacity onPress={() => setShowProductModal(false)}>
+              <TouchableOpacity onPress={() => setShowProductModal(false)} hitSlop={HIT_SLOP_8}>
                 <Ionicons name="close" size={22} color={colors.text.muted} />
               </TouchableOpacity>
             </View>
@@ -762,6 +774,8 @@ function LineCard({
 }) {
   const isManualLine = line.pozId.startsWith('MANUAL-');
   const [expanded, setExpanded] = useState(false);
+  // Mevcut not varsa (kullanıcı açıklaması veya ⚠ sistem uyarısı) açıklama alanı açık başlasın.
+  const [showNote, setShowNote] = useState(!!(line.notes && line.notes.trim()));
   const [manualPricing, setManualPricing] = useState(isManualLine);
   const [editingName, setEditingName] = useState(isManualLine && !line.pozName);
   const [saving, setSaving] = useState(false);
@@ -880,7 +894,7 @@ function LineCard({
         <View style={{ flex: 1 }} />
         <Text style={lineStyles.subTotalLabel}>Satır Top:</Text>
         <Text style={lineStyles.subTotalValue}>
-          ₺{calc.total.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+          {formatTRY(calc.total)}
         </Text>
       </View>
 
@@ -977,6 +991,34 @@ function LineCard({
           </View>
         </View>
       )}
+
+      {/* AÇIKLAMA (opsiyonel) — "+ Açıklama ekle" ile açılır. Müşteri teklif PDF'inde
+          kalemin altında görünür; sistem uyarıları (⚠) PDF'e basılmaz. */}
+      {showNote ? (
+        <View style={lineStyles.noteWrap}>
+          <View style={lineStyles.noteHeader}>
+            <Ionicons name="document-text-outline" size={13} color={colors.text.muted} />
+            <Text style={lineStyles.noteLabel}>Açıklama</Text>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity onPress={() => { setShowNote(false); onUpdate({ notes: undefined }); }} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.text.faint} />
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={lineStyles.noteInput}
+            value={line.notes ?? ''}
+            onChangeText={v => onUpdate({ notes: v })}
+            placeholder="Bu kaleme dair açıklama / not (müşteri teklifinde görünür)…"
+            placeholderTextColor={colors.text.faint}
+            multiline
+          />
+        </View>
+      ) : (
+        <TouchableOpacity onPress={() => setShowNote(true)} style={lineStyles.addNoteBtn} activeOpacity={0.7} hitSlop={6}>
+          <Ionicons name="add-circle-outline" size={15} color={brand.green} />
+          <Text style={lineStyles.addNoteText}>Açıklama ekle</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -1066,7 +1108,7 @@ function BreakRow({
           highlight && { color: colors.emerald.default, fontWeight: '800' },
         ]}
       >
-        ₺{value.toLocaleString('tr-TR', { maximumFractionDigits: 2 })}
+        {formatTRY(value)}
       </Text>
     </View>
   );
@@ -1127,7 +1169,7 @@ const lineStyles = StyleSheet.create({
   },
   lineNoText: { color: '#fff', fontSize: 10, fontWeight: '900' },
   pozId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
-  pozName: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2, lineHeight: 15 },
+  pozName: { fontSize: typography.sm, color: colors.text.primary, fontWeight: '700', marginTop: 2, lineHeight: 16 },
   removeBtn: {
     width: 26,
     height: 26,
@@ -1153,7 +1195,7 @@ const lineStyles = StyleSheet.create({
   },
   qtyUnit: { fontSize: 10, color: colors.text.faint, marginLeft: 2 },
   subTotalLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '600' },
-  subTotalValue: { fontSize: typography.xs, color: colors.emerald.default, fontWeight: '900', marginLeft: 4 },
+  subTotalValue: { fontSize: typography.sm, color: colors.emerald.default, fontWeight: '900', marginLeft: 4 },
 
   columnsGrid: { flexDirection: 'row', gap: 4 },
   col: { flex: 1 },
@@ -1186,6 +1228,24 @@ const lineStyles = StyleSheet.create({
 
   expandBtn: { marginTop: spacing.sm, alignSelf: 'center' },
   expandText: { fontSize: 10, color: brand.green, fontWeight: '700' },
+
+  addNoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, marginTop: 2, alignSelf: 'flex-start' },
+  addNoteText: { color: brand.green, fontSize: typography.xs, fontWeight: '800' },
+  noteWrap: { marginTop: 8 },
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  noteLabel: { color: colors.text.muted, fontSize: typography.xs, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  noteInput: {
+    backgroundColor: colors.bg.primary,
+    borderWidth: 1,
+    borderColor: colors.border.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    minHeight: 54,
+    textAlignVertical: 'top',
+  },
 
   expandSection: { marginTop: spacing.sm },
   breakdown: {
@@ -1292,7 +1352,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     gap: spacing.sm,
   },
-  emptyLinesText: { color: colors.text.faint, fontSize: typography.xs, textAlign: 'center' },
+  emptyLinesText: { color: colors.text.faint, fontSize: typography.sm, textAlign: 'center' },
 
   totalsCard: {
     backgroundColor: colors.bg.secondary,
