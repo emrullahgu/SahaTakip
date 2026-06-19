@@ -42,7 +42,11 @@ export interface ExternalApiKeys {
 
 const DEFAULTS: ExternalApiKeys = {
   googleMapsKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY,
-  apolloApiKey: process.env.EXPO_PUBLIC_APOLLO_API_KEY,
+  // GÜVENLİK: apolloApiKey ARTIK env default'undan ALINMAZ. EXPO_PUBLIC_* her zaman
+  // istemci bundle'ına gömülür → Apollo anahtarı APK/web kaynağına sızıyordu. Anahtar
+  // yalnızca (a) kullanıcının Ayarlar → Harici API Anahtarları ekranından girdiği değer
+  // (AsyncStorage, bundle'a girmez) veya (b) apollo-proxy edge fonksiyonunun sunucu sırrı
+  // (APOLLO_API_KEY secret) üzerinden gelir. Sızan eski anahtar ROTATE edilmeli.
 };
 
 export async function getExternalApiKeys(): Promise<ExternalApiKeys> {

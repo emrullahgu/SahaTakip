@@ -1,5 +1,7 @@
 // apollo.ts — Apollo.io entegrasyonu: lead/firma arama + kişi/firma zenginleştirme.
-// API anahtarı externalApiKeys (AsyncStorage) veya EXPO_PUBLIC_APOLLO_API_KEY'den gelir.
+// API anahtarı YALNIZ externalApiKeys (kullanıcının girdiği, AsyncStorage) veya web'de
+// apollo-proxy edge'inin sunucu sırrı (APOLLO_API_KEY) üzerinden gelir. EXPO_PUBLIC env
+// default'u GÜVENLİK nedeniyle kaldırıldı (bundle'a sızıyordu).
 // Kullanım: CRM (müşteri zenginleştir / yeni lead bul) + AI ajan araçları.
 //
 // CORS: Tarayıcıda (RN-web) api.apollo.io'ya doğrudan istek CORS ile "Failed to
