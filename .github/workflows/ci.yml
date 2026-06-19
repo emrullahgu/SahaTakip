@@ -29,5 +29,8 @@ jobs:
       - name: TypeScript tip kontrolu
         run: npx tsc --noEmit
 
-      - name: Jest testleri
+      - name: Jest testleri (pure-logic)
         run: npx jest --ci
+
+      - name: Ekran smoke-render testleri
+        run: npx jest --ci --config jest.render.config.js
