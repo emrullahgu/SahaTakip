@@ -1,6 +1,6 @@
 // ChatbotFAB — POZ-DEV-320 Sahada anlık yardım (Copilot LLM + kural tabanlı fallback)
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, Keyboard, useWindowDimensions, Platform, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -59,8 +59,21 @@ export default function ChatbotFAB() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
+
+  // WhatsApp tarzı: klavye açılınca panel yukarı gelsin. RN Modal'ı Android'de klavyeyle
+  // birlikte OTOMATİK resize ETMEZ (KeyboardAvoidingView behavior=undefined no-op'tu), bu
+  // yüzden klavye yüksekliğini elle dinleyip kartı o kadar yukarı kaldırıyoruz.
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const sub1 = Keyboard.addListener(showEvt, e => setKbHeight(e.endCoordinates?.height ?? 0));
+    const sub2 = Keyboard.addListener(hideEvt, () => setKbHeight(0));
+    return () => { sub1.remove(); sub2.remove(); };
+  }, []);
   const { workOrders, customers, quotes, employees } = useAppContext();
   const { profile, user } = useAuth();
   const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -173,8 +186,17 @@ export default function ChatbotFAB() {
         <Ionicons name="chatbubble-ellipses" size={24} color="#fff" />
       </TouchableOpacity>
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.modalRoot}>
-          <View style={s.modalCard}>
+        <View style={s.modalRoot}>
+          <View
+            style={[
+              s.modalCard,
+              // Klavye açıkken: kartı klavyenin üstüne taşı (marginBottom) ve yüksekliğini
+              // üstten taşmayacak biçimde sınırla. Kapalıyken normal %75 yükseklik.
+              kbHeight > 0
+                ? { height: Math.max(winH - kbHeight - insets.top - 12, winH * 0.4), marginBottom: kbHeight }
+                : { height: winH * 0.75 },
+            ]}
+          >
             <View style={s.modalHeader}>
               <View style={s.headerIcon}><Ionicons name="chatbubbles" size={18} color="#fff" /></View>
               <Text style={s.modalTitle}>SahaTakip Asistanı</Text>
@@ -210,7 +232,7 @@ export default function ChatbotFAB() {
                 <TouchableOpacity onPress={() => setPending(null)}><Ionicons name="close-circle" size={18} color={colors.rose.default} /></TouchableOpacity>
               </View>
             )}
-            <View style={[s.inputRow, { paddingBottom: insets.bottom + spacing.sm }]}>
+            <View style={[s.inputRow, { paddingBottom: (kbHeight > 0 ? spacing.sm : insets.bottom + spacing.sm) }]}>
               <TouchableOpacity style={s.attachBtn} onPress={pickImage} disabled={busy} hitSlop={6}>
                 <Ionicons name="image-outline" size={22} color={colors.text.muted} />
               </TouchableOpacity>
@@ -223,15 +245,17 @@ export default function ChatbotFAB() {
                 onChangeText={setInput}
                 placeholder="Sorunuzu yazın veya 📎 ile foto/PDF ekleyin..."
                 placeholderTextColor={colors.text.faint}
-                onSubmitEditing={onSend}
                 editable={!busy}
+                multiline
+                textAlignVertical="top"
+                blurOnSubmit={false}
               />
               <TouchableOpacity style={[s.sendBtn, busy && { opacity: 0.5 }]} onPress={onSend} disabled={busy}>
                 {busy ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={18} color="#fff" />}
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </>
   );
@@ -240,7 +264,7 @@ export default function ChatbotFAB() {
 const s = StyleSheet.create({
   fab: { position: 'absolute', left: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8 },
   modalRoot: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { height: '75%', backgroundColor: colors.bg.primary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, overflow: 'hidden' },
+  modalCard: { backgroundColor: colors.bg.primary, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, overflow: 'hidden' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.bg.secondary, borderBottomWidth: 1, borderBottomColor: colors.border.primary },
   headerIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
   modalTitle: { color: colors.text.primary, fontSize: typography.md, fontWeight: '800', flex: 1 },
@@ -249,11 +273,13 @@ const s = StyleSheet.create({
   userBubble: { alignSelf: 'flex-end', backgroundColor: '#0ea5e9' },
   botBubble: { alignSelf: 'flex-start', backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary },
   bubbleText: { color: colors.text.primary, fontSize: typography.sm },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
-  attachBtn: { padding: 4 },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border.primary, backgroundColor: colors.bg.secondary },
+  attachBtn: { padding: 4, height: 44, justifyContent: 'center' },
   pendingBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: spacing.md, paddingVertical: 8, marginHorizontal: spacing.sm, marginTop: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary },
   pendingName: { flex: 1, color: colors.text.primary, fontSize: typography.xs },
-  input: { flex: 1, backgroundColor: colors.bg.primary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, color: colors.text.primary, fontSize: typography.sm },
+  // multiline + auto-grow: minHeight ~1 satır, maxHeight ~4 satır (lineHeight 20*4 + dikey
+  // padding). 4 satırı aşınca kendi içinde kayar. WhatsApp benzeri davranış.
+  input: { flex: 1, backgroundColor: colors.bg.primary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm, color: colors.text.primary, fontSize: typography.base, lineHeight: 20, minHeight: 44, maxHeight: 20 * 4 + 24 },
   sendBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: '#a855f7', alignItems: 'center', justifyContent: 'center' },
   agentBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#7c3aed', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.md },
   agentBtnText: { color: '#fff', fontSize: typography.xs, fontWeight: '800' },
