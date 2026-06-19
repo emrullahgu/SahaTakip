@@ -42,6 +42,7 @@ import { useAuth } from './AuthContext';
 import { localDateISO } from '../utils/date';
 import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotifications';
 import { Notify } from '../services/notifications';
+import { checkSlaBreaches } from '../services/slaWatcher';
 
 // Bordroda günlük ücret = aylık ücret / standart iş günü. TR uygulamasında
 // genelde 30 (yasal) ya da ~22 (fiili çalışma günü) kullanılır; tek yerden
@@ -164,6 +165,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (eR.status === 'fulfilled') setEmployees(eR.value); else console.warn('[refresh.employees]', eR.reason);
       const anyFailed = [qR, cR, wR, eR].some(r => r.status === 'rejected');
       setSyncState(anyFailed ? 'error' : 'idle');
+      // SLA ihlali PROAKTİF taraması (Req#7): yenilenen iş emirleri üzerinden her WO için
+      // bir kez bildir (slaWatcher AsyncStorage seti ile spam önler). Taze wR.value
+      // kullanılır — workOrders state'i bu noktada henüz güncellenmemiş olabilir.
+      if (wR.status === 'fulfilled') {
+        void checkSlaBreaches(wR.value).catch(e => console.warn('[refresh.slaCheck]', e));
+      }
     } catch (err) {
       console.warn('[AppContext.refresh]', err);
       setSyncState('error');
