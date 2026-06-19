@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   statBox: { flex: 1, alignItems: 'center' },
   statVal: { fontSize: typography.lg, color: colors.text.primary, fontWeight: '800' },
-  statLbl: { fontSize: 9, color: colors.text.faint, marginTop: 2 },
+  statLbl: { fontSize: 10, color: colors.text.faint, marginTop: 2 },
   list: { paddingBottom: 24 },
   card: {
     flexDirection: 'row',
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   photosRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
   photoBox: { flex: 1 },
   photoLabel: {
-    fontSize: 9,
+    fontSize: 10,
     color: colors.text.faint,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   costItem: { flex: 1, alignItems: 'center' },
-  costLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '700', marginBottom: 3 },
+  costLabel: { fontSize: 10, color: colors.text.faint, fontWeight: '700', marginBottom: 3 },
   costVal: { fontSize: typography.xs, color: colors.text.secondary, fontWeight: '700' },
   notesBox: {
     backgroundColor: colors.bg.card,

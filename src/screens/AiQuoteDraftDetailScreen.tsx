@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   itName: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '600' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' },
   confPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
-  confText: { fontSize: 9, fontWeight: '800' },
+  confText: { fontSize: 10, fontWeight: '800' },
   unitText: { color: colors.text.faint, fontSize: 10 },
   warn: { color: '#f59e0b', fontSize: typography.xs, marginTop: spacing.sm, lineHeight: 16 },
   itQty: { color: colors.text.muted, fontSize: typography.xs },

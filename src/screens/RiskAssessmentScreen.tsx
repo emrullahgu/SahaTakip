@@ -127,7 +127,7 @@ const s = StyleSheet.create({
   card: { flexDirection: 'row', gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, borderLeftWidth: 4 },
   scoreBadge: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   scoreV: { color: '#fff', fontSize: typography.lg, fontWeight: '800' },
-  scoreL: { color: '#fff', fontSize: 9 },
+  scoreL: { color: '#fff', fontSize: 10 },
   title: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   meta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   formula: { color: colors.text.faint, fontSize: 10, marginTop: 2 },

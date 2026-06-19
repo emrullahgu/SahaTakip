@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
 
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.md, gap: spacing.md },
   metaItem: { minWidth: '45%' },
-  metaLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase' },
+  metaLabel: { fontSize: 10, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase' },
   metaValue: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2 },
 
   sectionLabel: {
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lineNoText: { color: '#fff', fontSize: 10, fontWeight: '900' },
-  linePozId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
+  linePozId: { fontSize: 10, color: colors.text.faint, fontWeight: '700' },
   linePozName: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2 },
   lineMeta: {
     flexDirection: 'row',

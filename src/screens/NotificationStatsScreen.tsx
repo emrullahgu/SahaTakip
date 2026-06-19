@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   dayBarWrap: { flex: 1, width: '100%', justifyContent: 'flex-end' },
   dayBar: { width: '100%', borderTopLeftRadius: 3, borderTopRightRadius: 3, minHeight: 3 },
   dayCount: { color: colors.text.primary, fontSize: 10, fontWeight: '800' },
-  dayLbl: { color: colors.text.muted, fontSize: 9 },
+  dayLbl: { color: colors.text.muted, fontSize: 10 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   evDot: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   barLabel: { color: colors.text.primary, fontSize: typography.xs, width: 100 },

@@ -72,7 +72,7 @@ const s = StyleSheet.create({
   card: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.bg.secondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary },
   score: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
   scoreV: { color: '#fff', fontSize: typography.lg, fontWeight: '800' },
-  scoreL: { color: '#fff', fontSize: 9, fontWeight: '700' },
+  scoreL: { color: '#fff', fontSize: 10, fontWeight: '700' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   cust: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '800', flex: 1 },
   chip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },

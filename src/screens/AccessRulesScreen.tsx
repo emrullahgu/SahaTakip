@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   card: { padding: spacing.md, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, marginBottom: spacing.sm },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   kindBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
-  kindText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  kindText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   valueText: { flex: 1, color: colors.text.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: typography.xs, fontWeight: '700' },
   label: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },

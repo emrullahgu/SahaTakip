@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   title: { flex: 1, color: colors.text.primary, fontWeight: '700', fontSize: typography.sm, lineHeight: 18 },
   sevPill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  sevText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  sevText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   desc: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4, lineHeight: 16 },
   kindLabel: { color: colors.text.faint, fontSize: 10, marginTop: 4, fontWeight: '700' },
   empty: { alignItems: 'center', paddingVertical: 60, gap: 8 },

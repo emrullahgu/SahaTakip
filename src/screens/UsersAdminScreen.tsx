@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { color: colors.text.primary, fontWeight: '700', fontSize: typography.sm, flexShrink: 1 },
   inactivePill: { backgroundColor: 'rgba(100,116,139,0.2)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
-  inactiveText: { color: colors.text.muted, fontSize: 9, fontWeight: '700' },
+  inactiveText: { color: colors.text.muted, fontSize: 10, fontWeight: '700' },
   email: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   rolePill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.full, borderWidth: 1 },
   roleText: { fontSize: 10, fontWeight: '800' },

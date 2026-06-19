@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: { color: brand.green, fontSize: 16, fontWeight: '900' },
-  statLabel: { color: colors.text.muted, fontSize: 9, marginTop: 4, fontWeight: '700', textTransform: 'uppercase' },
+  statLabel: { color: colors.text.muted, fontSize: 10, marginTop: 4, fontWeight: '700', textTransform: 'uppercase' },
   section: { color: brand.green, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginTop: 14, marginBottom: 8 },
   card: {
     flexDirection: 'row',

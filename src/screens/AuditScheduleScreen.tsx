@@ -118,7 +118,7 @@ const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, borderLeftWidth: 4 },
   dateBox: { width: 50, height: 50, borderRadius: radius.sm, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   dD: { fontSize: typography.lg, fontWeight: '800' },
-  dM: { color: colors.text.muted, fontSize: 9, textTransform: 'uppercase' },
+  dM: { color: colors.text.muted, fontSize: 10, textTransform: 'uppercase' },
   title: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   meta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   scope: { color: colors.text.faint, fontSize: typography.xs, marginTop: 2 },

@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: { fontSize: typography.lg, color: colors.text.primary, fontWeight: '900' },
-  statLabel: { fontSize: 9, color: colors.text.muted, marginTop: 2, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  statLabel: { fontSize: 10, color: colors.text.muted, marginTop: 2, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   searchRow: {
     flexDirection: 'row',
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignSelf: 'flex-start',
   },
-  statusText: { fontSize: 9, fontWeight: '800' },
+  statusText: { fontSize: 10, fontWeight: '800' },
 
   validityBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: spacing.sm },
   validityText: { fontSize: typography.xs, fontWeight: '800' },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border.primary,
   },
-  totalLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  totalLabel: { fontSize: 10, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   totalValue: { fontSize: typography.lg, color: colors.emerald.default, fontWeight: '900', marginTop: 2 },
   deleteBtn: {
     width: 32,

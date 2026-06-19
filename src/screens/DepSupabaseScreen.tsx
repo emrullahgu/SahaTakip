@@ -100,7 +100,7 @@ const s = StyleSheet.create({
   scopePill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
   scopeT: { fontSize: 10, fontWeight: '800' },
   reqPill: { backgroundColor: '#ef444433', borderColor: '#ef4444', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  reqT: { color: '#ef4444', fontSize: 9, fontWeight: '800' },
+  reqT: { color: '#ef4444', fontSize: 10, fontWeight: '800' },
   envDesc: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   envMasked: { color: colors.text.faint, fontSize: typography.xs, marginTop: 2, fontFamily: 'monospace' as any },
 });

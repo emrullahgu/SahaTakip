@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontWeight: '800',
   },
-  statLbl: { fontSize: 9, color: colors.text.faint },
+  statLbl: { fontSize: 10, color: colors.text.faint },
   list: { paddingBottom: 24 },
   card: {
     backgroundColor: colors.bg.secondary,

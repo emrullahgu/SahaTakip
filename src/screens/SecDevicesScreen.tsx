@@ -103,7 +103,7 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dev: { color: colors.text.primary, fontSize: typography.base, fontWeight: '700' },
   curPill: { backgroundColor: '#22c55e', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  curT: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  curT: { color: '#fff', fontSize: 10, fontWeight: '800' },
   os: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   meta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   revBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 8, borderRadius: radius.sm },

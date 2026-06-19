@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   dayCol: { flex: 1, alignItems: 'center', gap: 4 },
   dayBarWrap: { flex: 1, width: '100%', justifyContent: 'flex-end' },
   dayBar: { width: '100%', borderTopLeftRadius: 2, borderTopRightRadius: 2, minHeight: 3 },
-  dayLbl: { color: colors.text.muted, fontSize: 8 },
+  dayLbl: { color: colors.text.muted, fontSize: 10 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
   evDot: { width: 14, height: 14, borderRadius: 7 },
   barLabel: { color: colors.text.primary, fontSize: typography.xs, width: 90 },

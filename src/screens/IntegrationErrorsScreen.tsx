@@ -74,7 +74,7 @@ const s = StyleSheet.create({
   card: { padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, borderLeftWidth: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sev: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  sevT: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  sevT: { color: '#fff', fontSize: 10, fontWeight: '800' },
   src: { flex: 1, color: colors.text.primary, fontSize: typography.xs, fontWeight: '700' },
   msg: { color: colors.text.primary, fontSize: typography.sm, marginTop: 4 },
   det: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },

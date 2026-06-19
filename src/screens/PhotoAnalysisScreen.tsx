@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   confidence: { color: colors.text.muted, fontSize: typography.xs },
   cost: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700', marginTop: 2 },
   demoBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#fef3c7', borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3 },
-  demoText: { color: '#b45309', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  demoText: { color: '#b45309', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   demoNote: { color: colors.text.muted, fontSize: typography.xs, lineHeight: 16, marginBottom: spacing.sm, fontStyle: 'italic' },
   sectionT: { color: colors.text.muted, fontSize: typography.xs, fontWeight: '800', marginTop: spacing.sm, marginBottom: 4 },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 4 },

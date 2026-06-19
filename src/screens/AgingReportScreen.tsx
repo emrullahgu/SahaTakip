@@ -194,5 +194,5 @@ const styles = StyleSheet.create({
   rowMeta: { color: colors.text.muted, fontSize: 11, marginTop: 2 },
   rowAmount: { fontSize: typography.sm, fontWeight: '900' },
   bucketPill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.full, marginTop: 4 },
-  bucketPillText: { fontSize: 9, fontWeight: '800' },
+  bucketPillText: { fontSize: 10, fontWeight: '800' },
 });

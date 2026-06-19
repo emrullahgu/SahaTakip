@@ -508,7 +508,7 @@ const s = StyleSheet.create({
   name: { color: colors.text.primary, fontWeight: '600', fontSize: typography.sm, marginTop: 2 },
   tags: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4 },
   priceBox: { alignItems: 'flex-end', minWidth: 80 },
-  edited: { color: colors.blue.default, fontSize: 9, fontWeight: '700', marginTop: 1 },
+  edited: { color: colors.blue.default, fontSize: 10, fontWeight: '700', marginTop: 1 },
   rowActions: { flexDirection: 'row', gap: spacing.md, alignItems: 'center', paddingLeft: spacing.sm },
   editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
   editBox: { width: '100%', maxWidth: 360, backgroundColor: colors.bg.primary, borderRadius: radius.lg, padding: spacing.lg },

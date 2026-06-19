@@ -58,7 +58,7 @@ const s = StyleSheet.create({
   card: { padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, borderLeftWidth: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   b: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
-  bt: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  bt: { color: '#fff', fontSize: 10, fontWeight: '800' },
   n: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   sub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   qty: { fontSize: typography.sm, fontWeight: '800' },

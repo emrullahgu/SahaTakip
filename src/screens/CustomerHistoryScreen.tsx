@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border.primary,
   },
   statValue: { color: brand.green, fontSize: 14, fontWeight: '900' },
-  statLabel: { color: colors.text.muted, fontSize: 9, marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
+  statLabel: { color: colors.text.muted, fontSize: 10, marginTop: 2, fontWeight: '700', textTransform: 'uppercase' },
   section: { color: brand.green, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginBottom: 8 },
   card: {
     flexDirection: 'row',

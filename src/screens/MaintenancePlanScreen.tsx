@@ -121,7 +121,7 @@ const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, borderLeftWidth: 4 },
   dateBox: { width: 56, height: 56, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   dateD: { color: '#fff', fontSize: typography.xl, fontWeight: '800' },
-  dateM: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  dateM: { color: '#fff', fontSize: 10, fontWeight: '800' },
   title: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '800' },
   meta: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   empty: { color: colors.text.muted, textAlign: 'center', marginTop: 40 },

@@ -100,7 +100,7 @@ const s = StyleSheet.create({
   btnT: { color: '#fff', fontSize: 10, fontWeight: '700' },
   revoked: { color: '#ef4444', fontSize: 10, fontWeight: '700' },
   scopes: { flexDirection: 'row', gap: 4, marginTop: 6, flexWrap: 'wrap' },
-  sc: { color: '#10b981', fontSize: 9, fontWeight: '800', backgroundColor: '#10b98122', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
+  sc: { color: '#10b981', fontSize: 10, fontWeight: '800', backgroundColor: '#10b98122', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
   sub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4 },
   fab: { position: 'absolute', bottom: 32, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
   mWrap: { flex: 1, backgroundColor: '#000a', justifyContent: 'flex-end' },

@@ -1168,7 +1168,7 @@ const lineStyles = StyleSheet.create({
     alignItems: 'center',
   },
   lineNoText: { color: '#fff', fontSize: 10, fontWeight: '900' },
-  pozId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
+  pozId: { fontSize: 10, color: colors.text.faint, fontWeight: '700' },
   pozName: { fontSize: typography.sm, color: colors.text.primary, fontWeight: '700', marginTop: 2, lineHeight: 16 },
   removeBtn: {
     width: 26,
@@ -1194,12 +1194,12 @@ const lineStyles = StyleSheet.create({
     borderColor: colors.border.secondary,
   },
   qtyUnit: { fontSize: 10, color: colors.text.faint, marginLeft: 2 },
-  subTotalLabel: { fontSize: 9, color: colors.text.faint, fontWeight: '600' },
+  subTotalLabel: { fontSize: 10, color: colors.text.faint, fontWeight: '600' },
   subTotalValue: { fontSize: typography.sm, color: colors.emerald.default, fontWeight: '900', marginLeft: 4 },
 
   columnsGrid: { flexDirection: 'row', gap: 4 },
   col: { flex: 1 },
-  colLabel: { fontSize: 8, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  colLabel: { fontSize: 10, color: colors.text.faint, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
   colInput: {
     backgroundColor: colors.bg.secondary,
     borderRadius: 6,
@@ -1212,7 +1212,7 @@ const lineStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.secondary,
   },
-  colSub: { fontSize: 8, color: colors.text.faint, textAlign: 'right', marginTop: 1 },
+  colSub: { fontSize: 10, color: colors.text.faint, textAlign: 'right', marginTop: 1 },
 
   dismantleRow: {
     flexDirection: 'row',
@@ -1494,10 +1494,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.primary,
   },
   pozItemLeft: { flex: 1 },
-  pozItemId: { fontSize: 9, color: colors.text.faint, fontWeight: '700' },
+  pozItemId: { fontSize: 10, color: colors.text.faint, fontWeight: '700' },
   pozItemName: { fontSize: typography.xs, color: colors.text.primary, fontWeight: '700', marginTop: 2, lineHeight: 15 },
   pozPriceRow: { flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' },
-  pozPriceTxt: { fontSize: 9, color: colors.text.muted, fontWeight: '600' },
+  pozPriceTxt: { fontSize: 10, color: colors.text.muted, fontWeight: '600' },
   pozAddBtn: {
     width: 32,
     height: 32,

@@ -62,7 +62,7 @@ const s = StyleSheet.create({
   metrics: { flexDirection: 'row', gap: spacing.sm, marginVertical: 4 },
   m: { alignItems: 'flex-start' },
   mV: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
-  mL: { color: colors.text.muted, fontSize: 9 },
+  mL: { color: colors.text.muted, fontSize: 10 },
   barBg: { height: 4, backgroundColor: colors.bg.primary, borderRadius: 2, marginTop: 4, overflow: 'hidden' },
   barFg: { height: 4, borderRadius: 2 },
   scoreBadge: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },

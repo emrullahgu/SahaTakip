@@ -764,7 +764,7 @@ const approvalStyles = StyleSheet.create({
   photos: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
   photoBox: { flex: 1 },
   photoLabel: {
-    fontSize: 9,
+    fontSize: 10,
     color: colors.text.faint,
     fontWeight: '700',
     marginBottom: 4,
@@ -790,7 +790,7 @@ const approvalStyles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   costItem: { flex: 1, alignItems: 'center' },
-  costLbl: { fontSize: 9, color: colors.text.faint, fontWeight: '700', marginBottom: 3 },
+  costLbl: { fontSize: 10, color: colors.text.faint, fontWeight: '700', marginBottom: 3 },
   costVal: { fontSize: typography.xs, color: colors.text.secondary, fontWeight: '700' },
   footer: {
     flexDirection: 'row',
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: { fontSize: 9, color: colors.bg.primary, fontWeight: '900' },
+  badgeText: { fontSize: 10, color: colors.bg.primary, fontWeight: '900' },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 32 },
   pageTitle: { fontSize: typography.lg, color: colors.text.primary, fontWeight: '900', marginBottom: 4 },
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
   empRole: { fontSize: typography.xs, color: colors.text.muted, marginTop: 1 },
   empWage: { alignItems: 'flex-end' },
   empWageVal: { fontSize: typography.md, color: colors.emerald.default, fontWeight: '900' },
-  empWageSub: { fontSize: 9, color: colors.text.faint, marginTop: 2 },
+  empWageSub: { fontSize: 10, color: colors.text.faint, marginTop: 2 },
   attendanceRow: {
     flexDirection: 'row',
     gap: 4,
@@ -1022,8 +1022,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
   },
-  dayLabel: { fontSize: 8, color: colors.text.muted, fontWeight: '600', marginBottom: 2 },
-  dayStatus: { fontSize: 9, fontWeight: '800' },
+  dayLabel: { fontSize: 10, color: colors.text.muted, fontWeight: '600', marginBottom: 2 },
+  dayStatus: { fontSize: 10, fontWeight: '800' },
   wageRow: {
     flexDirection: 'row',
     alignItems: 'center',

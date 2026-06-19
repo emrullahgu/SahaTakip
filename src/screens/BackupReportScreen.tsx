@@ -86,7 +86,7 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { color: colors.text.primary, fontSize: typography.base, fontWeight: '700' },
   typePill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
-  typeT: { fontSize: 9, fontWeight: '800' },
+  typeT: { fontSize: 10, fontWeight: '800' },
   metaRow: { flexDirection: 'row', gap: 4, marginTop: 2 },
   meta: { color: colors.text.muted, fontSize: typography.xs },
   verT: { fontSize: typography.xs, fontWeight: '700', marginTop: 4 },

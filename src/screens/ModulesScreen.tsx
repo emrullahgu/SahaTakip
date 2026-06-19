@@ -53,9 +53,9 @@ const s = StyleSheet.create({
   card: { padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cat: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  catT: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  catT: { color: '#fff', fontSize: 10, fontWeight: '800' },
   n: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   sub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   plan: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
-  planT: { fontSize: 9, fontWeight: '800' },
+  planT: { fontSize: 10, fontWeight: '800' },
 });

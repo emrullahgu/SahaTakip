@@ -137,7 +137,7 @@ const s = StyleSheet.create({
   cellNum: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   dotRow: { flexDirection: 'row', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' },
   dot: { width: 5, height: 5, borderRadius: 3 },
-  dotMore: { color: colors.text.muted, fontSize: 8 },
+  dotMore: { color: colors.text.muted, fontSize: 10 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
   dayTitle: { color: colors.text.primary, fontSize: typography.md, fontWeight: '700' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#22c55e', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full },

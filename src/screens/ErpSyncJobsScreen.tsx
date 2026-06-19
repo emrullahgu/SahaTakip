@@ -71,7 +71,7 @@ const s = StyleSheet.create({
   card: { padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary, borderLeftWidth: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   vbadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
-  vt: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  vt: { color: '#fff', fontSize: 10, fontWeight: '800' },
   t: { flex: 1, color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   cnt: { fontSize: typography.sm, fontWeight: '800' },
   sub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 4 },

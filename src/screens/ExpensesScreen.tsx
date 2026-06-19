@@ -370,5 +370,5 @@ const styles = StyleSheet.create({
   expenseRight: { alignItems: 'flex-end', gap: 4 },
   expenseAmount: { fontSize: typography.sm, color: colors.text.primary, fontWeight: '800' },
   expenseStatus: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: radius.sm },
-  expenseStatusText: { fontSize: 9, fontWeight: '700' },
+  expenseStatusText: { fontSize: 10, fontWeight: '700' },
 });

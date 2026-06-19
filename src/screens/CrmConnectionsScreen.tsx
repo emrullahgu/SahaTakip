@@ -97,7 +97,7 @@ const s = StyleSheet.create({
   n: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
   sub: { color: colors.text.muted, fontSize: typography.xs, marginTop: 2 },
   st: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, borderWidth: 1 },
-  stT: { fontSize: 9, fontWeight: '800' },
+  stT: { fontSize: 10, fontWeight: '800' },
   btn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ec4899', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, alignSelf: 'flex-start', marginTop: 6 },
   btnT: { color: '#fff', fontSize: typography.xs, fontWeight: '700' },
   fab: { position: 'absolute', bottom: 32, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#ec4899', alignItems: 'center', justifyContent: 'center' },

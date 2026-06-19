@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: typography.sm, fontWeight: '800' },
   name: { color: colors.text.primary, fontSize: typography.md, fontWeight: '700' },
   meBadge: {
-    color: '#fff', fontSize: 9, fontWeight: '800',
+    color: '#fff', fontSize: 10, fontWeight: '800',
     backgroundColor: colors.emerald.default,
     paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6,
   },

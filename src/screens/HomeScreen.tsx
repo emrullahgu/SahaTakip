@@ -28,6 +28,7 @@ import FadeInView from '../components/FadeInView';
 import EmptyState from '../components/EmptyState';
 import { RootStackParamList, TabParamList } from '../types';
 import { quoteValidity } from '../utils/quoteValidity';
+import { HIT_SLOP_8 } from '../utils/a11y';
 
 type HomeNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'Home'>,
@@ -107,7 +108,7 @@ export default function HomeScreen() {
           </View>
           <TouchableOpacity
             onPress={() => navigation.navigate('GlobalSearch')}
-            style={styles.logoutBtn}
+            style={styles.logoutBtn} hitSlop={HIT_SLOP_8}
             activeOpacity={0.7}
             accessibilityLabel="Genel arama"
           >
@@ -115,19 +116,19 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={toggleTheme}
-            style={styles.logoutBtn}
+            style={styles.logoutBtn} hitSlop={HIT_SLOP_8}
             activeOpacity={0.7}
           >
             <Ionicons name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'} size={22} color={colors.text.muted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('ChangePassword')}
-            style={styles.logoutBtn}
+            style={styles.logoutBtn} hitSlop={HIT_SLOP_8}
             activeOpacity={0.7}
           >
             <Ionicons name="key-outline" size={22} color={colors.text.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={signOut} style={styles.logoutBtn} activeOpacity={0.7}>
+          <TouchableOpacity onPress={signOut} style={styles.logoutBtn} hitSlop={HIT_SLOP_8} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={22} color={colors.text.muted} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.avatarWrap} onPress={pickAvatar} activeOpacity={0.8} disabled={uploadingAvatar} accessibilityLabel="Profil fotoğrafı ekle">

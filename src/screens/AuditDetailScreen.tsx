@@ -95,6 +95,6 @@ const s = StyleSheet.create({
   diffRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border.primary },
   diffKey: { color: colors.text.primary, fontSize: typography.xs, fontWeight: '700', width: 80 },
   diffSide: { flex: 1 },
-  diffLabel: { color: colors.text.faint, fontSize: 9, fontWeight: '700' },
+  diffLabel: { color: colors.text.faint, fontSize: 10, fontWeight: '700' },
   diffVal: { color: colors.text.primary, fontSize: typography.xs },
 });

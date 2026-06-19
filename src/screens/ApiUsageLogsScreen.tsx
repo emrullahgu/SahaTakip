@@ -55,7 +55,7 @@ const s = StyleSheet.create({
   card: { padding: spacing.sm, backgroundColor: colors.bg.secondary, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border.primary },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   m: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, minWidth: 50, alignItems: 'center' },
-  mT: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  mT: { color: '#fff', fontSize: 10, fontWeight: '800' },
   ep: { flex: 1, color: colors.text.primary, fontSize: typography.xs, fontFamily: 'monospace' },
   code: { fontSize: typography.sm, fontWeight: '800' },
   sub: { color: colors.text.muted, fontSize: 10, marginTop: 2 },
