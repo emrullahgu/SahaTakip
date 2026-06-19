@@ -591,10 +591,24 @@ describe('AI proxy modu (EXPO_PUBLIC_AI_USE_PROXY)', () => {
     ).rejects.toThrow(/desteklenmiyor/i);
   });
 
-  it('proxy modunda araç-çağırma net "desteklenmiyor" hatası verir', async () => {
+  it('proxy modunda araç-çağırma ARTIK desteklenir (Supabase varsa ai-proxy; yoksa doğrudan sağlayıcı)', async () => {
     process.env[KEY] = 'true';
-    await expect(
-      chatWithTools([{ role: 'user', content: 'x' }], [], { provider: 'openai', apiKey: 'k' }),
-    ).rejects.toThrow(/desteklenmiyor/i);
+    // Bu dosyada SUPABASE_CONFIGURED=false → proxy branch atlanır, doğrudan OpenAI yoluna
+    // düşer (eski "desteklenmiyor" hard-block kaldırıldı; web/proxy+Supabase'de ai-proxy kullanılır).
+    (global as any).fetch = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{
+          message: { content: null, tool_calls: [{ id: 't1', type: 'function', function: { name: 'finish', arguments: '{}' } }] },
+          finish_reason: 'tool_calls',
+        }],
+      }),
+    });
+    const r = await chatWithTools(
+      [{ role: 'user', content: 'x' }],
+      [{ type: 'function', function: { name: 'finish', description: 'b', parameters: { type: 'object', properties: {} } } }],
+      { provider: 'openai', apiKey: 'k' },
+    );
+    expect(r.toolCalls[0].function.name).toBe('finish');
   });
 });

@@ -1,5 +1,6 @@
 // services/ai.ts — POZ-DEV-090..092 AI core (OpenAI/Claude/mock)
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { AiProvider, AiSettings, DamageAnalysis, DamageSeverity, PozSuggestion, VoiceReport } from '../types';
 import { POZ_CATALOG, PozItem } from '../data/pozCatalog';
@@ -224,10 +225,11 @@ export function shouldUseProxy(): boolean {
 export async function chatViaProxy(
   prompt: string,
   systemPrompt: string | undefined,
-  provider: AiProvider,
+  provider: AiProvider | 'auto',
 ): Promise<string> {
   if (!SUPABASE_CONFIGURED) throw new Error('AI proxy için Supabase yapılandırılmalı.');
-  // Proxy yalnız openai/claude/gemini biliyor; groq/mock → otomatik seçim.
+  // Proxy yalnız openai/claude/gemini biliyor; auto/groq/mock → otomatik seçim
+  // (ai-proxy 'auto' iken sağlayıcıları sırayla dener, sunucu-taraflı fallback yapar).
   const proxyProvider = provider === 'openai' || provider === 'claude' || provider === 'gemini' ? provider : 'auto';
   const messages = [
     ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
@@ -523,6 +525,23 @@ export async function chatWithFallback(
 ): Promise<{ reply: string; usedProvider: AiProvider; usedModel?: string; attempts: { provider: AiProvider; error?: string }[] }> {
   const attempts: { provider: AiProvider; error?: string }[] = [];
   const _t0 = Date.now();
+
+  // WEB ya da proxy modu: tarayıcıda api.openai.com / api.anthropic.com'a DOĞRUDAN istek
+  // CORS ile "Load failed" verir (yalnız gemini bazen geçer). Ayrıca anahtarlar istemcide
+  // olmamalı. Bu yüzden ai-proxy üzerinden 'auto' ile çağır — sunucu sağlayıcı seçer ve
+  // KENDİ İÇİNDE fallback yapar (ör. gemini kota 429 → openai/claude). Anahtarlar sunucuda.
+  if ((Platform.OS === 'web' || shouldUseProxy()) && SUPABASE_CONFIGURED) {
+    try {
+      const reply = await chatViaProxy(prompt, systemPrompt, 'auto');
+      if (!reply || !reply.trim()) throw new Error('Boş yanıt');
+      void recordAiCall({ feature: 'chat', provider: primary.provider, promptChars: prompt.length, replyChars: reply.length, durationMs: Date.now() - _t0, success: true });
+      return { reply, usedProvider: primary.provider, usedModel: primary.model, attempts: [{ provider: primary.provider }] };
+    } catch (e: any) {
+      const msg = e?.message || 'hata';
+      void recordAiCall({ feature: 'chat', provider: primary.provider, promptChars: prompt.length, durationMs: Date.now() - _t0, success: false, errorMessage: `proxy: ${msg}` });
+      throw new Error(`AI proxy başarısız oldu (ai-proxy deploy + sunucu anahtarları OPENAI/ANTHROPIC/GEMINI_API_KEY kontrol edin): ${msg}`);
+    }
+  }
 
   const tryOne = async (s: AiSettings) => {
     // Geçici hatada (503/429/timeout) aynı sağlayıcıyı kısa backoff'la 1 kez
@@ -1113,14 +1132,46 @@ function sanitizeOpenAiMessages(messages: ChatMessage[]): any[] {
   });
 }
 
+/**
+ * Tool-calling'i ai-proxy üzerinden yapar (WEB/proxy). Tarayıcı CORS'u openai/claude
+ * doğrudan çağrısını engeller ve anahtarlar istemcide olmamalı; bu yüzden tek LLM
+ * round-trip'i ai-proxy'de yapılır. Araç YÜRÜTME yine istemcidedir (loop.ts + app context).
+ * Eski ai-proxy yalnız 'content' döner → araçsız metin yanıtına ZARİF DÜŞÜŞ (redeploy'a kadar).
+ */
+async function chatWithToolsViaProxy(
+  messages: ChatMessage[],
+  tools: ToolSchema[],
+): Promise<ChatWithToolsResult> {
+  if (!SUPABASE_CONFIGURED) throw new Error('AI proxy için Supabase yapılandırılmalı.');
+  const { data, error } = await supabase.functions.invoke('ai-proxy', {
+    body: {
+      provider: 'openai',
+      messages: sanitizeOpenAiMessages(messages),
+      tools: tools.length ? tools : undefined,
+      tool_choice: tools.length ? 'auto' : undefined,
+    },
+  });
+  if (error) throw new Error(`AI proxy (agent) hatası: ${error.message || error}`);
+  const d: any = data;
+  const msg = d?.message ?? { content: d?.content ?? null, tool_calls: null };
+  const toolCalls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
+  return {
+    content: msg.content ?? null,
+    toolCalls,
+    finishReason: d?.finish_reason ?? (toolCalls.length ? 'tool_calls' : 'stop'),
+    raw: d,
+  };
+}
+
 export async function chatWithTools(
   messages: ChatMessage[],
   tools: ToolSchema[],
   settings?: AiSettings,
 ): Promise<ChatWithToolsResult> {
   const s = settings ?? (await getAiSettings());
-  if (shouldUseProxy()) {
-    throw new Error('Proxy modunda araç-çağırma (Agent) henüz desteklenmiyor (ai-proxy yalnız metin). Agent için sağlayıcı anahtarı gerekir.');
+  // WEB/proxy: tool-calling'i ai-proxy üzerinden yap (CORS + anahtar sunucuda).
+  if ((Platform.OS === 'web' || shouldUseProxy()) && SUPABASE_CONFIGURED) {
+    return chatWithToolsViaProxy(messages, tools);
   }
   if (s.provider === 'mock' || !s.apiKey) {
     throw new Error('AI provider yapılandırılmamış (Agent için OpenAI/Groq/Gemini/Claude gerekli).');
@@ -1245,6 +1296,21 @@ export async function chatWithToolsFallback(
   tools: ToolSchema[],
   primary?: AiSettings,
 ): Promise<ChatWithToolsResult> {
+  const _tStart = Date.now();
+  const _promptChars = messages.reduce((n, m) => n + (typeof m.content === 'string' ? m.content.length : 0), 0);
+  // WEB/proxy: anahtarlar istemcide olmadığından aşağıdaki client-anahtar geçidi candidates'i
+  // boş bırakıp "yapılandırılmamış" derdi. ai-proxy üzerinden tool-calling yap (CORS + anahtar
+  // sunucuda). Araç YÜRÜTME yine istemcidedir (loop.ts).
+  if ((Platform.OS === 'web' || shouldUseProxy()) && SUPABASE_CONFIGURED) {
+    try {
+      const res = await chatWithToolsViaProxy(messages, tools);
+      void recordAiCall({ feature: 'agent', provider: 'proxy', promptChars: _promptChars, replyChars: (res.content || '').length, durationMs: Date.now() - _tStart, success: true });
+      return res;
+    } catch (e: any) {
+      void recordAiCall({ feature: 'agent', provider: 'proxy', promptChars: _promptChars, durationMs: Date.now() - _tStart, success: false, errorMessage: String(e?.message ?? e) });
+      throw e;
+    }
+  }
   const p = primary ?? (await getAiSettings());
   const candidates: AiSettings[] = [];
   if (p.provider !== 'mock' && p.apiKey) candidates.push(p);

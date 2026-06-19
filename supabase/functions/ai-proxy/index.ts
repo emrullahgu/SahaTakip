@@ -37,6 +37,11 @@ interface ReqBody {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
+  // Tool-calling (Agent): istemci OpenAI-uyumlu tools verir; sunucu tool_calls'lu
+  // assistant mesajını döner. Araç YÜRÜTME istemcide kalır (client app context +
+  // interaktif onay). Yalnız OpenAI desteklenir (tool formatı en güvenilir).
+  tools?: any[];
+  tool_choice?: any;
 }
 
 interface AiResult {
@@ -86,6 +91,44 @@ async function callOpenAI(body: ReqBody, model: string): Promise<AiResult> {
     provider: 'openai',
     model,
     content: j.choices?.[0]?.message?.content ?? '',
+    usage: j.usage ? { input_tokens: j.usage.prompt_tokens, output_tokens: j.usage.completion_tokens } : undefined,
+    latency_ms: Date.now() - t0,
+  };
+}
+
+/**
+ * Tool-calling (Agent) — OpenAI'ye tools geçirir, tool_calls'lu assistant mesajını döner.
+ * Araç yürütme İSTEMCİDE yapılır (loop.ts + client app context); burada yalnız tek bir LLM
+ * round-trip'i sunucu-taraflı yapılır (tarayıcı CORS'u + anahtar sunucuda).
+ */
+async function callOpenAITools(body: ReqBody, model: string): Promise<any> {
+  const key = Deno.env.get('OPENAI_API_KEY');
+  if (!key) throw new Error('OPENAI_API_KEY tanımsız.');
+  const t0 = Date.now();
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model,
+      messages: body.messages,                 // istemci OpenAI-uyumlu (tool rolü dahil) gönderir
+      tools: body.tools,
+      tool_choice: body.tool_choice ?? 'auto',
+      temperature: body.temperature ?? 0.2,
+      max_tokens: body.max_tokens ?? 1500,
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+  const j: any = await res.json();
+  const choice = j.choices?.[0] ?? {};
+  return {
+    provider: 'openai',
+    model,
+    message: {
+      role: 'assistant',
+      content: choice.message?.content ?? null,
+      tool_calls: choice.message?.tool_calls ?? null,
+    },
+    finish_reason: choice.finish_reason ?? 'stop',
     usage: j.usage ? { input_tokens: j.usage.prompt_tokens, output_tokens: j.usage.completion_tokens } : undefined,
     latency_ms: Date.now() - t0,
   };
@@ -284,6 +327,23 @@ Deno.serve(async (req) => {
   try {
     const body: ReqBody = await req.json();
     if (!body.messages?.length) throw new Error('messages boş olamaz');
+
+    // Tool-calling (Agent): yalnız OpenAI; 3-sağlayıcı fallback YOK (tool formatları farklı).
+    if (body.tools?.length) {
+      const model = body.model || DEFAULT_MODELS.openai;
+      const result = await callOpenAITools(body, model);
+      logUsage({
+        function_name: 'ai-proxy',
+        model: result?.model ?? null,
+        input_tokens: result?.usage?.input_tokens ?? 0,
+        output_tokens: result?.usage?.output_tokens ?? 0,
+        duration_ms: Date.now() - t0,
+        status: 'ok',
+        user_id: userId,
+        meta: { provider: 'openai', tools: true },
+      });
+      return new Response(JSON.stringify(result), { headers: { ...CORS, 'content-type': 'application/json' } });
+    }
 
     // Streaming sadece OpenAI üzerinden destekleniyor (en yaygın).
     if (body.stream) {
