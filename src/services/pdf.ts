@@ -316,11 +316,32 @@ export function pdfBrandHeader(title: string, subtitle?: string, rightText?: str
 /**
  * Teklif PDF'i oluşturur ve cihazda paylaşım menüsünü açar.
  */
+/** Dosya adı parçasını güvenli hale getirir (yol-geçersiz karakterleri temizler). */
+function sanitizeFileNamePart(s: string): string {
+  return (s || '')
+    .replace(/[\/\\:*?"<>|\n\r\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60);
+}
+
+/**
+ * Teklif PDF dosya adı: "KOBİNERJİ-TEKLİF KONUSU-TEKLİF NO.pdf"
+ * (firma adı brand.ts'ten; konu = teklif başlığı; no = teklif numarası).
+ * Hem cihazda paylaşımda hem müşteriye e-postada AYNI ad kullanılır (send-quote-email edge de eşler).
+ */
+export function quotePdfFileName(quote: Quote): string {
+  const company = sanitizeFileNamePart(BRAND.company.name) || 'Teklif';
+  const title = sanitizeFileNamePart(quote.title) || 'Teklif';
+  const number = sanitizeFileNamePart(quote.number);
+  return [company, title, number].filter(Boolean).join('-') + '.pdf';
+}
+
 export async function generateAndShareQuotePdf(quote: Quote): Promise<{ uri: string }> {
   const html = buildQuoteHtml(quote);
   return deliverPdf(html, {
-    fileName: `Teklif-${quote.number}.pdf`,
-    dialogTitle: `Teklif ${quote.number}`,
+    fileName: quotePdfFileName(quote),
+    dialogTitle: `${BRAND.company.name} Teklif ${quote.number}`,
   });
 }
 

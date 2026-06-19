@@ -9,6 +9,7 @@ import { Linking } from 'react-native';
 import { openUrlSafe } from '../utils/urlGuard';
 import { isOnlineMode } from './data/repository';
 import { supabase } from './supabase';
+import { quotePdfFileName } from './pdf';
 import type { Quote } from '../types';
 
 function quoteSummary(q: Quote): string {
@@ -44,7 +45,9 @@ export async function sendQuoteEmail(
   if (isOnlineMode()) {
     try {
       const { data, error } = await supabase.functions.invoke('send-quote-email', {
-        body: { to: toEmail, subject, html: body.replace(/\n/g, '<br/>'), quote, pdfUri },
+        // fileName: "KOBİNERJİ-KONU-NO.pdf" — müşteriye giden ek de bu adla gitsin
+        // (cihaz paylaşımıyla AYNI ad). Brand tek kaynak client'ta.
+        body: { to: toEmail, subject, html: body.replace(/\n/g, '<br/>'), quote, pdfUri, fileName: quotePdfFileName(quote) },
       });
       if (!error && data) {
         return { ok: true, mode: 'edge' };

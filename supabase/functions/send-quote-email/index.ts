@@ -88,8 +88,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const attachments: Array<{ filename: string; path?: string }> = [];
   if (body.pdfUri && /^https?:\/\//i.test(body.pdfUri)) {
+    // Müşteriye giden ek adı: client "KOBİNERJİ-KONU-NO.pdf" gönderir (fileName);
+    // yoksa eski davranışa düş. Yol-geçersiz karakterleri temizle.
+    const safe = String(body.fileName ?? `${body.quote?.number ?? 'teklif'}.pdf`)
+      .replace(/[\/\\:*?"<>|\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim();
     attachments.push({
-      filename: `${body.quote?.number ?? 'teklif'}.pdf`,
+      filename: /\.pdf$/i.test(safe) ? safe : `${safe}.pdf`,
       path: body.pdfUri,
     });
   }
