@@ -60,10 +60,74 @@ export interface QuoteDraftSeed {
  * Blok yoksa metin değişmeden döner (regresyon yok); blok bozuksa metinden temizlenir
  * ama draft null olur (kullanıcıya ham JSON gösterilmez).
  */
+/** Türkçe/İngilizce karışık sayı metnini float'a çevirir ("1.295.149,50"→1295149.5, "583.8"→583.8). */
+function parseLooseNumber(s: string): number {
+  let t = String(s ?? '').replace(/[^\d.,]/g, '').trim();
+  if (!t) return NaN;
+  if (t.includes(',')) {
+    // virgül = ondalık, nokta = binlik
+    t = t.replace(/\./g, '').replace(',', '.');
+  } else {
+    const parts = t.split('.');
+    if (parts.length > 1) {
+      const last = parts[parts.length - 1];
+      // 3 haneli son grup + öncekiler ≤3 hane → binlik ayırıcı (1.295.149); aksi halde ondalık (583.8)
+      if (last.length === 3 && parts.slice(0, -1).every(p => p.length >= 1 && p.length <= 3)) t = parts.join('');
+    }
+  }
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+const TOTAL_ROW = /toplam|kdv|genel|ara\s*toplam|vergi|tutar\s*$/i;
+
+/**
+ * `quotedraft` bloğu YOKSA, asistanın yazdığı pipe'lı markdown teklif tablosundan kalemleri
+ * çıkarmayı dener (best-effort yedek). Kullanıcı yine de "Yeni Teklif" ekranında görüp
+ * kaydeder → yanlış sayı riskini kullanıcı doğrular. "Birim Fiyat" sütunu net bulunamazsa
+ * taslak ÜRETMEZ (yanlış fiyatla doldurmaktansa buton göstermemek daha güvenli).
+ */
+function parseQuoteTableFallback(reply: string): QuoteDraftLineSeed[] {
+  const rows = reply.split('\n').map(l => l.trim()).filter(l => l.startsWith('|') && l.includes('|', 1));
+  if (rows.length < 2) return [];
+  const cells = (r: string) => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+  const header = cells(rows[0]).map(h => h.toLocaleLowerCase('tr-TR'));
+  const findIdx = (...keys: string[]) => header.findIndex(h => keys.some(k => h.includes(k)));
+  const priceIdx = findIdx('birim fiyat', 'b. fiyat', 'b.fiyat', 'birim f', 'birimfiyat');
+  if (priceIdx < 0) return []; // birim fiyat sütunu yoksa güvenli çık
+  let nameIdx = findIdx('kalem', 'iş', 'açıklama', 'tanım', 'hizmet', 'malzeme', 'poz');
+  if (nameIdx < 0) nameIdx = 0;
+  const qtyIdx = findIdx('adet', 'miktar', 'qty', 'mik.');
+  const unitIdx = findIdx('birim', 'br.');
+  const out: QuoteDraftLineSeed[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const c = cells(rows[i]);
+    if (c.every(x => /^[-:\s]*$/.test(x))) continue;          // ayraç satırı (|---|---|)
+    const name = (c[nameIdx] ?? '').replace(/\*\*/g, '').trim();
+    if (!name || TOTAL_ROW.test(name)) continue;              // boş ya da toplam satırı
+    const price = parseLooseNumber(c[priceIdx] ?? '');
+    if (!Number.isFinite(price)) continue;
+    const q = qtyIdx >= 0 ? parseLooseNumber(c[qtyIdx] ?? '') : NaN;
+    const unit = unitIdx >= 0 && unitIdx !== nameIdx ? (c[unitIdx] ?? '').trim() : undefined;
+    out.push({
+      name,
+      unit: unit && !/^\d/.test(unit) ? unit : undefined,
+      quantity: Number.isFinite(q) && q > 0 ? q : 1,
+      unitPrice: price >= 0 ? price : 0,
+    });
+  }
+  return out;
+}
+
 export function extractQuoteDraft(reply: string): { text: string; draft: QuoteDraftSeed | null } {
   if (!reply) return { text: reply || '', draft: null };
   const m = reply.match(/```quotedraft\s*([\s\S]*?)```/i);
-  if (!m) return { text: reply, draft: null };
+  if (!m) {
+    // Blok yok → markdown teklif tablosundan kalem çıkarmayı dene (yedek; metin değişmez).
+    const fbLines = parseQuoteTableFallback(reply);
+    if (fbLines.length) return { text: reply, draft: { lines: fbLines } };
+    return { text: reply, draft: null };
+  }
   const idx = m.index ?? 0;
   const text = (reply.slice(0, idx) + reply.slice(idx + m[0].length)).trim();
   try {
@@ -270,13 +334,14 @@ YETKİN — ÇOK ÖNEMLİ (asla yalan söyleme):
 - Kullanıcı gerçek bir işlem isterse (teklif/iş emri/müşteri oluştur, durum değiştir, mesaj gönder): istediği içeriği TASLAK olarak metinle hazırla, sonra şöyle yönlendir: "Bunu gerçekten kaydetmek/uygulamak için **Otonom Ajan** ekranını kullan ya da ilgili ekrandan (örn. Yeni Teklif) ekle." Otonom Ajan bu işlemleri gerçekten yapabilen tek yerdir.
 - Emin değilsen "bunu ben uygulayamam, şu ekrandan yapabilirsin" de — uydurma onay verme.
 
-TEKLİF TASLAĞI AKTARIMI (kayıt değil — kullanıcı kaydeder):
-- Bir FİYAT TEKLİFİ hazırladığında (kalem + birim fiyat içeren), normal Türkçe yanıtının (tablo dahil) EN SONUNA tek bir makine-okunur blok ekle:
+TEKLİF TASLAĞI AKTARIMI (kayıt değil — kullanıcı kaydeder) — ⚠ ZORUNLU:
+- Bir FİYAT TEKLİFİ hazırladığında (kalem + birim fiyat içeren) yanıtının EN SONUNA tek bir makine-okunur blok eklemek ZORUNLUDUR. Bu bloğu eklemezsen uygulamada "Yeni Teklif'te Aç" butonu ÇIKMAZ ve kullanıcı teklifi oluşturamaz — yani işini yapmamış olursun. Tabloyu okunabilirlik için göster AMA bloğu ASLA atlama:
 \`\`\`quotedraft
 {"customerName":"Müşteri adı","title":"Teklif başlığı","notes":"kapsam/varsayım notu","lines":[{"name":"İş tanımı","unit":"Adet","quantity":1,"unitPrice":2500}]}
 \`\`\`
 - unitPrice = tabloda gösterdiğin KDV HARİÇ NİHAİ birim fiyat (yalnız sayı; ₺ koyma, binlik ayırıcı koyma, KDV ekleme). Katalog kalemiyse "pozId" ekle; manuel/katalog-dışı hizmet bedeliyse pozId YAZMA.
 - Bu blok kullanıcıya GÖSTERİLMEZ; uygulama onu okuyup "Yeni Teklif" ekranını önceden doldurur. Bloktan söz etme, "kaydettim/oluşturdum" DEME — kaydı kullanıcı o ekranda yapacak. Blok yalnızca somut fiyatlı bir teklif kurduğunda eklenir; fiyatı bilinmeyen kalem olursa o satıra unitPrice:0 ver.
+- Kullanıcı "kaydet / oluştur / onayla" derse: kaydı SEN yapamazsın; bir önceki teklifi AYNI quotedraft bloğuyla TEKRAR ver ve kısaca yönlendir: "Aşağıdaki «Yeni Teklif'te Aç» butonuna dokun, açılan ekranda **Teklifi Kaydet**'e bas." Disclaimer'ı tek başına tekrarlama — daima bloğu da ekle ki buton görünsün.
 
 ÇIKTI BİÇİMİ:
 - Türkçe. Kısa cevapta düz, akıcı metin kullan; liste/tablo GERÇEKTEN işe yarıyorsa markdown'a geç — her cevabı zorla başlık/madde yapma.

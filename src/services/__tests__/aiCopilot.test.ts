@@ -145,4 +145,41 @@ describe('extractQuoteDraft — sohbet→teklif yapısal aktarım', () => {
     const reply = '```quotedraft\n' + JSON.stringify({ lines: [{ quantity: 1, unitPrice: 5 }] }) + '\n```';
     expect(extractQuoteDraft(reply).draft).toBeNull();
   });
+
+  // ---- YEDEK: blok yoksa markdown teklif tablosundan kalem çıkarımı ----
+  it('quotedraft bloğu yoksa pipe markdown tablosundan kalemleri çıkarır (kullanıcı senaryosu)', () => {
+    const reply = [
+      '1000 kVA trafo kurulumu teklifi:',
+      '| Kalem | Birim | Adet | Birim Fiyat | Tutar |',
+      '|---|---|---|---|---|',
+      '| 1000 KVA Trafo Kurulumu İşçilik+Malzeme | TAKIM | 1 | 647000 | 647000 |',
+      '| 1000 KVA için otomatik kompanzasyon | ADET | 1 | 550 | 550 |',
+      '| 250KVA TRAFO OG BUŞİNG KAPAMA SETİ | SET | 1 | 583.8 | 583.8 |',
+      '| **Genel Toplam** | | | | 777760.56 |',
+    ].join('\n');
+    const { draft } = extractQuoteDraft(reply);
+    expect(draft).not.toBeNull();
+    expect(draft!.lines).toHaveLength(3); // toplam satırı elendi
+    expect(draft!.lines[0]).toMatchObject({ name: '1000 KVA Trafo Kurulumu İşçilik+Malzeme', unit: 'TAKIM', quantity: 1, unitPrice: 647000 });
+    expect(draft!.lines[2]).toMatchObject({ unitPrice: 583.8, unit: 'SET' });
+  });
+
+  it('yedek: TR binlik/ondalık ayırıcıyı doğru çözer (1.295.149,50)', () => {
+    const reply = [
+      '| Açıklama | Adet | Birim Fiyat |',
+      '|---|---|---|',
+      '| Komple sistem | 1 | 1.295.149,50 |',
+    ].join('\n');
+    const { draft } = extractQuoteDraft(reply);
+    expect(draft!.lines[0].unitPrice).toBeCloseTo(1295149.5, 2);
+  });
+
+  it('yedek: "Birim Fiyat" sütunu yoksa taslak ÜRETMEZ (yanlış fiyat riski)', () => {
+    const reply = [
+      '| Kalem | Adet | Tutar |',
+      '|---|---|---|',
+      '| Bir iş | 2 | 5000 |',
+    ].join('\n');
+    expect(extractQuoteDraft(reply).draft).toBeNull();
+  });
 });
