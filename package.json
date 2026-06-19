@@ -15,6 +15,7 @@
     "build:aab": "eas build --platform android --profile production",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "test:render": "jest --config jest.render.config.js",
     "audit:nav": "node scripts/audit-nav.js",
     "sb": "supabase",
     "sb:login": "supabase login",
@@ -68,6 +69,7 @@
     "jest": "~29.7.0",
     "jest-expo": "^56.0.4",
     "patch-package": "^8.0.1",
+    "react-test-renderer": "^19.2.3",
     "supabase": "^2.104.0",
     "typescript": "~6.0.3"
   },

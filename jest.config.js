@@ -9,6 +9,9 @@ module.exports = {
     'node_modules/(?!(jest-)?react-native|@react-native|@react-navigation|expo(nent)?|@expo|@unimodules|unimodules|sentry-expo|native-base|react-native-svg)',
   ],
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
+  // *.render.test.tsx ekran smoke testleri AYRI config (jest.render.config.js, jest-expo)
+  // ile çalışır; bu pure-logic (node + string-RN-mock) config'te çalıştırılMAMALI.
+  testPathIgnorePatterns: ['/node_modules/', '\\.render\\.test\\.tsx$'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^react-native$': '<rootDir>/jest.rn-mock.js',
