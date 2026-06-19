@@ -22,6 +22,10 @@ const supabase = createClient(
 
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY')!;
 const MODEL = 'gpt-4o-mini';
+// Maliyet tavanı: ajan döngüsü boyunca biriken completion_tokens bu eşiği aşınca
+// yeni iterasyon (yeni paralı OpenAI çağrısı) başlatma. Runaway tool-call döngüsü =
+// maliyet patlaması koruması. ~8+ tam iterasyona (her biri max_tokens:1500) denk gelir.
+const MAX_COMPLETION_TOKENS = 12000;
 
 // ─────────────────────────────────────────────────────────────
 // Tool tanımları (JSON schema)
@@ -583,6 +587,13 @@ Deno.serve(async (req) => {
       if (!toolCalls || !toolCalls.length) {
         // Bitti
         final = msg;
+        break;
+      }
+
+      // MALİYET CAP: kümülatif completion_tokens eşiği aşıldıysa yeni iterasyon
+      // başlatma. Döngüden çık; aşağıdaki "maks adıma ulaşıldı" dalı tek bir kapanış
+      // özeti üretir, böylece kullanıcı yine anlamlı yanıt alır ama döngü kontrolden çıkamaz.
+      if (totalUsage.completion_tokens > MAX_COMPLETION_TOKENS) {
         break;
       }
 

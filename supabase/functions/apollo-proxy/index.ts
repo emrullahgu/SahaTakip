@@ -22,6 +22,27 @@ const CORS = {
 
 const APOLLO_BASE = 'https://api.apollo.io/api/v1';
 
+// Basit in-memory rate-limit (kullanıcı başına, sabit pencere). NOT: Edge isolate'leri
+// yatay ölçeklenir ve soğur → bu sayaç instance-local ve uçucudur; kesin kota değil,
+// burst/suistimal sönümleyicidir. Kesin kota gerekirse Postgres tabanlı sayaç gerekir.
+const RL_WINDOW_MS = 60_000;   // 1 dk
+const RL_MAX = 20;             // kullanıcı başına / dk
+const rlHits = new Map<string, { count: number; reset: number }>();
+
+function rateLimit(userId: string): { ok: boolean; retryAfter: number } {
+  const now = Date.now();
+  const e = rlHits.get(userId);
+  if (!e || now >= e.reset) {
+    rlHits.set(userId, { count: 1, reset: now + RL_WINDOW_MS });
+    return { ok: true, retryAfter: 0 };
+  }
+  if (e.count >= RL_MAX) {
+    return { ok: false, retryAfter: Math.ceil((e.reset - now) / 1000) };
+  }
+  e.count++;
+  return { ok: true, retryAfter: 0 };
+}
+
 interface ReqBody {
   path: string;
   method?: 'GET' | 'POST';
@@ -41,6 +62,16 @@ Deno.serve(async (req) => {
   const auth = await requireUser(req, { requireApproved: true });
   if (!auth.ok) {
     return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  }
+
+  // RATE-LIMIT: kimliği doğrulanmış kullanıcı başına dk başına RL_MAX istek
+  // (best-effort; requireUser anon çağrıyı zaten yukarıda reddetti → userId mevcut).
+  const rl = rateLimit(auth.userId ?? 'unknown');
+  if (!rl.ok) {
+    return new Response(JSON.stringify({ error: 'Çok fazla istek — lütfen biraz bekleyin.' }), {
+      status: 429,
+      headers: { ...CORS, 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfter) },
+    });
   }
 
   let parsed: ReqBody;

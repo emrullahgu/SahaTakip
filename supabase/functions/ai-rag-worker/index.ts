@@ -117,6 +117,26 @@ async function processItem(item: any): Promise<{ ok: boolean; error?: string }> 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
+  // GÜVENLİK: kimliksiz POST/GET bu worker'ı tetikleyip ai_ingest_queue'yu boşaltabilir
+  // ve her kayıt için embedding (paralı OpenAI çağrısı) tüketebilir. dispatch-email-reports
+  // ile aynı paylaşılan-secret (cron Bearer) kalıbı. RAG_CRON_TOKEN tanımsızsa fonksiyon
+  // devre dışı (fail-closed 503); Bearer eşleşmezse 401.
+  const CRON_TOKEN = Deno.env.get('RAG_CRON_TOKEN') ?? '';
+  if (!CRON_TOKEN) {
+    return new Response(JSON.stringify({ error: 'disabled: RAG_CRON_TOKEN not set' }), {
+      status: 503,
+      headers: { ...CORS, 'content-type': 'application/json' },
+    });
+  }
+  const got = (req.headers.get('authorization') ?? req.headers.get('Authorization') ?? '')
+    .replace(/^Bearer\s+/i, '').trim();
+  if (got !== CRON_TOKEN) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { ...CORS, 'content-type': 'application/json' },
+    });
+  }
+
   let batchSize = 25;
   if (req.method === 'POST') {
     try {
