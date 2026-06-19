@@ -30,6 +30,7 @@ import { REAL_CUSTOMERS } from '../data/realCustomers';
 import {
   isOnlineMode,
   quotesRepo,
+  serverMaxQuoteSeq,
   customersRepo,
   workOrdersRepo,
   employeesRepo,
@@ -43,6 +44,7 @@ import { localDateISO } from '../utils/date';
 import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotifications';
 import { Notify } from '../services/notifications';
 import { checkSlaBreaches } from '../services/slaWatcher';
+import { insertQuoteWithNumberRetry } from '../utils/quoteInsert';
 
 // Bordroda günlük ücret = aylık ücret / standart iş günü. TR uygulamasında
 // genelde 30 (yasal) ya da ~22 (fiili çalışma günü) kullanılır; tek yerden
@@ -320,8 +322,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // hata olursa geri alınır.
   const addQuote = async (q: Quote): Promise<WriteResult> => {
     setQuotes(prev => [q, ...prev]);
+    // generateQuoteNumber numarayı YEREL listeden üretir; liste bayatsa (başka cihaz,
+    // sayfalama, yenilenmemiş) sunucudaki bir numarayla çakışır → quotes_number_key (23505)
+    // ve teklif HİÇ kaydedilemez. insertQuoteWithNumberRetry çakışmada sunucudaki GERÇEK
+    // max'tan yeni numara üretip retry yapar. quotes_all_read tüm kullanıcılara açık
+    // olduğundan serverMaxQuoteSeq global max'ı görür (rol fark etmez).
+    const prefix = `TK-${new Date().getFullYear()}-`;
+    let saved: Quote;
     try {
-      await quotesRepo.insert(q);
+      saved = await insertQuoteWithNumberRetry(q, prefix, {
+        insert: quote => quotesRepo.insert(quote).then(() => undefined),
+        serverMaxSeq: serverMaxQuoteSeq,
+        localMaxSeq: p => quotes.reduce((m, x) => {
+          if (!x.number || !x.number.startsWith(p)) return m;
+          const n = parseInt(x.number.slice(p.length), 10);
+          return Number.isFinite(n) && n > m ? n : m;
+        }, 0),
+        onNumberChange: quote => setQuotes(prev => prev.map(x => (x.id === q.id ? quote : x))),
+      });
     } catch (e: any) {
       setQuotes(prev => prev.filter(x => x.id !== q.id)); // optimistik geri al
       console.warn('[quote.insert]', e);
@@ -330,7 +348,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     auditRepo.log(userId, { action: 'quote.create', tableName: 'quotes', refId: q.id });
     void Notify.quoteCreated(q.customerName, q.title, q.id);
-    showToast(`Teklif ${q.number} kaydedildi.`);
+    showToast(`Teklif ${saved.number} kaydedildi.`);
     return { ok: true };
   };
 

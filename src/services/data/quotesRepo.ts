@@ -22,6 +22,31 @@ import type { Quote } from '../../types';
 
 const CACHE_KEY = 'quotes';
 
+/**
+ * Sunucudaki en yüksek teklif numarası sırasını (verilen prefix için) döndürür.
+ * Yerel `quotes` listesi bayat olabilir (başka cihaz/sayfalama/yenilenmemiş) → numara
+ * üreteci sunucudaki gerçek max'ı bilmeden çakışan numara üretebiliyor (quotes_number_key
+ * 23505). Bu, addQuote'un retry'ında gerçek tabanı almak için kullanılır.
+ * NOT: soft-delete edilenler de numarayı işgal ettiğinden deleted_at filtresi YOK.
+ * Offline/hata → 0. Numaralar 4 hane sıfır-dolgulu olduğundan metinsel desc = sayısal desc.
+ */
+export async function serverMaxQuoteSeq(prefix: string): Promise<number> {
+  if (!isOnlineMode()) return 0;
+  try {
+    const { data, error } = await supabase
+      .from('quotes')
+      .select('number')
+      .like('number', `${prefix}%`)
+      .order('number', { ascending: false })
+      .limit(1);
+    if (error || !data?.length) return 0;
+    const n = parseInt(String((data[0] as any).number).slice(prefix.length), 10);
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export const quotesRepo: Repository<Quote> = {
   async list(): Promise<Quote[]> {
     if (!isOnlineMode()) {
@@ -61,7 +86,14 @@ export const quotesRepo: Repository<Quote> = {
     let userId: string | undefined;
     try { const { data } = await supabase.auth.getUser(); userId = data?.user?.id ?? undefined; } catch { /* ignore */ }
     const { error: e1 } = await supabase.from('quotes').insert(quoteToRow(quote, userId));
-    if (e1) throw new Error(`[quotes.insert] ${e1.message}`);
+    if (e1) {
+      // Hata kodunu (ör. 23505 unique violation) ÜST KATMANA taşı — addQuote
+      // numara çakışmasını (quotes_number_key) yakalayıp yeni numarayla retry yapsın.
+      const err: any = new Error(`[quotes.insert] ${e1.message}`);
+      err.code = (e1 as any).code;
+      err.constraintName = (e1 as any).details ?? e1.message;
+      throw err;
+    }
     if (quote.lines.length) {
       const { error: e2 } = await supabase
         .from('quote_lines')
