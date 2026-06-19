@@ -11,10 +11,15 @@ import {
   FlatList,
   Alert,
   Switch,
+  Image,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { resizeForUpload } from '../utils/image';
+import { uploadPhoto } from '../services/photoUpload';
 import { HIT_SLOP_8 } from '../utils/a11y';
 import { formatTRY } from '../utils/money';
 import { Ionicons } from '@expo/vector-icons';
@@ -84,8 +89,29 @@ export default function NewQuoteScreen() {
   const [title, setTitle] = useState(editingQuote?.title ?? prefill?.title ?? '');
   const [notes, setNotes] = useState(editingQuote?.notes ?? prefill?.notes ?? '');
   const [lines, setLines] = useState<QuoteLine[]>(editingQuote?.lines ?? prefill?.lines ?? []);
+  const [images, setImages] = useState<string[]>(editingQuote?.images ?? []);
+  const [uploadingImg, setUploadingImg] = useState(false);
   const [recents, setRecents] = useState<RecentPoz[]>([]);
   const [showRecents, setShowRecents] = useState(false);
+
+  // Teklife görsel ekle: galeriden seç → küçült → storage'a yükle → public URL'i listeye ekle.
+  // URL saklanır (base64 DB'yi şişirmesin); PDF'e ve ekrana basılır.
+  const addImage = async () => {
+    if (uploadingImg) return;
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      setUploadingImg(true);
+      const { uri } = await resizeForUpload(res.assets[0].uri, { maxWidth: 1600, compress: 0.7 });
+      const url = await uploadPhoto(uri, 'quotes');
+      setImages(prev => [...prev, url]);
+    } catch (e: any) {
+      Alert.alert('Görsel eklenemedi', e?.message || 'Yükleme başarısız. İnternet bağlantınızı kontrol edin.');
+    } finally {
+      setUploadingImg(false);
+    }
+  };
+  const removeImage = (url: string) => setImages(prev => prev.filter(u => u !== url));
 
   // Modal state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -171,6 +197,7 @@ export default function NewQuoteScreen() {
         engineer: editingQuote.engineer || engineerName,
         lines,
         notes,
+        images,
         subtotal: totals.subtotal,
         vatTotal: totals.vatTotal,
         grandTotal: totals.grandTotal,
@@ -196,6 +223,7 @@ export default function NewQuoteScreen() {
       lines,
       status: 'Taslak',
       notes,
+      images,
       subtotal: totals.subtotal,
       vatTotal: totals.vatTotal,
       grandTotal: totals.grandTotal,
@@ -444,6 +472,27 @@ export default function NewQuoteScreen() {
             onChangeText={setNotes}
             multiline
           />
+        </View>
+
+        {/* === GÖRSELLER === */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>5. Görseller ({images.length})</Text>
+          <Text style={styles.imgHint}>Teklife eklenen görseller PDF'in sonuna basılır ve müşteriye gönderilir.</Text>
+          <View style={styles.imgGrid}>
+            {images.map(url => (
+              <View key={url} style={styles.imgThumbWrap}>
+                <Image source={{ uri: url }} style={styles.imgThumb} resizeMode="cover" />
+                <TouchableOpacity style={styles.imgRemove} onPress={() => removeImage(url)} hitSlop={HIT_SLOP_8}>
+                  <Ionicons name="close-circle" size={22} color={colors.rose.default} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.imgAddBtn} onPress={addImage} disabled={uploadingImg} activeOpacity={0.8}>
+              {uploadingImg
+                ? <ActivityIndicator color={brand.blue} />
+                : <><Ionicons name="image-outline" size={26} color={brand.blue} /><Text style={styles.imgAddText}>Görsel Ekle</Text></>}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* === TOPLAM === */}
@@ -1264,6 +1313,14 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.primary },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 100 },
+
+  imgHint: { fontSize: typography.xs, color: colors.text.faint, marginBottom: spacing.sm },
+  imgGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  imgThumbWrap: { position: 'relative' },
+  imgThumb: { width: 88, height: 88, borderRadius: radius.md, backgroundColor: colors.bg.secondary },
+  imgRemove: { position: 'absolute', top: -8, right: -8, backgroundColor: colors.bg.primary, borderRadius: 12 },
+  imgAddBtn: { width: 88, height: 88, borderRadius: radius.md, borderWidth: 1.5, borderColor: brand.blue, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  imgAddText: { fontSize: typography.xs, color: brand.blue, fontWeight: '700' },
 
   section: { marginBottom: spacing.lg },
   sectionLabel: {

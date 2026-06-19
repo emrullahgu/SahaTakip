@@ -193,6 +193,7 @@ export interface Quote {
   generatedWorkOrderId?: string; // POZ-DEV-039
   templateId?: string;        // POZ-DEV-041
   shareToken?: string;        // POZ-DEV-040 (yerel, paylaşılabilir link için)
+  images?: string[];          // Teklife eklenen görseller (storage public URL'leri); PDF'e basılır
 }
 
 // FAZ 4 — POZ-DEV-038 Revizyon geçmişi

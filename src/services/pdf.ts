@@ -184,6 +184,10 @@ export function buildQuoteHtml(quote: Quote): string {
   .notes { margin-top: 22px; padding: 12px 14px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px; }
   .notes .l { font-size: 9px; font-weight: 800; color: #92400e; text-transform: uppercase; letter-spacing: 1px; }
   .notes .v { font-size: 11px; color: #78350f; margin-top: 4px; white-space: pre-wrap; }
+  .img-section { margin-top: 22px; page-break-inside: avoid; }
+  .img-title { font-size: 9px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .img-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .img-item { width: 31%; height: auto; max-height: 220px; object-fit: cover; border: 1px solid #e2e8f0; border-radius: 4px; }
   .footer {
     margin-top: 36px;
     padding-top: 14px;
@@ -267,6 +271,12 @@ export function buildQuoteHtml(quote: Quote): string {
     <div class="sign">Hazırlayan<br/><strong style="color:#1f2937">${escapeHtml(quote.engineer)}</strong></div>
     <div class="sign">Müşteri Kaşe / İmza</div>
   </div>
+
+  ${(quote.images && quote.images.length)
+    ? `<div class="img-section"><div class="img-title">Görseller</div><div class="img-grid">${quote.images
+        .filter(u => typeof u === 'string' && /^(https?:|data:image\/)/i.test(u))
+        .map(u => `<img class="img-item" src="${escapeHtml(u)}"/>`).join('')}</div></div>`
+    : ''}
 
   <div class="footer">
     <div>Bu teklif sistem tarafından üretilmiştir.</div>

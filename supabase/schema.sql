@@ -578,6 +578,7 @@ alter table quotes add column if not exists accept_signature text;
 alter table quotes add column if not exists generated_work_order_id text;
 alter table quotes add column if not exists template_id text;
 alter table quotes add column if not exists share_token text;
+alter table quotes add column if not exists images jsonb not null default '[]'::jsonb;
 
 
 -- ============================================================

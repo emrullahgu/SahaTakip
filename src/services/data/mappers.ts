@@ -30,6 +30,7 @@ export const quoteFromRow = (row: any, lines: any[] = []): Quote => ({
   acceptSignature: row.accept_signature ?? undefined,
   generatedWorkOrderId: row.generated_work_order_id ?? undefined,
   shareToken: row.share_token ?? undefined,
+  images: Array.isArray(row.images) ? row.images : [],
   lines: lines.map(quoteLineFromRow).sort((a, b) => a.lineNo - b.lineNo),
 });
 
@@ -71,6 +72,7 @@ export const quoteToRow = (q: Quote, userId?: string) => ({
   accept_signature: q.acceptSignature ?? null,
   generated_work_order_id: q.generatedWorkOrderId ?? null,
   share_token: q.shareToken ?? null,
+  images: q.images ?? [],
   created_by: userId ?? null,
 });
 
