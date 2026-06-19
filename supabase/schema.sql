@@ -1818,8 +1818,59 @@ begin
   end if;
 end $$;
 
--- NOT: AI RAG sohbet tabloları (ai_documents/ai_chunks/ai_conversations/ai_messages/
--- channel_messages), pgvector extension ve RLS'leri YALNIZ migration'larda tutulur
--- (20260602000000_ai_rag.sql + 20260626000000_ai_rls_secdef_hardening.sql); schema.sql
--- bunları içermez (pgvector bağımlılığı). ai_messages with-check katılımcı-kontrollü
--- versiyonu 20260626'dadır.
+-- ========== AI SOHBET GEÇMİŞİ (ai_conversations / ai_messages) ==========
+-- Kaynak: 20260602000000_ai_rag.sql + 20260626000000_ai_rls_secdef_hardening.sql.
+-- Bu iki tablo vektör kolonu İÇERMEZ → pgvector gerekmez; schema.sql'e dahil edildi
+-- (sıfırdan kurulan ortamda RLS'siz/eksik kalmasınlar diye). Sıra önemli:
+-- ai_messages.conversation_id -> ai_conversations FK.
+create table if not exists public.ai_conversations (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid,
+  title        text,
+  provider     text,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create table if not exists public.ai_messages (
+  id              uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.ai_conversations(id) on delete cascade,
+  role            text not null check (role in ('system','user','assistant','tool')),
+  content         text,
+  tool_calls      jsonb,
+  tool_name       text,
+  tokens_in       int,
+  tokens_out      int,
+  provider        text,
+  model           text,
+  created_at      timestamptz not null default now()
+);
+create index if not exists ai_messages_conv_idx on public.ai_messages(conversation_id, created_at);
+
+alter table public.ai_conversations enable row level security;
+alter table public.ai_messages      enable row level security;
+
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'ai_conv_own') then
+    create policy ai_conv_own on public.ai_conversations for all to authenticated
+      using (user_id is null or user_id = auth.uid()) with check (user_id is null or user_id = auth.uid());
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'ai_msg_own') then
+    create policy ai_msg_own on public.ai_messages for all to authenticated
+      using (
+        exists (select 1 from public.ai_conversations c
+                where c.id = ai_messages.conversation_id
+                  and (c.user_id is null or c.user_id = auth.uid()))
+      )
+      with check (
+        exists (select 1 from public.ai_conversations c
+                where c.id = ai_messages.conversation_id
+                  and (c.user_id is null or c.user_id = auth.uid()))
+      );
+  end if;
+end $$;
+
+-- NOT: AI RAG vektör tabloları (ai_documents/ai_chunks/channel_messages), pgvector
+-- extension ve match_ai_chunks RPC YALNIZ migration'larda tutulur (pgvector bağımlılığı);
+-- schema.sql bunları içermez. ai_conversations/ai_messages vektörsüz olduğu için yukarıda
+-- schema.sql'e dahildir (ai_msg_own with-check katılımcı-kontrollü, 20260626 ile uyumlu).
