@@ -21,7 +21,7 @@ kapsamı hâlâ eksik. Zemin: `tsc` 0 hata, jest 345/345.
 
 ## ⚡ Bu oturumda TAMAMLANDI (2026-06-19, kod tarafı — 7 commit)
 Aşağıdaki P1/P2/P3 kod maddeleri uygulandı, doğrulandı (tsc 0, jest **360/360** + **test:render 10/10**), commit'lendi:
-- ✅ **P1.6** `ai-rag-worker` cron-token (RAG_CRON_TOKEN) gate + **P1.8** `ai-tools` token cap (12k) + `apollo-proxy` rate-limit (`b7377fe`)
+- ✅ **P1.6** `ai-rag-worker` auth gate (allowServiceRole'lü `requireUser` — pg_cron service_role + kullanıcı JWT geçer, anon reddedilir; öz-incelemede yakalanan cron-kırılması düzeltildi) + **P1.8** `ai-tools` token cap (12k) + `apollo-proxy` rate-limit (`b7377fe`, fix)
 - ✅ **P1.5** schema.sql drift: `ai_conversations`/`ai_messages` eklendi (`82b9603`)
 - ✅ **P1.7** SLA ihlali PROAKTİF bildirimi: `slaWatcher.ts` + AppContext.refresh() + 5 test; ölü `i18n` kaldırıldı (`33287ee`)
 - ✅ **P0.3 (kod kısmı)** Apollo anahtarı client bundle'dan kaldırıldı (`3f3b4a5`)
