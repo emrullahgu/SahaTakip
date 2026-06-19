@@ -98,7 +98,14 @@ export const quotesRepo: Repository<Quote> = {
       const { error: e2 } = await supabase
         .from('quote_lines')
         .insert(quote.lines.map(l => quoteLineToRow(quote.id, l)));
-      if (e2) throw new Error(`[quote_lines.insert] ${e2.message}`);
+      if (e2) {
+        // ATOMİKLİK: quotes yazıldı ama quote_lines patladı. Telafi yapılmazsa YETİM bir
+        // quotes satırı kalır ve quotes_number_key benzersiz numarayı KALICI işgal eder
+        // (kullanıcı "kaydedilemedi" görür ama numara yanar). Telafi-silme ile satırı geri
+        // al → numara serbest kalır. Silme best-effort (RLS ile kendi satırını silebilir).
+        await supabase.from('quotes').delete().eq('id', quote.id).then(() => {}, () => {});
+        throw new Error(`[quote_lines.insert] ${e2.message}`);
+      }
     }
     return quote;
   },

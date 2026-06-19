@@ -13,7 +13,8 @@ const MAX = 200;
 function mapProvider(p?: string): AiAssistantProvider {
   switch (p) {
     case 'claude': case 'anthropic': return 'anthropic';
-    case 'openai': return 'openai';
+    // 'proxy' = ajan çağrısı ai-proxy üzerinden (callOpenAITools yalnız OpenAI) → openai.
+    case 'openai': case 'proxy': return 'openai';
     case 'gemini': return 'gemini';
     default: return 'local';
   }
