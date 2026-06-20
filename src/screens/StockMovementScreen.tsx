@@ -24,6 +24,7 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { listMaterials } from '../services/materials';
 import { listWarehouses } from '../services/warehouses';
 import { addMovement, getBalance } from '../services/stock';
+import { parseNonNeg } from '../utils/numInput';
 import {
   Material,
   Warehouse,
@@ -124,7 +125,8 @@ export default function StockMovementScreen() {
       fromWarehouseId: needFrom ? fromId : undefined,
       toWarehouseId: needTo ? toId : undefined,
       qty: q,
-      unitPrice: unitPrice ? Number(unitPrice.replace(',', '.')) : undefined,
+      unitPrice: parseNonNeg(unitPrice), // NaN/negatif birim fiyat stok değerlemesini bozmasın
+
       workOrderId: presetWorkOrderId,
       note: note.trim() || undefined,
     });

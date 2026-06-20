@@ -63,6 +63,15 @@ export default function PayrollRunsScreen() {
 
   const onSave = async () => {
     if (!preview) return Alert.alert('Eksik', 'Personel seçin');
+    // DOĞRULAMA: geçersiz/negatif değerler bordroya sızmasın (önceden negatif NET maaş bile
+    // sessizce kaydediliyordu — avans brütten fazlaysa).
+    if (!(Number(wage) > 0)) return Alert.alert('Geçersiz', "Aylık ücret 0'dan büyük olmalı.");
+    const d = Number(days);
+    if (!Number.isFinite(d) || d < 0 || d > 31) return Alert.alert('Geçersiz', 'Çalışılan gün 0–31 arası olmalı.');
+    if (!/^\d{4}-\d{2}$/.test(month)) return Alert.alert('Geçersiz', 'Dönem YYYY-AA biçiminde olmalı (örn. 2026-06).');
+    if (preview.net < 0) {
+      return Alert.alert('Negatif Net Maaş', `Net maaş negatif (${preview.net.toFixed(2)} ₺) — avans/kesinti brüt ücretten fazla. Değerleri kontrol edin.`);
+    }
     await savePayrollRun({ ...preview, status: 'draft' });
     setModal(false);
     refresh();

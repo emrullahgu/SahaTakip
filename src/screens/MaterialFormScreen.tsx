@@ -20,6 +20,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { getMaterial, upsertMaterial, newMaterial } from '../services/materials';
+import { parseNonNeg } from '../utils/numInput';
 import { Material, RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MaterialForm'>;
@@ -112,7 +113,7 @@ export default function MaterialFormScreen() {
           <Text style={styles.label}>Birim Fiyat</Text>
           <TextInput
             value={form.price === undefined || form.price === null ? '' : String(form.price)}
-            onChangeText={t => set('price', t === '' ? undefined : Number(t.replace(',', '.')))}
+            onChangeText={t => set('price', t === '' ? undefined : parseNonNeg(t))}
             style={styles.input}
             placeholder="0"
             placeholderTextColor={colors.text.faint}
@@ -122,7 +123,7 @@ export default function MaterialFormScreen() {
           <Text style={styles.label}>Minimum Stok (uyarı eşiği)</Text>
           <TextInput
             value={form.minStock === undefined || form.minStock === null ? '' : String(form.minStock)}
-            onChangeText={t => set('minStock', t === '' ? undefined : Number(t.replace(',', '.')))}
+            onChangeText={t => set('minStock', t === '' ? undefined : parseNonNeg(t))}
             style={styles.input}
             placeholder="0 = uyarı yok"
             placeholderTextColor={colors.text.faint}

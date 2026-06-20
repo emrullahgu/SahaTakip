@@ -176,7 +176,7 @@ export default function CustomerFormScreen() {
               <Text style={styles.section}>Finansal Bilgiler</Text>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 <View style={{ flex: 1 }}>
-                  <Field label="Risk Limiti" value={String(form.riskLimit ?? '')} onChangeText={v => set('riskLimit', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />
+                  <Field label="Risk Limiti" value={String(form.riskLimit ?? '')} onChangeText={v => set('riskLimit', Math.max(0, parseFloat(v) || 0))} keyboardType="numeric" placeholder="0 ₺" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Field label="Mevcut Bakiye" value={String(form.currentBalance ?? '')} onChangeText={v => set('currentBalance', parseFloat(v) || 0)} keyboardType="numeric" placeholder="0 ₺" />

@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { addLog, getLog, updateLog } from '../services/vehicleLogs';
 import { uploadPhoto } from '../services/photoUpload';
+import { parseNonNeg } from '../utils/numInput';
 import { VehicleLog, VehicleLogKind, RootStackParamList } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'VehicleLogForm'>;
@@ -106,6 +107,14 @@ export default function VehicleLogFormScreen() {
       return;
     }
 
+    // DOĞRULAMA: girilmiş ama geçersiz (NaN/negatif) sayı KAYDA SIZMASIN — yakıt istatistiği/
+    // km grafiği bozulmasın. parseNonNeg geçersizi undefined yapar; girilmiş+geçersizse blokla.
+    const kmN = parseNonNeg(km), litersN = parseNonNeg(liters), unitPriceN = parseNonNeg(unitPrice), totalCostN = parseNonNeg(totalCost);
+    if ((km && kmN === undefined) || (liters && litersN === undefined) || (unitPrice && unitPriceN === undefined) || (totalCost && totalCostN === undefined)) {
+      Alert.alert('Geçersiz değer', 'Km / litre / fiyat geçerli ve negatif olmayan bir sayı olmalı.');
+      return;
+    }
+
     setSaving(true);
     try {
       // Yeni seçilen yerel fişi Storage'a yükle (online ise URL, değilse local kalır).
@@ -121,10 +130,10 @@ export default function VehicleLogFormScreen() {
       const log: Omit<VehicleLog, 'id' | 'createdAt'> = {
         vehicleId,
         kind,
-        km: km ? Number(km.replace(',', '.')) : undefined,
-        liters: liters ? Number(liters.replace(',', '.')) : undefined,
-        unitPrice: unitPrice ? Number(unitPrice.replace(',', '.')) : undefined,
-        totalCost: totalCost ? Number(totalCost.replace(',', '.')) : undefined,
+        km: kmN,
+        liters: litersN,
+        unitPrice: unitPriceN,
+        totalCost: totalCostN,
         serviceType: serviceType.trim() || undefined,
         dueAt: dueAt.trim() || undefined,
         note: note.trim() || undefined,
