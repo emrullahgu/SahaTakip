@@ -82,14 +82,15 @@ export async function addEntry(
     createdAt: new Date().toISOString(),
   };
   if (SUPABASE_CONFIGURED) {
-    try {
-      const { data: row, error } = await supabase
-        .from('cash_entries')
-        .insert(toRow(next))
-        .select()
-        .single();
-      if (!error && row) next = fromRow(row);
-    } catch { /* keep local */ }
+    // DÜRÜSTLÜK (Req#3): DB reddederse fırlat — yutulursa kasa girişi sunucudan taze
+    // çekilince kaybolur, bakiye yanlış kalır ("kaydedildi" yalanı).
+    const { data: row, error } = await supabase
+      .from('cash_entries')
+      .insert(toRow(next))
+      .select()
+      .single();
+    if (error) throw new Error(`Kasa girişi kaydedilemedi: ${error.message}`);
+    if (row) next = fromRow(row);
   }
   await saveAll([next, ...all]);
   void auditRepo.logCurrent({ action: 'cash.entry.create', tableName: 'cash_entries', refId: next.id, meta: { kind: next.kind, amount: next.amount, employeeId: next.employeeId } });
@@ -98,7 +99,8 @@ export async function addEntry(
 
 export async function deleteEntry(id: string): Promise<void> {
   if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
-    try { await supabase.from('cash_entries').delete().eq('id', id); } catch { /* ignore */ }
+    const { error } = await supabase.from('cash_entries').delete().eq('id', id);
+    if (error) throw new Error(`Kasa girişi silinemedi: ${error.message}`);
   }
   const all = await listEntries();
   await saveAll(all.filter(e => e.id !== id));

@@ -148,6 +148,10 @@ export default function PaymentFormScreen() {
         },
         { text: 'Kapat', onPress: () => navigation.goBack() },
       ]);
+    } catch (e: any) {
+      // createPayment/updatePayment/addEntry artık DB reddinde fırlatır → kullanıcıya
+      // DÜRÜST hata (sahte "kaydedildi" yok). Ekrandan çıkma; kullanıcı tekrar deneyebilir.
+      Alert.alert('Hata', (editId ? 'Tahsilat güncellenemedi: ' : 'Tahsilat kaydedilemedi: ') + (e?.message || 'bilinmeyen hata'));
     } finally {
       setSaving(false);
     }

@@ -125,8 +125,13 @@ export default function PaymentDetailScreen() {
         text: 'Sil',
         style: 'destructive',
         onPress: async () => {
-          await deletePayment(p.id);
-          navigation.goBack();
+          // deletePayment artık DB reddinde fırlatır → başarısızsa ekrandan ÇIKMA + dürüst hata.
+          try {
+            await deletePayment(p.id);
+            navigation.goBack();
+          } catch (e: any) {
+            Alert.alert('Silinemedi', e?.message || 'Tahsilat silinemedi.');
+          }
         },
       },
     ]);

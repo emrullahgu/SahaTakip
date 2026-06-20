@@ -111,8 +111,12 @@ function PaymentsScreenInner() {
         text: 'Sil',
         style: 'destructive',
         onPress: async () => {
-          await deletePayment(p.id);
-          await load();
+          try {
+            await deletePayment(p.id);
+            await load();
+          } catch (e: any) {
+            Alert.alert('Silinemedi', e?.message || 'Tahsilat silinemedi.');
+          }
         },
       },
     ]);

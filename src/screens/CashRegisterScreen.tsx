@@ -109,13 +109,18 @@ function CashRegisterInner() {
       Alert.alert('Eksik', 'Tutar 0\'dan büyük olmalı.');
       return;
     }
-    await addEntry({
-      employeeId: selectedEmp.id,
-      employeeName: selectedEmp.name,
-      kind,
-      amount: amt,
-      note: note.trim() || undefined,
-    });
+    try {
+      await addEntry({
+        employeeId: selectedEmp.id,
+        employeeName: selectedEmp.name,
+        kind,
+        amount: amt,
+        note: note.trim() || undefined,
+      });
+    } catch (err: any) {
+      Alert.alert('Kaydedilemedi', err?.message || 'Kasa girişi kaydedilemedi.');
+      return;
+    }
     setAmount('');
     setNote('');
     await Promise.all([loadEntries(), loadSummaries()]);
@@ -128,8 +133,12 @@ function CashRegisterInner() {
         text: 'Sil',
         style: 'destructive',
         onPress: async () => {
-          await deleteEntry(e.id);
-          await Promise.all([loadEntries(), loadSummaries()]);
+          try {
+            await deleteEntry(e.id);
+            await Promise.all([loadEntries(), loadSummaries()]);
+          } catch (err: any) {
+            Alert.alert('Silinemedi', err?.message || 'Kasa girişi silinemedi.');
+          }
         },
       },
     ]);

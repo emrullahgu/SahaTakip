@@ -108,14 +108,16 @@ export async function createPayment(
     receiptNo: data.receiptNo ?? autoReceiptNo(all),
   };
   if (SUPABASE_CONFIGURED) {
-    try {
-      const { data: row, error } = await supabase
-        .from('payments')
-        .insert(toRow(next))
-        .select()
-        .single();
-      if (!error && row) next = fromRow(row);
-    } catch { /* keep local */ }
+    // DÜRÜSTLÜK (Req#3): DB reddederse (RLS/constraint/ağ) HATA FIRLAT — önceden hata yutulup
+    // yerel kayıt + "Tahsilat kaydedildi" gösteriliyordu; sonraki listPayments() sunucudan
+    // taze çekince yerel kayıt KALICI siliniyordu (finansal veri sessiz kaybı).
+    const { data: row, error } = await supabase
+      .from('payments')
+      .insert(toRow(next))
+      .select()
+      .single();
+    if (error) throw new Error(`Tahsilat kaydedilemedi: ${error.message}`);
+    if (row) next = fromRow(row);
   }
   await saveAll([next, ...all]);
   void auditRepo.logCurrent({ action: 'payment.create', tableName: 'payments', refId: next.id, meta: { amount: next.amount, method: next.method, status: next.status, customerId: next.customerId } });
@@ -134,19 +136,20 @@ export async function updatePayment(
     return updated;
   });
   if (updated && SUPABASE_CONFIGURED && UUID_RE.test(id)) {
-    try {
-      const { data: row, error } = await supabase
-        .from('payments')
-        .update(toRow(updated))
-        .eq('id', id)
-        .select()
-        .single();
-      if (!error && row) {
-        updated = fromRow(row);
-        const idx = next.findIndex(p => p.id === id);
-        if (idx >= 0) next[idx] = updated;
-      }
-    } catch { /* ignore */ }
+    // DÜRÜSTLÜK (Req#3): hata yutulmaz — DB reddederse fırlat (yerel güncelleme sunucudan
+    // taze çekildiğinde geri alınıp sessizce kaybolmasın).
+    const { data: row, error } = await supabase
+      .from('payments')
+      .update(toRow(updated))
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(`Tahsilat güncellenemedi: ${error.message}`);
+    if (row) {
+      updated = fromRow(row);
+      const idx = next.findIndex(p => p.id === id);
+      if (idx >= 0) next[idx] = updated;
+    }
   }
   if (updated) {
     await saveAll(next);
@@ -157,7 +160,10 @@ export async function updatePayment(
 
 export async function deletePayment(id: string): Promise<void> {
   if (SUPABASE_CONFIGURED && UUID_RE.test(id)) {
-    try { await supabase.from('payments').delete().eq('id', id); } catch { /* ignore */ }
+    // DÜRÜSTLÜK: silme reddedilirse (RLS/yetki) fırlat — yerelden silinip sunucuda kalan
+    // kayıt sonraki fetch'te geri gelip "silindi" yalanını açığa çıkarmasın.
+    const { error } = await supabase.from('payments').delete().eq('id', id);
+    if (error) throw new Error(`Tahsilat silinemedi: ${error.message}`);
   }
   const all = await listPayments();
   await saveAll(all.filter(p => p.id !== id));
