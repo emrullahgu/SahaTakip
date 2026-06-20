@@ -2,7 +2,7 @@
 // CheckinScannerScreen — POZ-DEV-020 (QR ile lokasyon check-in)
 // expo-camera barcode scanner; QR formatı: SAHA:{site_code}[:{customer_id}]
 // ====================================================================
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,11 +19,15 @@ export default function CheckinScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [lastSite, setLastSite] = useState<string | null>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!permission) return;
     if (!permission.granted && permission.canAskAgain) requestPermission();
   }, [permission]);
+
+  // setTimeout cleanup: tarama penceresinde ekran kapanırsa unmount sonrası setState olmasın.
+  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
 
   const onScan = async ({ data }: { data: string }) => {
     if (scanned) return;
@@ -32,7 +36,8 @@ export default function CheckinScannerScreen() {
     const parts = data.split(':');
     if (parts[0] !== 'SAHA' || !parts[1]) {
       Alert.alert('Geçersiz QR', 'Saha kodu okunamadı. Beklenen format: SAHA:KOD');
-      setTimeout(() => setScanned(false), 1500);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setScanned(false), 1500);
       return;
     }
     const siteCode = parts[1];

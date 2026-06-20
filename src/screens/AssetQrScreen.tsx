@@ -1,5 +1,5 @@
 // Faz 46 — AssetQrScreen (QR display + scan mock)
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,9 +49,13 @@ export default function AssetQrScreen() {
 
   const pattern = selected ? grid16(selected.qrPayload) : null;
 
+  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (scanTimer.current) clearTimeout(scanTimer.current); }, []);
+
   const mockScan = () => {
     setScanning(true);
-    setTimeout(() => {
+    if (scanTimer.current) clearTimeout(scanTimer.current);
+    scanTimer.current = setTimeout(() => {
       const pick = assets[Math.floor(Math.random() * assets.length)];
       setScanning(false);
       if (pick) {
