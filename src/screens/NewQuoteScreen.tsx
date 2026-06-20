@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { resizeForUpload } from '../utils/image';
 import { uploadPhoto } from '../services/photoUpload';
+import { quotePricingWarnings } from '../utils/quoteWarnings';
 import { HIT_SLOP_8 } from '../utils/a11y';
 import { formatTRY } from '../utils/money';
 import { Ionicons } from '@expo/vector-icons';
@@ -144,6 +145,9 @@ export default function NewQuoteScreen() {
   }, [navigation, editingQuote]);
 
   const totals = useMemo(() => calcQuoteTotals(lines), [lines]);
+  // Fiyat-sağlığı uyarıları (fiyatsız kalem / aşırı iskonto / hatalı miktar) — kaydetmeden
+  // önce kullanıcıyı uyarır, bloklamaz.
+  const warnings = useMemo(() => quotePricingWarnings(lines, totals.grandTotal), [lines, totals.grandTotal]);
 
   const addPozLine = (poz: PozItem) => {
     const newLine: QuoteLine = {
@@ -188,6 +192,24 @@ export default function NewQuoteScreen() {
       Alert.alert('Eksik bilgi', 'En az bir kalem ekleyiniz.');
       return;
     }
+    // Fiyat-sağlığı: ciddi (danger) uyarı varsa kaydetmeden önce ONAY iste (bloklamaz).
+    const dangers = warnings.filter(w => w.severity === 'danger');
+    if (dangers.length) {
+      Alert.alert(
+        'Fiyat uyarısı',
+        dangers.map(d => '• ' + d.message).join('\n') + '\n\nYine de kaydetmek istiyor musun?',
+        [
+          { text: 'İptal', style: 'cancel' },
+          { text: 'Yine de Kaydet', style: 'destructive', onPress: () => { void proceedSave(); } },
+        ],
+      );
+      return;
+    }
+    await proceedSave();
+  };
+
+  const proceedSave = async () => {
+    if (!customer) return;
     if (editingQuote) {
       const updated: Quote = {
         ...editingQuote,
@@ -516,6 +538,21 @@ export default function NewQuoteScreen() {
             </Text>
           </View>
         </View>
+
+        {warnings.length > 0 && (
+          <View style={styles.warnCard}>
+            {warnings.map((w, i) => (
+              <View key={i} style={styles.warnRow}>
+                <Ionicons
+                  name={w.severity === 'danger' ? 'alert-circle' : 'warning-outline'}
+                  size={16}
+                  color={w.severity === 'danger' ? colors.rose.default : '#f59e0b'}
+                />
+                <Text style={styles.warnText}>{w.message}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* SAVE BAR */}
@@ -1314,6 +1351,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: 100 },
 
+  warnCard: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', gap: 6 },
+  warnRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  warnText: { flex: 1, fontSize: typography.sm, color: '#78350f', lineHeight: 18 },
   imgHint: { fontSize: typography.xs, color: colors.text.faint, marginBottom: spacing.sm },
   imgGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   imgThumbWrap: { position: 'relative' },

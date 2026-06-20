@@ -182,4 +182,16 @@ describe('extractQuoteDraft — sohbet→teklif yapısal aktarım', () => {
     ].join('\n');
     expect(extractQuoteDraft(reply).draft).toBeNull();
   });
+
+  it('yedek: isim sütunu başlıktan bulunamazsa fiyat sütununu İSİM SANMAZ', () => {
+    // Başlık isim-anahtarı içermiyor; fiyat ilk sütun. nameIdx fiyat sütununa düşmemeli.
+    const reply = [
+      '| Birim Fiyat | Adet | Ürün |',
+      '|---|---|---|',
+      '| 2500 | 4 | Kablo |',
+    ].join('\n');
+    const { draft } = extractQuoteDraft(reply);
+    expect(draft).not.toBeNull();
+    expect(draft!.lines[0]).toMatchObject({ name: 'Kablo', quantity: 4, unitPrice: 2500 });
+  });
 });

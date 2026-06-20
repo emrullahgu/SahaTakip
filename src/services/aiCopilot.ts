@@ -95,10 +95,15 @@ function parseQuoteTableFallback(reply: string): QuoteDraftLineSeed[] {
   const findIdx = (...keys: string[]) => header.findIndex(h => keys.some(k => h.includes(k)));
   const priceIdx = findIdx('birim fiyat', 'b. fiyat', 'b.fiyat', 'birim f', 'birimfiyat');
   if (priceIdx < 0) return []; // birim fiyat sütunu yoksa güvenli çık
-  let nameIdx = findIdx('kalem', 'iş', 'açıklama', 'tanım', 'hizmet', 'malzeme', 'poz');
-  if (nameIdx < 0) nameIdx = 0;
   const qtyIdx = findIdx('adet', 'miktar', 'qty', 'mik.');
   const unitIdx = findIdx('birim', 'br.');
+  let nameIdx = findIdx('kalem', 'iş', 'açıklama', 'tanım', 'hizmet', 'malzeme', 'poz');
+  if (nameIdx < 0) {
+    // İsim sütunu başlıktan bulunamadı → fiyat/adet/birim OLMAYAN ilk sütunu isim say.
+    // (Aksi halde nameIdx=0 fiyat sütunuysa fiyatı isim sanıp teklif tutarını çöpler.)
+    nameIdx = header.findIndex((_, i) => i !== priceIdx && i !== qtyIdx && i !== unitIdx);
+    if (nameIdx < 0) return []; // güvenli çık
+  }
   const out: QuoteDraftLineSeed[] = [];
   for (let i = 1; i < rows.length; i++) {
     const c = cells(rows[i]);
