@@ -30,6 +30,7 @@ import { buildCsv, shareCsv } from '../services/csvExport';
 import { quotesToRows } from '../utils/exportRows';
 import { localDateISO } from '../utils/date';
 import { validityBadge, quoteValidity } from '../utils/quoteValidity';
+import { quotePricingWarnings } from '../utils/quoteWarnings';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -291,6 +292,10 @@ function QuoteCard({
   const sc = STATUS_COLORS[quote.status] ?? STATUS_COLORS['Taslak'];
   const vBadge = validityBadge(quote);
   const vExpired = quoteValidity(quote) === 'expired';
+  // Fiyat-sağlığı: fiyatsız kalem (danger) olan teklifi listede işaretle → kullanıcı
+  // göndermeden önce düzeltsin (yeni: quotePricingWarnings ile tutarlı).
+  const hasPriceDanger = quotePricingWarnings(quote.lines ?? [], quote.grandTotal)
+    .some(w => w.severity === 'danger');
   return (
     <PressableScale style={styles.card} onPress={onPress}>
       <View style={styles.cardTop}>
@@ -313,6 +318,13 @@ function QuoteCard({
         <View style={[styles.validityBadge, { backgroundColor: vExpired ? colors.rose.bg : colors.amber.bg, borderColor: vExpired ? colors.rose.border : colors.amber.border }]}>
           <Ionicons name="time-outline" size={12} color={vExpired ? colors.rose.default : colors.amber.default} />
           <Text style={[styles.validityText, { color: vExpired ? colors.rose.default : colors.amber.default }]}>{vBadge}</Text>
+        </View>
+      )}
+
+      {hasPriceDanger && (
+        <View style={[styles.validityBadge, { backgroundColor: colors.rose.bg, borderColor: colors.rose.border }]}>
+          <Ionicons name="alert-circle-outline" size={12} color={colors.rose.default} />
+          <Text style={[styles.validityText, { color: colors.rose.default }]}>Fiyatsız kalem var — düzenle</Text>
         </View>
       )}
 
