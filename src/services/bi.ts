@@ -463,7 +463,11 @@ export async function listBudgetVsActual(): Promise<BudgetVsActualRow[]> {
       .select('category,amount,date').gte('date', pStart).lt('date', pEnd);
     const byCat = new Map<string, number>();
     for (const e of (data || [])) byCat.set(e.category || 'Diğer', (byCat.get(e.category || 'Diğer') || 0) + safeNum(e.amount));
-    const prevStart = localDateISO(new Date(Date.now() - 90 * 86400000));
+    // Plan = önceki 3 TAKVİM AYININ aylık ortalaması. Önceden "bugün-90gün" kullanılıyordu;
+    // ayın ortasında pencere ~71 gün oluyordu ama bölen sabit /3 → plan sistematik düşük çıkıp
+    // yanlış "bütçe aşıldı" alarmı veriyordu. Tam 3 ay (cari ay başından 3 ay geri → cari ay başı).
+    const ps = new Date(pStart + 'T00:00:00');
+    const prevStart = localDateISO(new Date(ps.getFullYear(), ps.getMonth() - 3, 1));
     const { data: prev } = await supabase.from('expenses')
       .select('category,amount,date').gte('date', prevStart).lt('date', pStart);
     const prevByCat = new Map<string, number>();
@@ -474,7 +478,12 @@ export async function listBudgetVsActual(): Promise<BudgetVsActualRow[]> {
     const rows: BudgetVsActualRow[] = [];
     let i = 0;
     for (const [cat, actual] of byCat) {
-      const planned = Math.round(((prevByCat.get(cat) || actual) / 3) * 100) / 100;
+      // Kategorinin geçmişi varsa 3-ay ortalaması; YOKSA plan=gerçekleşen (variance≈0).
+      // Önceki `|| actual` hem eksik hem TAM 0 geçmişi actual/3'e düşürüp +%200 sahte
+      // sapma üretiyordu.
+      const planned = prevByCat.has(cat)
+        ? Math.round((prevByCat.get(cat)! / 3) * 100) / 100
+        : actual;
       const variance = actual - planned;
       rows.push({
         id: 'bvar_' + (i++),

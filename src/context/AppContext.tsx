@@ -101,7 +101,7 @@ export interface AppContextType {
   setQuoteStatus: (id: string, status: QuoteStatus) => Promise<WriteResult>;
   // FAZ 4
   acceptQuoteAndCreateWorkOrder: (quoteId: string, signedBy?: string, signature?: string) => Promise<string | null>;
-  reviseQuote: (q: Quote, reason?: string) => Promise<void>;
+  reviseQuote: (q: Quote, reason?: string) => Promise<WriteResult>;
   generateQuoteShareToken: (quoteId: string) => string | null;
   generateQuoteNumber: () => string;
   addCustomer: (c: Customer) => Promise<WriteResult>;
@@ -321,7 +321,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // "kaydedildi" derken yalan söylemesin (Gereksinim 3); UI optimistik güncellenir,
   // hata olursa geri alınır.
   const addQuote = async (q: Quote): Promise<WriteResult> => {
-    setQuotes(prev => [q, ...prev]);
+    // DEDUPE: aynı id zaten varsa tekrar ekleme. QuotesScreen realtime callback'i kendi
+    // INSERT'ini geri alıp (stale closure guard'ı kaçırınca) addQuote'u 2. kez çağırabiliyordu
+    // → liste başında çift kart + FlatList yinelenen-key uyarısı. Kaynakta dedupe en sağlamı.
+    setQuotes(prev => prev.some(x => x.id === q.id) ? prev : [q, ...prev]);
     // generateQuoteNumber numarayı YEREL listeden üretir; liste bayatsa (başka cihaz,
     // sayfalama, yenilenmemiş) sunucudaki bir numarayla çakışır → quotes_number_key (23505)
     // ve teklif HİÇ kaydedilemez. insertQuoteWithNumberRetry çakışmada sunucudaki GERÇEK
@@ -406,10 +409,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // FAZ 4 — Revizyon kaydet (POZ-DEV-038)
-  const reviseQuote = async (q: Quote, reason?: string) => {
+  const reviseQuote = async (q: Quote, reason?: string): Promise<WriteResult> => {
     await recordRevision(q, reason);
     await recordQuoteLines(q.lines);
-    updateQuote({ ...q, revision: (q.revision ?? 0) + 1 });
+    // await: önceden fire-and-forget'ti; reviseQuote DB yazımı bitmeden resolve oluyor,
+    // {ok:false} yutuluyordu. Sonucu çağırana ilet (updateQuote zaten rollback+toast yapar).
+    return updateQuote({ ...q, revision: (q.revision ?? 0) + 1 });
   };
 
   // FAZ 4 — Paylaşılabilir kabul linki tokeni üret (POZ-DEV-040)
