@@ -23,7 +23,11 @@ export default function FieldJobDetailScreen() {
   const route = useRoute<R>();
   const nav = useNavigation<Nav>();
   const [job, setJob] = useState<FieldJob | null>(null);
-  const load = useCallback(async () => { const j = await getJob(route.params.jobId); setJob(j || null); }, [route.params.jobId]);
+  const [loaded, setLoaded] = useState(false);
+  const load = useCallback(async () => {
+    try { const j = await getJob(route.params.jobId); setJob(j || null); }
+    finally { setLoaded(true); }
+  }, [route.params.jobId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onAdvance = async () => {
@@ -41,7 +45,17 @@ export default function FieldJobDetailScreen() {
     load();
   };
 
-  if (!job) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  // loaded ayrımı: yükleme bitene kadar spinner; bittiğinde iş YOKSA "bulunamadı" + geri dön
+  // (önceden bulunamayan/silinmiş jobId kalıcı "Yükleniyor..." tuzağında kalıyordu).
+  if (!loaded) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  if (!job) return (
+    <SafeAreaView style={s.safe}>
+      <Text style={s.empty}>İş bulunamadı.</Text>
+      <TouchableOpacity onPress={() => nav.goBack()} style={{ alignSelf: 'center', marginTop: 12 }}>
+        <Text style={{ color: '#1e40af', fontWeight: '700' }}>← Geri Dön</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
   const action = NEXT_STAGE[job.stage];
 
   return (

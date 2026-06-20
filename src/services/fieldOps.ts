@@ -185,6 +185,10 @@ export async function listChecklist(jobId: string): Promise<FieldChecklistItem[]
   const all = await get<FieldChecklistItem[]>(K.check, []);
   let job = all.filter(c => c.jobId === jobId);
   if (job.length === 0) {
+    // GEÇERSİZ/var-olmayan jobId koruması: önceden her jobId için sahte 6-kalemlik checklist
+    // üretilip KALICI yazılıyordu (silinmiş/bozuk param → yetim veri kirliliği). Yalnız gerçek
+    // bir iş varsa seed et; yoksa boş dön (ekran "iş bulunamadı" gösterir).
+    if (!jobId || !(await getJob(jobId))) return [];
     job = await seedChecklist(jobId);
     await set(K.check, [...all, ...job]);
   }

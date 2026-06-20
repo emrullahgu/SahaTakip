@@ -21,7 +21,11 @@ export default function SurveyFormDetailScreen() {
   const [qty, setQty] = useState('1');
   const [price, setPrice] = useState('');
 
-  const load = useCallback(async () => { const s = await getSurvey(route.params.surveyId); setSv(s || null); }, [route.params.surveyId]);
+  const [loaded, setLoaded] = useState(false);
+  const load = useCallback(async () => {
+    try { const s = await getSurvey(route.params.surveyId); setSv(s || null); }
+    finally { setLoaded(true); }
+  }, [route.params.surveyId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onAdd = async () => {
@@ -31,7 +35,8 @@ export default function SurveyFormDetailScreen() {
     setModal(false); load();
   };
 
-  if (!sv) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  if (!loaded) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
+  if (!sv) return <SafeAreaView style={s.safe}><Text style={s.empty}>Anket bulunamadı.</Text></SafeAreaView>;
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>

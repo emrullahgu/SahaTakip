@@ -13,10 +13,16 @@ type R = RouteProp<RootStackParamList, 'AuditDetail'>;
 export default function AuditDetailScreen() {
   const route = useRoute<R>();
   const [item, setItem] = useState<AuditLogEntry | undefined>();
+  const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => { setItem(await getAuditEntry(route.params.entryId)); }, [route.params.entryId]);
+  const load = useCallback(async () => {
+    try { setItem(await getAuditEntry(route.params.entryId)); }
+    finally { setLoaded(true); }
+  }, [route.params.entryId]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // loaded ayrımı: yükleme bitmeden "bulunamadı" gösterip flicker yapmasın.
+  if (!loaded) return <SafeAreaView style={s.safe}><Text style={s.empty}>Yükleniyor...</Text></SafeAreaView>;
   if (!item) return <SafeAreaView style={s.safe}><Text style={s.empty}>Kayıt bulunamadı.</Text></SafeAreaView>;
 
   const beforeKeys = Object.keys(item.before || {});
