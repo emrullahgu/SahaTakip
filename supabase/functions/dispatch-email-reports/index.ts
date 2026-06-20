@@ -79,10 +79,14 @@ async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T
 
 async function resolveRecipients(s: EmailSchedule): Promise<string[]> {
   const list = new Set<string>(s.recipients ?? []);
-  if (s.role_filter && s.role_filter.length > 0) {
-    // role bazlı email listesi — auth.users join
+  // GÜVENLİK: role_filter PostgREST in.(...) gramerine basılıyor. Kodlanmadan/whitelist'siz
+  // bir rol değeri ")&select=..." gibi karakterler içerirse filtre yapısı değişir (service_role
+  // ile RLS bypass → tüm e-postalar). Bilinen rollere whitelist + encode.
+  const KNOWN_ROLES = new Set(['admin', 'manager', 'engineer', 'field', 'viewer', 'sales', 'accountant']);
+  const roles = (s.role_filter ?? []).filter(r => KNOWN_ROLES.has(String(r)));
+  if (roles.length > 0) {
     const data = await sb<{ email: string | null }[]>(
-      `/rest/v1/profiles?role=in.(${s.role_filter.join(',')})&select=email:auth_user_email`,
+      `/rest/v1/profiles?role=in.(${roles.map(encodeURIComponent).join(',')})&select=email:auth_user_email`,
     ).catch(() => [] as { email: string | null }[]);
     for (const row of data) {
       if (row?.email) list.add(row.email);

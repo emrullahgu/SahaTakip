@@ -42,6 +42,7 @@ interface SendQuoteEmailBody {
   html: string;
   quote?: { id?: string; number?: string };
   pdfUri?: string;
+  fileName?: string;   // "KOBİNERJİ-KONU-NO.pdf" — client gönderir, ek adı bundan kurulur
   replyTo?: string;
 }
 

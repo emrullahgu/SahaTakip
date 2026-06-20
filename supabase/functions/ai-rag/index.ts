@@ -194,12 +194,16 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     action = body.action ?? 'unknown';
-    // ingest/delete DB'yi değiştirir (belge ekler/siler) → en az authenticated.
-    // Önceden kimliksiz herhangi biri ai_documents/ai_chunks'a spam belge basabiliyordu.
-    // query/list (yalnız-okuma) açık kalır. Rol-gate değil ki meşru akış kırılmasın.
-    if (action === 'ingest' || action === 'delete') {
+    // GÜVENLİK: TÜM aksiyonlar kimlik ister. query/list de KAPALI: ai_documents.content
+    // müşteri vergi no/telefon/e-posta/adres (PII) içeriyor (ai-rag-worker fmtCustomer) ve
+    // query embedding + LLM (paralı) tetikliyor → kimliksiz erişim PII sızıntısı + maliyet
+    // suistimaliydi. ingest worker'dan service_role ile gelir (allowServiceRole); query/list/
+    // delete authenticated+approved kullanıcı.
+    {
       const { requireUser } = await import('../_shared/auth.ts');
-      const auth = await requireUser(req);
+      const auth = action === 'ingest'
+        ? await requireUser(req, { allowServiceRole: true })
+        : await requireUser(req, { requireApproved: true });
       if (!auth.ok) return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { ...CORS, 'content-type': 'application/json' } });
     }
     let out: any;

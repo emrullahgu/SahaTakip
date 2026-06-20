@@ -184,13 +184,17 @@ Deno.serve(async (req) => {
         if (emails.length) {
           const from = Deno.env.get('RESEND_FROM') || 'SahaTakip <onboarding@resend.dev>';
           // bcc ile gönder → alıcılar birbirini görmez (gizlilik).
+          // GÜVENLİK: title/body kullanıcı girdisi → HTML'e kaçışsız gömülürse e-posta
+          // HTML/phishing enjeksiyonu (authenticated kullanıcı <a>/<img> sokabilir). Escape et.
+          const esc = (x: unknown) => String(x ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
           const r = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               from, to: [from], bcc: emails,
-              subject: title,
-              html: `<div style="font-family:Arial,sans-serif"><h3 style="color:#1e40af">${title}</h3><p>${body}</p><p style="color:#888;font-size:12px">SahaTakip · KOBİNERJİ</p></div>`,
+              subject: esc(title),
+              html: `<div style="font-family:Arial,sans-serif"><h3 style="color:#1e40af">${esc(title)}</h3><p>${esc(body)}</p><p style="color:#888;font-size:12px">SahaTakip · KOBİNERJİ</p></div>`,
             }),
           });
           if (r.ok) emailsSent = emails.length;
