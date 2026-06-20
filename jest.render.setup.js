@@ -27,7 +27,19 @@ jest.mock('@expo/vector-icons', () => {
 jest.mock('react-native-maps', () => {
   const React = require('react');
   const Stub = (props) => React.createElement('Map', props);
-  return { __esModule: true, default: Stub, Marker: Stub, Polyline: Stub, PROVIDER_GOOGLE: 'google' };
+  return { __esModule: true, default: Stub, Marker: Stub, Polyline: Stub, Circle: Stub, Callout: Stub, PROVIDER_GOOGLE: 'google' };
+});
+
+// expo-camera (CameraView + useCameraPermissions) native; test ortamında yok.
+jest.mock('expo-camera', () => {
+  const React = require('react');
+  const Cam = (props) => React.createElement('Camera', props);
+  return {
+    __esModule: true,
+    CameraView: Cam,
+    Camera: Cam,
+    useCameraPermissions: () => [{ granted: true, status: 'granted' }, jest.fn(async () => ({ granted: true }))],
+  };
 });
 
 // Navigation hook'larını nötrle → ekranlar NavigationContainer olmadan da render olur.

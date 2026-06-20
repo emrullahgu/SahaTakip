@@ -15,8 +15,10 @@ export interface GeoPosition {
  * Reddedilirse null döner.
  */
 export async function requestAndGetPosition(): Promise<GeoPosition | null> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
+  // Bazı platform/edge durumlarda izin API'si undefined dönebilir → {status} destructuring
+  // çökerdi. Savunmacı: sonuç yoksa veya izin yoksa null (konum yok), çökme yok.
+  const perm = await Location.requestForegroundPermissionsAsync().catch(() => null);
+  if (!perm || perm.status !== 'granted') {
     return null;
   }
   const pos = await Location.getCurrentPositionAsync({
