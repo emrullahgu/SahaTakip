@@ -37,7 +37,8 @@ export const calcQuoteTotals = (lines: QuoteLine[]) => {
   }
   // Kuruşa yuvarla: float birikimi 777760.5600000001 gibi artıklar bırakıyordu; saklanan
   // tutar net olsun (PDF/ekran zaten formatlıyordu ama downstream profit/rapor ham değeri
-  // kullanıyor). grandTotal yuvarlanmış subtotal+vatTotal'dan türetilir → invariant korunur.
+  // kullanıyor). grandTotal yuvarlanmış subtotal+vatTotal'dan türetilir → kuruş hassasiyetinde
+  // grandTotal ≈ subtotal + vatTotal (IEEE-754 nedeniyle katı === değil; tüketiciler toleranslı).
   const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
   subtotal = round2(subtotal);
   vatTotal = round2(vatTotal);

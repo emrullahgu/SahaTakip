@@ -96,7 +96,9 @@ function parseQuoteTableFallback(reply: string): QuoteDraftLineSeed[] {
   const priceIdx = findIdx('birim fiyat', 'b. fiyat', 'b.fiyat', 'birim f', 'birimfiyat');
   if (priceIdx < 0) return []; // birim fiyat sütunu yoksa güvenli çık
   const qtyIdx = findIdx('adet', 'miktar', 'qty', 'mik.');
-  const unitIdx = findIdx('birim', 'br.');
+  // DİKKAT: 'birim fiyat'.includes('birim') true → priceIdx'i HARİÇ tut, yoksa "Birim Fiyat"
+  // gerçek "Birim" sütunundan önce gelirse unitIdx fiyat sütununa kilitlenir.
+  const unitIdx = header.findIndex((h, i) => i !== priceIdx && (h.includes('birim') || h.includes('br.')));
   let nameIdx = findIdx('kalem', 'iş', 'açıklama', 'tanım', 'hizmet', 'malzeme', 'poz');
   if (nameIdx < 0) {
     // İsim sütunu başlıktan bulunamadı → fiyat/adet/birim OLMAYAN ilk sütunu isim say.

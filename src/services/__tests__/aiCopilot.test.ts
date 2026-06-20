@@ -183,6 +183,17 @@ describe('extractQuoteDraft — sohbet→teklif yapısal aktarım', () => {
     expect(extractQuoteDraft(reply).draft).toBeNull();
   });
 
+  it('yedek: "Birim Fiyat" "Birim"den ÖNCE gelirse birim sütununu doğru bulur (fiyata kilitlenmez)', () => {
+    const reply = [
+      '| Kalem | Birim Fiyat | Adet | Birim |',
+      '|---|---|---|---|',
+      '| Trafo | 647000 | 1 | TAKIM |',
+    ].join('\n');
+    const { draft } = extractQuoteDraft(reply);
+    expect(draft).not.toBeNull();
+    expect(draft!.lines[0]).toMatchObject({ name: 'Trafo', unitPrice: 647000, quantity: 1, unit: 'TAKIM' });
+  });
+
   it('yedek: isim sütunu başlıktan bulunamazsa fiyat sütununu İSİM SANMAZ', () => {
     // Başlık isim-anahtarı içermiyor; fiyat ilk sütun. nameIdx fiyat sütununa düşmemeli.
     const reply = [
