@@ -92,6 +92,21 @@ describe('applyOp — insert / update', () => {
     expect(up.row).toMatchObject({ id: 'ex-uuid-1', category: 'Yol', amount: 150 });
   });
 
+  it('stock_balances insert → bileşik anahtar (material_id,warehouse_id) upsert (poison-op yok)', async () => {
+    await applyOp({ table: 'stock_balances', action: 'insert', payload: { material_id: 'm-1', warehouse_id: 'w-1', qty: 42 } });
+    const up = mockCalls.find(c => c.op === 'upsert' && c.table === 'stock_balances');
+    expect(up).toBeDefined();
+    expect(up.opts).toMatchObject({ onConflict: 'material_id,warehouse_id' }); // PK değil bileşik anahtar
+    expect(up.row).toMatchObject({ material_id: 'm-1', warehouse_id: 'w-1', qty: 42 });
+  });
+
+  it('stock_movements insert → satır olduğu gibi yazılır (offline stok hareketi drenajı)', async () => {
+    await applyOp({ table: 'stock_movements', action: 'insert', payload: { kind: 'giris', material_id: 'm-1', qty: 5 } });
+    const up = mockCalls.find(c => c.op === 'upsert' && c.table === 'stock_movements');
+    expect(up).toBeDefined();
+    expect(up.row).toMatchObject({ kind: 'giris', material_id: 'm-1', qty: 5 });
+  });
+
   it('work_orders update → keyCol "number" ve created_by GÖNDERİLMEZ (sahiplik korunur)', async () => {
     await applyOp({ table: 'work_orders', action: 'update', payload: { id: 'IE-2026-002', status: 'Tamamlandı' } });
     expect(mockCalls.find(c => c.op === 'update.eq')).toMatchObject({ table: 'work_orders', col: 'number', val: 'IE-2026-002' });

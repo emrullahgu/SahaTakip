@@ -14,6 +14,7 @@ import {
 import { listMaterials } from './materials';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { auditRepo } from './data/auditRepo';
+import { enqueueSync, clearSyncOp } from './data/repository';
 
 const BAL_KEY = '@SahaTakip:stock_balances';
 const MOV_KEY = '@SahaTakip:stock_movements';
@@ -119,14 +120,23 @@ async function applyDelta(materialId: string, warehouseId: string, delta: number
   }
   await saveBalances(all);
   if (SUPABASE_CONFIGURED && UUID_RE.test(materialId) && UUID_RE.test(warehouseId)) {
+    const row = { material_id: materialId, warehouse_id: warehouseId, qty: newQty };
     try {
-      await supabase
+      // error alanı kontrol EDİLMELİ — upsert RLS/constraint reddinde throw etmez, {error}
+      // döner. Önceden hem error yutuluyor hem catch{} vardı → yerel/DB qty KALICI ayrışıyor
+      // (sonraki listBalances DB'den taze çekince yereli bozuyordu). Şimdi başarısızlıkta
+      // kuyruğa al → reconnect'te drain mutlak qty'yi (snapshot) yeniden yazar.
+      const { error } = await supabase
         .from('stock_balances')
-        .upsert(
-          { material_id: materialId, warehouse_id: warehouseId, qty: newQty },
-          { onConflict: 'material_id,warehouse_id' },
-        );
-    } catch { /* ignore */ }
+        .upsert(row, { onConflict: 'material_id,warehouse_id' });
+      if (error) throw new Error(error.message);
+    } catch {
+      // Snapshot semantiği: yalnız EN SON qty önemli → aynı (material,warehouse) için
+      // önceki kuyruk op'unu değiştir (stabil id ile birikme/şişme olmaz).
+      const opId = `stockbal-${materialId}-${warehouseId}`;
+      await clearSyncOp(opId).catch(() => {});
+      await enqueueSync({ id: opId, table: 'stock_balances', action: 'insert', payload: row }).catch(() => {});
+    }
   }
 }
 
@@ -195,11 +205,17 @@ export async function addMovement(input: {
     try {
       const row = movToRow(mov);
       const { data, error } = await supabase.from('stock_movements').insert(row).select().single();
-      if (!error && data) {
+      if (error) throw new Error(error.message);
+      if (data) {
         mov.id = data.id;
         mov.createdAt = data.created_at ?? mov.createdAt;
       }
-    } catch { /* keep local id */ }
+    } catch {
+      // Insert koptu (offline/RLS). Önceden hareket yalnız yerelde kalıyor, HİÇ
+      // senkronlanmıyordu (diğer cihazlar/admin için sessiz kayıp). Kuyruğa al →
+      // reconnect'te drain insert eder (op başarıda silinir → çift kayıt yok).
+      await enqueueSync({ id: mov.id, table: 'stock_movements', action: 'insert', payload: movToRow(mov) }).catch(() => {});
+    }
   }
 
   // Bakiye etkisi:

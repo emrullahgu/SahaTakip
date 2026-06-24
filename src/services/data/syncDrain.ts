@@ -116,8 +116,12 @@ export async function applyOp(op: { table: string; action: string; payload: any 
     // İDEMPOTENT: kısmi başarısızlıkta (ör. quotes yazıldı ama quote_lines koptu)
     // op kuyrukta kalır; tekrar denemede plain insert 'duplicate key' verip kuyruğu
     // kalıcı tıkardı. Bu yüzden upsert. work_orders'da DB id auto-uuid, app id'si
-    // benzersiz `number` kolonunda → çakışma kolonu number; diğerleri PK (id).
-    const upsertOpts = table === 'work_orders' ? { onConflict: 'number' } : undefined;
+    // benzersiz `number` kolonunda → çakışma kolonu number; stock_balances bileşik
+    // (material_id,warehouse_id) anahtarlı → o kolonlarda çakış; diğerleri PK (id).
+    const upsertOpts =
+      table === 'work_orders' ? { onConflict: 'number' }
+      : table === 'stock_balances' ? { onConflict: 'material_id,warehouse_id' }
+      : undefined;
     const { error } = await supabase.from(table).upsert(toRow(), upsertOpts as any);
     if (error) throw new Error(error.message);
     // Teklif insert ise satırları da yaz — önce mevcutları sil (kısmi insert
