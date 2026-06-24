@@ -1,7 +1,7 @@
 // PaymentFormScreen — POZ-DEV-078
 // Yeni / mevcut tahsilatı kaydetme.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   PAYMENT_STATUS_LABEL,
 } from '../services/payments';
 import { addEntry } from '../services/cashRegister';
+import { newUuid } from '../services/data';
 import { Notify } from '../services/notifications';
 import { useAppContext } from '../context/AppContext';
 import {
@@ -56,6 +57,11 @@ export default function PaymentFormScreen() {
   const [receivedById, setReceivedById] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  // KARARLI id'ler: tahsilat ve kasa girişi atomik değil; kasa girişi koparsa kullanıcı
+  // "Kaydet"e tekrar basar. Aynı id ile retry -> upsert idempotent -> çift tahsilat/çift
+  // kasa girişi OLMAZ. Form mount başına sabit (yeni tahsilat); editId'de kullanılmaz.
+  const payIdRef = useRef(newUuid());
+  const cashIdRef = useRef(newUuid());
 
   useEffect(() => {
     (async () => {
@@ -114,28 +120,49 @@ export default function PaymentFormScreen() {
         note: note.trim() || undefined,
       };
 
+      // 1) TAHSİLAT — başarısız olursa kasa girişine GEÇME (yetim kasa girişi olmasın).
       let saved: Payment | null;
-      if (editId) {
-        saved = await updatePayment(editId, base);
-      } else {
-        saved = await createPayment(base);
+      try {
+        if (editId) {
+          saved = await updatePayment(editId, base);
+        } else {
+          saved = await createPayment({ ...base, id: payIdRef.current });
+        }
+      } catch (e: any) {
+        // Tahsilatın KENDİSİ kaydedilemedi → dürüst hata; kararlı id sayesinde tekrar
+        // denemek çift kayıt YARATMAZ (upsert idempotent).
+        Alert.alert('Hata', (editId ? 'Tahsilat güncellenemedi: ' : 'Tahsilat kaydedilemedi: ') + (e?.message || 'bilinmeyen hata'));
+        return;
       }
 
-      // Saha personeli kasa girişi (yalnız received + nakit/kart):
+      // 2) KASA GİRİŞİ — tahsilat KAYDEDİLDİ; kasa girişi ayrı tablo (atomik değil).
+      // Koparsa tahsilatı "kaydedilemedi" diye GÖSTERME (yalan olur); hedefli mesaj ver.
+      // Kararlı cashId + upsert → "Kaydet"e tekrar basmak yalnız kasa girişini tamamlar,
+      // tahsilatı TEKRARLAMAZ.
       if (!editId && saved && status === 'received' && employee &&
           (method === 'cash' || method === 'card' || method === 'transfer')) {
-        await addEntry({
-          employeeId: employee.id,
-          employeeName: employee.name,
-          kind: 'collection',
-          amount: amt,
-          paymentId: saved.id,
-          workOrderId: workOrderId || undefined,
-          note: `${customer.shortName} tahsilatı`,
-        });
+        try {
+          await addEntry({
+            id: cashIdRef.current,
+            employeeId: employee.id,
+            employeeName: employee.name,
+            kind: 'collection',
+            amount: amt,
+            paymentId: saved.id,
+            workOrderId: workOrderId || undefined,
+            note: `${customer.shortName} tahsilatı`,
+          });
+        } catch (e: any) {
+          Alert.alert(
+            'Kısmen tamam',
+            'Tahsilat KAYDEDİLDİ ancak kasa girişi yapılamadı: ' + (e?.message || 'bilinmeyen hata') +
+              '\n\n"Kaydet"e tekrar basarsanız yalnız kasa girişi tamamlanır (tahsilat tekrarlanmaz).',
+          );
+          return;
+        }
       }
 
-      // Bildirim olayı
+      // Bildirim olayı (tahsilat + kasa girişi tamam)
       if (!editId && saved && status === 'received') {
         await Notify.paymentReceived(customer.shortName, amt, saved.id);
       }
@@ -148,10 +175,6 @@ export default function PaymentFormScreen() {
         },
         { text: 'Kapat', onPress: () => navigation.goBack() },
       ]);
-    } catch (e: any) {
-      // createPayment/updatePayment/addEntry artık DB reddinde fırlatır → kullanıcıya
-      // DÜRÜST hata (sahte "kaydedildi" yok). Ekrandan çıkma; kullanıcı tekrar deneyebilir.
-      Alert.alert('Hata', (editId ? 'Tahsilat güncellenemedi: ' : 'Tahsilat kaydedilemedi: ') + (e?.message || 'bilinmeyen hata'));
     } finally {
       setSaving(false);
     }

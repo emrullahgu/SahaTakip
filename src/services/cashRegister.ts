@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CashEntry, CashEntryKind, CashSummary, Employee } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { auditRepo } from './data/auditRepo';
+import { newUuid } from './data/repository';
 
 const KEY = '@SahaTakip:cash_entries';
 
@@ -40,10 +41,6 @@ function toRow(e: CashEntry): Record<string, any> {
   return row;
 }
 
-function rid(): string {
-  return 'cash_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-}
-
 export async function listEntries(): Promise<CashEntry[]> {
   if (SUPABASE_CONFIGURED) {
     try {
@@ -75,24 +72,29 @@ export async function addEntry(
   data: Omit<CashEntry, 'id' | 'createdAt' | 'date'> & { id?: string; date?: string },
 ): Promise<CashEntry> {
   const all = await listEntries();
+  // İDEMPOTENCY (Req#3): tahsilat-kasa akışı atomik değil; kasa girişi koparsa kullanıcı
+  // tekrar dener. Çağıran kararlı id (useRef) geçince upsert retry'da çift kasa girişi
+  // YARATMAZ (kasa bakiyesi şişmez). Aynı id varsa date + createdAt korunur.
+  const existing = all.find(e => e.id === data.id);
   let next: CashEntry = {
     ...data,
-    id: data.id ?? rid(),
-    date: data.date ?? new Date().toISOString(),
-    createdAt: new Date().toISOString(),
+    id: data.id ?? newUuid(),
+    date: data.date ?? existing?.date ?? new Date().toISOString(),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
   if (SUPABASE_CONFIGURED) {
     // DÜRÜSTLÜK (Req#3): DB reddederse fırlat — yutulursa kasa girişi sunucudan taze
     // çekilince kaybolur, bakiye yanlış kalır ("kaydedildi" yalanı).
+    // upsert(onConflict:id): aynı id ile retry çift kasa girişi yerine aynı satırı günceller.
     const { data: row, error } = await supabase
       .from('cash_entries')
-      .insert(toRow(next))
+      .upsert(toRow(next), { onConflict: 'id' })
       .select()
       .single();
     if (error) throw new Error(`Kasa girişi kaydedilemedi: ${error.message}`);
     if (row) next = fromRow(row);
   }
-  await saveAll([next, ...all]);
+  await saveAll([next, ...all.filter(e => e.id !== next.id)]);
   void auditRepo.logCurrent({ action: 'cash.entry.create', tableName: 'cash_entries', refId: next.id, meta: { kind: next.kind, amount: next.amount, employeeId: next.employeeId } });
   return next;
 }

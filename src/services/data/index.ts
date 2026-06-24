@@ -7,7 +7,7 @@
 //
 // ====================================================================
 
-export { isOnlineMode, isWriteQueued, supabase, cacheGet, cacheSet } from './repository';
+export { isOnlineMode, isWriteQueued, newUuid, supabase, cacheGet, cacheSet } from './repository';
 export { drainSyncQueue, getSyncQueue } from './syncDrain';
 export { clearSyncQueue, clearSyncOp, enqueueSync } from './repository';
 export { quotesRepo, serverMaxQuoteSeq } from './quotesRepo';

@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { auditRepo } from './data/auditRepo';
+import { newUuid } from './data/repository';
 
 const KEY = '@SahaTakip:payments';
 
@@ -60,10 +61,6 @@ function toRow(p: Payment): Record<string, any> {
   return row;
 }
 
-function rid(): string {
-  return 'pay_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-}
-
 export async function listPayments(): Promise<Payment[]> {
   if (SUPABASE_CONFIGURED) {
     try {
@@ -100,26 +97,32 @@ export async function createPayment(
   data: Omit<Payment, 'id' | 'createdAt'> & { id?: string },
 ): Promise<Payment> {
   const all = await listPayments();
+  // İDEMPOTENCY (Req#3): tahsilat ile kasa girişi atomik DEĞİL (iki ayrı tablo). Kasa girişi
+  // koparsa kullanıcı "Kaydet"e tekrar basar; çağıran KARARLI bir id (useRef) geçtiği +
+  // upsert idempotent olduğu için retry İKİNCİ bir tahsilat satırı YARATMAZ (çift tahsilat
+  // önlenir). Aynı id'li kayıt zaten varsa makbuz no + createdAt korunur (retry = aynı kayıt).
+  const existing = all.find(p => p.id === data.id);
   let next: Payment = {
     ...data,
-    id: data.id ?? rid(),
-    createdAt: new Date().toISOString(),
+    id: data.id ?? newUuid(),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
     currency: data.currency ?? 'TRY',
-    receiptNo: data.receiptNo ?? autoReceiptNo(all),
+    receiptNo: data.receiptNo ?? existing?.receiptNo ?? autoReceiptNo(all),
   };
   if (SUPABASE_CONFIGURED) {
     // DÜRÜSTLÜK (Req#3): DB reddederse (RLS/constraint/ağ) HATA FIRLAT — önceden hata yutulup
     // yerel kayıt + "Tahsilat kaydedildi" gösteriliyordu; sonraki listPayments() sunucudan
     // taze çekince yerel kayıt KALICI siliniyordu (finansal veri sessiz kaybı).
+    // upsert(onConflict:id): aynı id ile retry çift satır yerine aynı satırı günceller.
     const { data: row, error } = await supabase
       .from('payments')
-      .insert(toRow(next))
+      .upsert(toRow(next), { onConflict: 'id' })
       .select()
       .single();
     if (error) throw new Error(`Tahsilat kaydedilemedi: ${error.message}`);
     if (row) next = fromRow(row);
   }
-  await saveAll([next, ...all]);
+  await saveAll([next, ...all.filter(p => p.id !== next.id)]);
   void auditRepo.logCurrent({ action: 'payment.create', tableName: 'payments', refId: next.id, meta: { amount: next.amount, method: next.method, status: next.status, customerId: next.customerId } });
   return next;
 }
