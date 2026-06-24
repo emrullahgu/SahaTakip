@@ -80,6 +80,16 @@ export const isOnlineMode = (): boolean => {
 export const isUuid = (id: string): boolean =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
+/**
+ * Bir yazma işleminin DB'ye gitmek yerine offline sync kuyruğuna alınıp alınmayacağını
+ * ÖNCEDEN söyler. Repo insert/update/delete'leri tam olarak bu koşulda enqueue eder:
+ * çevrimdışı/yapılandırılmamış (isOnlineMode=false) VEYA id henüz UUID değil (yerel id →
+ * drain sırasında DB'ye yazılır). Üst katman (AppContext/AI ajan) "kaydedildi" yerine
+ * "kuyruğa alındı, henüz sunucuda değil" diyebilsin diye (Gereksinim 3 — dürüstlük).
+ * NOT: queued=true iken işlem o an sunucuya YAZILMAMIŞTIR; reconnect'te drain dener.
+ */
+export const isWriteQueued = (id: string): boolean => !isOnlineMode() || !isUuid(id);
+
 /** Cross-platform UUID v4 üretici (crypto.randomUUID fallback'lı). */
 export function newUuid(): string {
   try {

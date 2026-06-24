@@ -29,6 +29,7 @@ import { INITIAL_WORK_ORDERS, INITIAL_EMPLOYEES } from '../data/initialData';
 import { REAL_CUSTOMERS } from '../data/realCustomers';
 import {
   isOnlineMode,
+  isWriteQueued,
   quotesRepo,
   serverMaxQuoteSeq,
   customersRepo,
@@ -66,7 +67,9 @@ export type SyncState = 'idle' | 'syncing' | 'offline' | 'error';
 
 /** Yazma işleminin GERÇEK sonucu — ajanın "yaptım" derken yalan söylememesi için
  *  (Gereksinim 3). ok=DB yazımı başarılı; başarısızsa hata mesajı döner. */
-export type WriteResult = { ok: boolean; error?: string };
+// queued=true → işlem yerel sync kuyruğuna alındı, henüz sunucuya YAZILMADI (offline).
+// Üst katman "kaydedildi" yerine "kuyruğa alındı" demeli (Gereksinim 3 — dürüstlük).
+export type WriteResult = { ok: boolean; error?: string; queued?: boolean };
 
 export interface AppContextType {
   workOrders: WorkOrder[];
@@ -245,6 +248,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // toast'ı atılıyordu; bulut kaydı başarısız olsa bile kullanıcı başarı görüyordu.
     workOrdersRepo.insert(order)
       .then(() => {
+        // Çevrimdışıysa kuyruğa alındı, sunucuya yazılmadı — dürüst mesaj (Req#3).
+        if (isWriteQueued(order.id)) {
+          showToast('İş emri yerel kaydedildi — internet gelince sunucuya gönderilecek.');
+          return;
+        }
         showToast(order.status === 'Onay Bekliyor'
           ? 'Rapor gönderildi! Yönetici onay havuzuna eklendi.'
           : 'İş emri kaydedildi.');
@@ -351,8 +359,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     auditRepo.log(userId, { action: 'quote.create', tableName: 'quotes', refId: q.id });
     void Notify.quoteCreated(q.customerName, q.title, q.id);
-    showToast(`Teklif ${saved.number} kaydedildi.`);
-    return { ok: true };
+    // Çevrimdışıysa teklif yalnız yerel kuyruğa alındı; "kaydedildi" demek yalan olur (Req#3).
+    const queued = isWriteQueued(q.id);
+    showToast(queued
+      ? `Teklif ${saved.number} yerel kaydedildi — internet gelince sunucuya gönderilecek.`
+      : `Teklif ${saved.number} kaydedildi.`);
+    return { ok: true, queued };
   };
 
   const updateQuote = async (q: Quote): Promise<WriteResult> => {
@@ -568,8 +580,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
     auditRepo.log(userId, { action: 'customer.create', tableName: 'customers', refId: c.id });
     void Notify.customerCreated(c.shortName, c.id);
-    showToast(`${c.shortName} eklendi.`);
-    return { ok: true };
+    const queued = isWriteQueued(c.id);
+    showToast(queued
+      ? `${c.shortName} yerel kaydedildi — internet gelince sunucuya gönderilecek.`
+      : `${c.shortName} eklendi.`);
+    return { ok: true, queued };
   };
 
   const updateCustomer = async (c: Customer): Promise<WriteResult> => {

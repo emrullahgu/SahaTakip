@@ -511,9 +511,11 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         taxNumber: args.taxNumber || '',
       };
       const res = await ctx.app.addCustomer(customer);
-      return res.ok
-        ? { ok: true, id, message: 'Müşteri oluşturuldu' }
-        : { ok: false, message: 'Müşteri kaydedilemedi: ' + (res.error || 'bilinmeyen hata') };
+      if (!res.ok) return { ok: false, message: 'Müşteri kaydedilemedi: ' + (res.error || 'bilinmeyen hata') };
+      // queued → çevrimdışı: yerel kuyrukta, sunucuda DEĞİL. Kullanıcıya yalan söyleme (Req#3).
+      return res.queued
+        ? { ok: true, id, queued: true, message: 'Müşteri YEREL kaydedildi — internet gelince sunucuya yazılacak (henüz sunucuda DEĞİL).' }
+        : { ok: true, id, message: 'Müşteri oluşturuldu' };
     },
   },
 
@@ -1137,6 +1139,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         ok: true,
         id,
         number,
+        queued: saveRes.queued, // çevrimdışı → yerel kuyrukta, sunucuda değil
         lineCount: lines.length,
         pricedFromCatalog: lines.length - manualPriceLines.length, // yalnız fiyatı > 0 olanlar
         manualPriceLines, // fiyatı 0 bırakılan (katalog dışı VEYA katalog fiyatı 0) kalemler
@@ -1144,7 +1147,10 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         customerName: q.customerName,
         needsCustomer: !matchedCustomer, // müşteri kayda bağlanamadı → kullanıcıya bildir
         message:
-          'Taslak teklif oluşturuldu (fiyatlar yalnızca katalogdan, uydurma yok). ' +
+          (saveRes.queued
+            ? 'Taslak teklif YEREL kaydedildi — internet gelince sunucuya yazılacak (henüz sunucuda DEĞİL). '
+            : 'Taslak teklif oluşturuldu ') +
+          '(fiyatlar yalnızca katalogdan, uydurma yok). ' +
           (matchedCustomer ? '' : `DİKKAT: "${rawName}" kayıtlı müşteriyle eşleşmedi — teklif raporlarda görünmesi için müşteriyi doğrula/oluştur. `) +
           (manualPriceLines.length
             ? `DİKKAT: ${manualPriceLines.length} kalemin birim fiyatı yok (0 bırakıldı) — kullanıcıya AÇIKÇA listele ve fiyatlarını girmesini iste.`
