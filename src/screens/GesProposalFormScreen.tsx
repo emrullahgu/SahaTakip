@@ -74,7 +74,7 @@ export default function GesProposalFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Section title="Müşteri">
           <TextInput style={s.input} value={customerName} onChangeText={setCustomerName} placeholder="Müşteri adı" placeholderTextColor={colors.text.faint} />

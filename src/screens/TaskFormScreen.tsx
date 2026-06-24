@@ -60,7 +60,7 @@ export default function TaskFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Section title="Başlık">
           <TextInput style={s.input} value={title} onChangeText={setTitle} placeholder="Görev başlığı" placeholderTextColor={colors.text.faint} />

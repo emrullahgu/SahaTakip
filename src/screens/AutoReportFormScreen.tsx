@@ -48,7 +48,7 @@ export default function AutoReportFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}>
         <Text style={s.label}>İsim *</Text>
         <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Aylık Yönetim Özeti" placeholderTextColor={colors.text.faint} />

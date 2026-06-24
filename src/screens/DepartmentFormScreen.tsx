@@ -37,7 +37,7 @@ export default function DepartmentFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.label}>Departman Adı *</Text>
         <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Saha Operasyon" placeholderTextColor={colors.text.faint} />

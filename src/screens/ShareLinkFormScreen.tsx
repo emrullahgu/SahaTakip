@@ -59,7 +59,7 @@ export default function ShareLinkFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}>
         <Text style={s.label}>Başlık *</Text>
         <TextInput style={s.input} value={title} onChangeText={setTitle} placeholder="Teklif 2024-001 paylaşımı" placeholderTextColor={colors.text.faint} />

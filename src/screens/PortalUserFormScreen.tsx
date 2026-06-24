@@ -51,7 +51,7 @@ export default function PortalUserFormScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 80 }}>
         <Text style={s.label}>Ad Soyad *</Text>
         <TextInput style={s.input} value={fullName} onChangeText={setFullName} placeholder="Ali Veli" placeholderTextColor={colors.text.faint} />
