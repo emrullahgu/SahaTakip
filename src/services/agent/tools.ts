@@ -40,6 +40,10 @@ export interface AgentContext {
 export interface ToolDef {
   schema: ToolSchema;
   destructive?: boolean;
+  /** DB'ye yazan (mutasyon) tool. destructive olmasa da başarısızlığı finish-özetinde
+   *  UYARI tetikler (Req#3 — ajan "güncellendi" deyip yalan söylemesin). Salt-okuma
+   *  tool'larında ok:false beklenen "bulunamadı" olabilir → onlar write değildir. */
+  write?: boolean;
   handler: (args: any, ctx: AgentContext) => Promise<any>;
 }
 
@@ -477,6 +481,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
 
   // ----- WRITE OPS -----
   create_customer: {
+    write: true,
     schema: {
       type: 'function',
       function: {
@@ -520,6 +525,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   },
 
   update_work_order_status: {
+    write: true,
     schema: {
       type: 'function',
       function: {
@@ -695,6 +701,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   },
 
   add_suggestion: {
+    write: true,
     schema: {
       type: 'function',
       function: {
@@ -1197,6 +1204,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
 
   // ----- QUOTE NOTES / DESCRIPTION (autofill) -----
   update_quote_notes: {
+    write: true,
     schema: {
       type: 'function',
       function: {
@@ -1228,6 +1236,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   },
 
   update_quote_line_notes: {
+    write: true,
     schema: {
       type: 'function',
       function: {
@@ -1260,6 +1269,7 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   },
 
   set_quote_status: {
+    write: true,
     schema: {
       type: 'function',
       function: {

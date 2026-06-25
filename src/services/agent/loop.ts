@@ -10,6 +10,7 @@
 
 import { chatWithToolsFallback, type ChatMessage } from '../ai';
 import { AGENT_TOOLS, getAllToolSchemas, type AgentContext } from './tools';
+import { auditRepo } from '../data/auditRepo';
 import type { AiSettings } from '../../types';
 
 export type AgentEvent =
@@ -102,13 +103,23 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
   // geçersizleştirebiliyordu.
   let anyWriteFailed = false;
   let lastWriteError = '';
-  const withFailureNotice = (summary: string): string =>
-    anyWriteFailed
-      ? summary +
+  // DÜŞÜK-GÜVEN / GÖZDEN GEÇİRME notları (Req#6): fiyatsız kalem, eşleşmeyen müşteri,
+  // çevrimdışı kuyruk gibi durumlar ajanın serbest-metnine bırakılmaz; final özete
+  // DETERMİNİSTİK olarak eklenir — LLM "tamamdır" dese bile kullanıcı uyarıyı görür.
+  const reviewNotes: string[] = [];
+  const withNotices = (summary: string): string => {
+    let out = summary;
+    if (reviewNotes.length) {
+      out += '\n\n📋 GÖZDEN GEÇİRME GEREKİR:\n' + reviewNotes.map(n => '• ' + n).join('\n');
+    }
+    if (anyWriteFailed) {
+      out +=
         '\n\n⚠ DİKKAT: Bu görevde en az bir yazma/gönderme işlemi BAŞARISIZ oldu (' +
         (lastWriteError || 'kayıt yapılamadı') +
-        '). Yukarıdaki ❌ adımları kontrol edin; iddia edilen değişiklik gerçekleşmemiş olabilir.'
-      : summary;
+        '). Yukarıdaki ❌ adımları kontrol edin; iddia edilen değişiklik gerçekleşmemiş olabilir.';
+    }
+    return out;
+  };
   for (let i = 1; i <= maxIterations; i++) {
     if (shouldStop?.()) {
       onEvent({ type: 'stop', reason: 'Kullanıcı durdurdu' });
@@ -145,7 +156,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       const text = (content ?? '').trim();
       if (text) {
         if (finishReason === 'stop' || finishReason === 'length') {
-          onEvent({ type: 'final', content: withFailureNotice(text) });
+          onEvent({ type: 'final', content: withNotices(text) });
           return;
         }
         // İçerik var ama bitmedi — devam etmesini iste
@@ -217,19 +228,51 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
         const err = failed
           ? String((result as any).error || (result as any).message || 'İşlem başarısız')
           : undefined;
-        // Yalnız yazma/destructive tool başarısızlığını "write failed" say — read
-        // tool'larda ok:false beklenen bir "bulunamadı" olabilir, onu sayma.
-        if (failed && def.destructive) { anyWriteFailed = true; lastWriteError = err || lastWriteError; }
+        // Yazma/destructive tool başarısızlığını "write failed" say (Req#3) — read
+        // tool'larda ok:false beklenen bir "bulunamadı" olabilir, onu sayma. Artık
+        // destructive OLMAYAN write'lar (create_customer/update_*/set_quote_status) da
+        // sayılır; aksi halde başarısız mutasyon final özette UYARI tetiklemiyordu.
+        const isWrite = !!(def.destructive || def.write);
+        if (failed && isWrite) { anyWriteFailed = true; lastWriteError = err || lastWriteError; }
+        // KAYIT/TAKİP (Req#7): otonom yazma/destructive eylemleri audit_log'a yaz (başarı+hata).
+        if (isWrite) {
+          const r: any = result;
+          void auditRepo.logCurrent({
+            action: 'agent.' + name,
+            tableName: 'agent_action',
+            refId: String((r && (r.id ?? r.number)) || ''),
+            meta: { ok: !failed, error: err, summary: r && r.message ? String(r.message).slice(0, 200) : undefined },
+          });
+        }
+        // DETERMİNİSTİK düşük-güven kapısı (Req#6): create_quote_draft eksik fiyat/müşteri
+        // veya çevrimdışı kuyruk döndürdüyse, LLM özetine bırakmadan gözden-geçirme notu ekle.
+        if (name === 'create_quote_draft' && !failed && result && typeof result === 'object') {
+          const r: any = result;
+          const tag = r.number ? `Teklif ${r.number}` : 'Teklif';
+          if (Array.isArray(r.manualPriceLines) && r.manualPriceLines.length) {
+            reviewNotes.push(`${tag}: ${r.manualPriceLines.length} kalemin birim fiyatı KATALOGTA YOK, 0 bırakıldı (uydurulmadı) — fiyatları girin.`);
+          }
+          if (r.needsCustomer) {
+            reviewNotes.push(`${tag}: "${r.customerName || ''}" kayıtlı müşteriyle eşleşmedi — müşteriyi doğrulayın/oluşturun (yoksa raporlarda görünmez).`);
+          }
+          if (r.queued) {
+            reviewNotes.push(`${tag}: çevrimdışı — yerel kuyrukta, henüz sunucuya yazılmadı.`);
+          }
+        }
         onEvent({ type: 'tool_result', id: tc.id, name, result, ok: !failed, error: err });
         messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result ?? null) });
         if (name === 'finish') {
-          onEvent({ type: 'final', content: withFailureNotice(String(result?.summary || 'Tamamlandı')) });
+          onEvent({ type: 'final', content: withNotices(String(result?.summary || 'Tamamlandı')) });
           finished = true;
           break;
         }
       } catch (e: any) {
         const err = e?.message || String(e);
-        if (def.destructive) { anyWriteFailed = true; lastWriteError = err || lastWriteError; }
+        if (def.destructive || def.write) {
+          anyWriteFailed = true;
+          lastWriteError = err || lastWriteError;
+          void auditRepo.logCurrent({ action: 'agent.' + name, tableName: 'agent_action', refId: '', meta: { ok: false, error: String(err).slice(0, 200) } });
+        }
         onEvent({ type: 'tool_result', id: tc.id, name, result: { error: err }, ok: false, error: err });
         messages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: err }) });
       }
