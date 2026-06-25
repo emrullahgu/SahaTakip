@@ -1,10 +1,15 @@
 // governance.ts — POZ-DEV-341 Yetkilendirme, denetim ve kurumsal yönetim veri katmanı
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, SUPABASE_CONFIGURED } from './supabase';
+import { newUuid } from './data/repository';
 import type {
   Department, Region, Permission, UserRoleExt, PermissionResource, PermissionAction,
   ApprovalRequest, ApprovalKind, ApprovalStatus,
   AuditLogEntry, AuditAction, SessionLog, KvkkAccessLog, KvkkAccessKind,
 } from '../types';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuidOrNull = (v?: string | null): string | null => (v && UUID_RE.test(v) ? v : null);
 
 const KEYS = {
   dept: 'gov_departments_v1',
@@ -144,24 +149,94 @@ export const APPROVAL_STATUS_COLOR: Record<ApprovalStatus, string> = {
   pending: '#f59e0b', approved: '#22c55e', rejected: '#ef4444', expired: '#64748b',
 };
 
-export async function listApprovals(): Promise<ApprovalRequest[]> { return loadList<ApprovalRequest>(KEYS.apr); }
+// Onaylar SUNUCUDA (approvals tablosu) — çok-kullanıcılı onay havuzu (Kural 8). AsyncStorage
+// yalnız offline cache/fallback. Karar (decide) RLS ile yalnız admin/manager'a açık.
+function aprFromRow(r: any): ApprovalRequest {
+  return {
+    id: r.id,
+    kind: r.kind,
+    title: r.title,
+    description: r.description ?? undefined,
+    requestedBy: r.requested_by ?? undefined,
+    requestedByName: r.requested_by_name ?? undefined,
+    resource: r.resource ?? undefined,
+    resourceId: r.resource_id ?? undefined,
+    payload: r.payload ?? undefined,
+    status: r.status,
+    createdAt: r.created_at ?? new Date().toISOString(),
+    decidedAt: r.decided_at ?? undefined,
+    decidedBy: r.decided_by ?? undefined,
+    decisionNote: r.decision_note ?? undefined,
+    requiredApprovals: r.required_approvals ?? undefined,
+  };
+}
+function aprToRow(a: ApprovalRequest): Record<string, any> {
+  return {
+    id: a.id,
+    kind: a.kind,
+    title: a.title,
+    description: a.description ?? null,
+    requested_by: uuidOrNull(a.requestedBy),
+    requested_by_name: a.requestedByName ?? null,
+    resource: a.resource ?? null,
+    resource_id: a.resourceId ?? null,
+    payload: a.payload ?? {},
+    status: a.status,
+    decided_by: uuidOrNull(a.decidedBy),
+    decided_by_name: null,
+    decision_note: a.decisionNote ?? null,
+    required_approvals: a.requiredApprovals ?? null,
+  };
+}
+
+export async function listApprovals(): Promise<ApprovalRequest[]> {
+  if (SUPABASE_CONFIGURED) {
+    try {
+      const { data, error } = await supabase.from('approvals').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        const list = data.map(aprFromRow);
+        await saveList(KEYS.apr, list);
+        return list;
+      }
+    } catch { /* offline fallback */ }
+  }
+  return loadList<ApprovalRequest>(KEYS.apr);
+}
 export async function getApproval(id: string): Promise<ApprovalRequest | undefined> {
   return (await listApprovals()).find(a => a.id === id);
 }
 export async function createApproval(input: Omit<ApprovalRequest, 'id' | 'createdAt' | 'status'>): Promise<ApprovalRequest> {
-  const list = await listApprovals();
-  const fresh: ApprovalRequest = { ...input, id: uid('apr'), createdAt: new Date().toISOString(), status: 'pending' };
+  const fresh: ApprovalRequest = { ...input, id: newUuid(), createdAt: new Date().toISOString(), status: 'pending' };
+  if (SUPABASE_CONFIGURED) {
+    // DÜRÜSTLÜK: DB reddederse (RLS) fırlat — sahte "talep oluşturuldu" gösterilmesin.
+    const { data, error } = await supabase.from('approvals').insert(aprToRow(fresh)).select().single();
+    if (error) throw new Error(`Onay talebi oluşturulamadı: ${error.message}`);
+    const saved = data ? aprFromRow(data) : fresh;
+    const list = await loadList<ApprovalRequest>(KEYS.apr);
+    await saveList(KEYS.apr, [saved, ...list.filter(a => a.id !== saved.id)]);
+    return saved;
+  }
+  const list = await loadList<ApprovalRequest>(KEYS.apr);
   await saveList(KEYS.apr, [fresh, ...list]);
   return fresh;
 }
-export async function decideApproval(id: string, status: 'approved' | 'rejected', decidedBy?: string, note?: string): Promise<void> {
-  const list = await listApprovals();
+export async function decideApproval(id: string, status: 'approved' | 'rejected', decidedBy?: string, note?: string, decidedByName?: string): Promise<void> {
+  if (SUPABASE_CONFIGURED) {
+    // RLS: yalnız admin/manager UPDATE edebilir → yetkisiz karar burada DB tarafından reddedilir.
+    const { error } = await supabase.from('approvals').update({
+      status,
+      decided_at: new Date().toISOString(),
+      decided_by: uuidOrNull(decidedBy),
+      decided_by_name: decidedByName ?? null,
+      decision_note: note ?? null,
+    }).eq('id', id);
+    if (error) throw new Error(`Onay kararı kaydedilemedi: ${error.message}`);
+  }
+  // yerel cache senkron tut (offline + anlık UI)
+  const list = await loadList<ApprovalRequest>(KEYS.apr);
   const idx = list.findIndex(a => a.id === id);
   if (idx >= 0) {
-    list[idx].status = status;
-    list[idx].decidedAt = new Date().toISOString();
-    list[idx].decidedBy = decidedBy;
-    list[idx].decisionNote = note;
+    list[idx] = { ...list[idx], status, decidedAt: new Date().toISOString(), decidedBy, decisionNote: note };
     await saveList(KEYS.apr, list);
   }
 }

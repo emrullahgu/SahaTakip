@@ -45,8 +45,21 @@ export default function ApprovalDetailScreen() {
     );
   }
 
+  // KARAR YETKİSİ (Kural 8): yalnız admin/manager onaylar/reddeder. Sunucu RLS da zorlar
+  // (approvals_decide), bu UI kapısı kullanıcıya net geri bildirim + yanlış denemeyi önler.
+  const canApprove = profile?.role === 'admin' || profile?.role === 'manager';
+
   const act = async (next: 'approved' | 'rejected') => {
-    await decideApproval(item.id, next, profile?.id, undefined);
+    if (!canApprove) {
+      Alert.alert('Yetki yok', 'Onaylama/Reddetme yalnızca yönetici veya admin yetkisindedir.');
+      return;
+    }
+    try {
+      await decideApproval(item.id, next, profile?.id, undefined, profile?.full_name || undefined);
+    } catch (e: any) {
+      Alert.alert('Hata', 'Karar kaydedilemedi: ' + (e?.message || 'bilinmeyen hata'));
+      return;
+    }
     await recordAudit({
       actorId: profile?.id, actorName: profile?.full_name || undefined,
       action: 'permission_change', resource: 'system', resourceId: item.id,
@@ -77,7 +90,7 @@ export default function ApprovalDetailScreen() {
           {item.decisionNote ? <Row label="Not" value={item.decisionNote} /> : null}
         </View>
 
-        {item.status === 'pending' && (
+        {item.status === 'pending' && canApprove && (
           <View style={s.actions}>
             <TouchableOpacity style={[s.actBtn, { backgroundColor: '#22c55e' }]} onPress={() => act('approved')}>
               <Ionicons name="checkmark" size={18} color="#fff" />
@@ -87,6 +100,11 @@ export default function ApprovalDetailScreen() {
               <Ionicons name="close" size={18} color="#fff" />
               <Text style={s.actTxt}>Reddet</Text>
             </TouchableOpacity>
+          </View>
+        )}
+        {item.status === 'pending' && !canApprove && (
+          <View style={s.card}>
+            <Text style={s.cardV}>Bu talep onay bekliyor. Karar yetkisi yönetici/admin'dedir.</Text>
           </View>
         )}
       </ScrollView>
