@@ -46,6 +46,7 @@ import { sendLocalPush, scheduleLocalPushAt } from '../services/pushNotification
 import { Notify } from '../services/notifications';
 import { checkSlaBreaches } from '../services/slaWatcher';
 import { insertQuoteWithNumberRetry } from '../utils/quoteInsert';
+import { canTransitionQuote } from '../services/quoteFlow';
 
 // Bordroda günlük ücret = aylık ücret / standart iş günü. TR uygulamasında
 // genelde 30 (yasal) ya da ~22 (fiili çalışma günü) kullanılır; tek yerden
@@ -401,6 +402,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const setQuoteStatus = async (id: string, status: QuoteStatus): Promise<WriteResult> => {
     const existing = quotes.find(q => q.id === id);
     if (!existing) return { ok: false, error: 'Teklif bulunamadı' };
+    // GEÇİŞ GUARD'I (Kural 9): geçersiz/atlamalı durum geçişini reddet (örn. AI'ın
+    // 'Taslak'tan doğrudan 'Faturalandırıldı'ya atlaması). 'Kabul Edildi' normalde
+    // acceptQuoteAndCreateWorkOrder akışından gelir (bu yol setQuoteStatus'ü kullanmaz).
+    if (!canTransitionQuote(existing.status, status)) {
+      return { ok: false, error: `Geçersiz durum geçişi: ${existing.status} → ${status}` };
+    }
     const target: Quote = { ...existing, status };
     const snapshot = quotes;
     setQuotes(prev => prev.map(q => (q.id === id ? target : q)));
