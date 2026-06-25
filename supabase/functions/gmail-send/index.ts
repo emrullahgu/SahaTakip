@@ -163,38 +163,69 @@ Deno.serve(async (req) => {
     const body = await req.json();
     if (!body.to || !body.subject) throw new Error('to ve subject zorunlu.');
 
+    // ============================================================
+    // DRAFT-ONLY KİLİT (İş kuralı 3 + 4): otomatik/istenmeyen e-posta GÖNDERİLMEZ.
+    // Varsayılan davranış = TASLAK oluştur (kullanıcı Gmail'de görüp kendi gönderir).
+    // GERÇEK gönderim YALNIZ: GMAIL_SENDING_ENABLED='true' (sunucu sırrı) VE body.mode==='send'
+    // ikisi birlikteyken yapılır. (Paraşüt PARASUT_INVOICING_ENABLED çift-kilidinin Gmail muadili.)
+    // Bu kilit gelene kadar welcome/teklif/OSOS gibi tüm yollar taslakta kalır.
+    // ============================================================
+    const sendingEnabled = Deno.env.get('GMAIL_SENDING_ENABLED') === 'true';
+    const action: 'send' | 'draft' = (sendingEnabled && body.mode === 'send') ? 'send' : 'draft';
+
     let ok = false;
     let providerId: string | null = null;
     let from = '';
     let errorJson: string | null = null;
     let method = '';
 
-    const smtpUser = Deno.env.get('GMAIL_SMTP_USER');
-    const smtpPass = Deno.env.get('GMAIL_SMTP_PASSWORD');
-    if (smtpUser && smtpPass) {
-      method = 'smtp';
-      from = smtpUser;
-      try {
-        const r = await sendSmtp({ ...body, from });
+    if (action === 'send') {
+      const smtpUser = Deno.env.get('GMAIL_SMTP_USER');
+      const smtpPass = Deno.env.get('GMAIL_SMTP_PASSWORD');
+      if (smtpUser && smtpPass) {
+        method = 'smtp';
+        from = smtpUser;
+        try {
+          const r = await sendSmtp({ ...body, from });
+          ok = r.ok;
+          providerId = r.id;
+        } catch (e: any) {
+          errorJson = String(e?.message ?? e);
+        }
+      } else {
+        method = 'gmail-api';
+        const tok = await getAccessToken();
+        from = tok.from;
+        const raw = buildRaw({ ...body, from });
+        const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${tok.token}` },
+          body: JSON.stringify({ raw }),
+        });
+        const j: any = await r.json();
         ok = r.ok;
-        providerId = r.id;
-      } catch (e: any) {
-        errorJson = String(e?.message ?? e);
+        providerId = j?.id ?? null;
+        if (!ok) errorJson = JSON.stringify(j);
       }
     } else {
-      method = 'gmail-api';
-      const tok = await getAccessToken();
-      from = tok.from;
-      const raw = buildRaw({ ...body, from });
-      const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${tok.token}` },
-        body: JSON.stringify({ raw }),
-      });
-      const j: any = await r.json();
-      ok = r.ok;
-      providerId = j?.id ?? null;
-      if (!ok) errorJson = JSON.stringify(j);
+      // TASLAK: Gmail API users.drafts.create (gmail.compose scope gerekir; SMTP taslak yapamaz).
+      method = 'gmail-api-draft';
+      try {
+        const tok = await getAccessToken();
+        from = tok.from;
+        const raw = buildRaw({ ...body, from });
+        const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${tok.token}` },
+          body: JSON.stringify({ message: { raw } }),
+        });
+        const j: any = await r.json();
+        ok = r.ok;
+        providerId = j?.id ?? j?.message?.id ?? null;
+        if (!ok) errorJson = JSON.stringify(j);
+      } catch (e: any) {
+        errorJson = 'Taslak oluşturulamadı (Gmail API + OAuth gmail.compose scope gerekir): ' + String(e?.message ?? e);
+      }
     }
 
     await supabase.from('channel_messages').insert({
@@ -204,15 +235,16 @@ Deno.serve(async (req) => {
       from_addr: from,
       subject: body.subject,
       body: body.html ?? body.text ?? '',
-      status: ok ? 'sent' : 'failed',
+      // channel_messages.status CHECK 'draft' içermez → taslak için 'queued' (operatör gönderecek).
+      status: ok ? (action === 'send' ? 'sent' : 'queued') : 'failed',
       provider_id: providerId,
       error: errorJson,
       related_type: body.related_type ?? null,
       related_id: body.related_id ?? null,
-      meta: { method },
+      meta: { method, action },
     });
 
-    return new Response(JSON.stringify({ ok, method, provider_id: providerId, error: errorJson }), {
+    return new Response(JSON.stringify({ ok, action, method, provider_id: providerId, error: errorJson, sendingEnabled }), {
       status: ok ? 200 : 502,
       headers: { ...CORS, 'content-type': 'application/json' },
     });

@@ -407,8 +407,11 @@ export interface DailyRunResult {
   skippedReason?: string;
 }
 
-/** Bugünün otomasyonunu çalıştırır: temporal alarm tarama + günlük özet + (opsiyonel) dağıtım. */
-export async function runDailyAutomation(opts?: { force?: boolean }): Promise<DailyRunResult> {
+/** Bugünün otomasyonunu çalıştırır: temporal alarm tarama + günlük özet + (opsiyonel) dağıtım.
+ *  İş kuralı 3 (otomatik e-posta YOK): dağıtım YALNIZCA opts.deliver=true iken yapılır.
+ *  Gözetimsiz çağrı (maybeRunAutoToday) deliver GÖNDERMEZ → rapor üretilir, kanallara
+ *  otomatik gönderim olmaz. Elle "çalıştır+gönder" (OsosAutomationScreen) deliver:true geçer. */
+export async function runDailyAutomation(opts?: { force?: boolean; deliver?: boolean }): Promise<DailyRunResult> {
   const cfg = await getAutoReportConfig();
   const now = new Date();
   const today = dayKey(now);
@@ -432,7 +435,10 @@ export async function runDailyAutomation(opts?: { force?: boolean }): Promise<Da
   const openAlarms = await listAlarms({ unacknowledgedOnly: true });
 
   let delivered: DailyRunResult['delivered'] = null;
-  if (cfg.enabled && (cfg.emails.length || cfg.whatsapps.length || cfg.gchatSpaces.length)) {
+  // İş kuralı 3: yalnız ELLE tetiklenen (deliver:true) çalıştırma kanallara gönderir.
+  // Gözetimsiz/otomatik çalıştırma rapor üretir ama GÖNDERMEZ (Gmail zaten draft-kilitli;
+  // WhatsApp/GChat bu kapıyla durdurulur).
+  if (opts?.deliver && cfg.enabled && (cfg.emails.length || cfg.whatsapps.length || cfg.gchatSpaces.length)) {
     const text = buildDailyReportText(summary, openAlarms, cfg.includeAlarms);
     const subject = `OSOS Günlük Rapor — ${summary.date}`;
     try {

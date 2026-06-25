@@ -67,7 +67,9 @@ export default function OsosAutomationScreen() {
     if (!cfg) return;
     setBusy(true);
     try {
-      const res = await runDailyAutomation({ force: true });
+      // ELLE tetikleme (kullanıcı butonu) → dağıtıma izin (otomatik değil; İş kuralı 3 uyumlu).
+      // E-postalar yine GMAIL_SENDING_ENABLED kilidi nedeniyle taslak olur.
+      const res = await runDailyAutomation({ force: true, deliver: true });
       Alert.alert(
         'Otomasyon çalıştırıldı',
         `Yeni alarm: ${res.newAlarms}\nAçık alarm: ${res.openAlarms}\n` +
