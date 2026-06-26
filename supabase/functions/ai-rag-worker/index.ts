@@ -68,12 +68,42 @@ function fmtSalesVisit(p: any): { title: string; content: string } {
   return { title: `Satış Ziyareti – ${ref}`, content: lines.join('\n') };
 }
 
-function formatPayload(entity_type: string, payload: any): { title: string; content: string } | null {
+// Teklif: kalemleri (quote_lines) service_role ile ayrıca çekip metne döker. Kabul/Fatura
+// edilmiş teklifler güvenilir fiyat referansıdır (meta.reliable_price) — bot "geçmişte
+// benzer işe ne verdik" sorusunu bu korpustan yanıtlar. İç korpus → is_public DEĞİL.
+async function fmtQuote(p: any): Promise<{ title: string; content: string; meta: any } | null> {
+  const num = p.number ?? p.id;
+  const { data: lines } = await supabase
+    .from('quote_lines')
+    .select('line_no, poz_name, unit, quantity, material_price, install_price, dismantle_price, with_dismantle')
+    .eq('quote_id', p.id)
+    .order('line_no', { ascending: true });
+  const lineTxt = (lines ?? []).map((l: any) => {
+    const unitPrice = Number(l.material_price || 0) + Number(l.install_price || 0) +
+      (l.with_dismantle ? Number(l.dismantle_price || 0) : 0);
+    return `  - ${l.poz_name} | ${l.quantity} ${l.unit} | birim ~${unitPrice.toLocaleString('tr-TR')} TL`;
+  }).join('\n');
+  const reliable = p.status === 'Kabul Edildi' || p.status === 'Faturalandırıldı';
+  const head = [
+    `Teklif: ${num}`,
+    p.customer_name ? `Müşteri: ${p.customer_name}` : null,
+    p.title ? `Konu: ${p.title}` : null,
+    p.status ? `Durum: ${p.status}` : null,
+    p.date ? `Tarih: ${p.date}` : null,
+    p.grand_total != null ? `Genel Toplam: ${Number(p.grand_total).toLocaleString('tr-TR')} TL` : null,
+    reliable ? '(Bu teklif KABUL/FATURA edildi — güvenilir fiyat referansı)' : null,
+  ].filter(Boolean).join('\n');
+  const content = lineTxt ? `${head}\nKalemler:\n${lineTxt}` : head;
+  return { title: `Teklif – ${num}`, content, meta: { reliable_price: reliable, status: p.status } };
+}
+
+async function buildDoc(entity_type: string, payload: any): Promise<{ title: string; content: string; meta?: any } | null> {
   switch (entity_type) {
     case 'customer':    return fmtCustomer(payload);
     case 'work_order':  return fmtWorkOrder(payload);
     case 'sales_visit': return fmtSalesVisit(payload);
-    default: return null;
+    case 'quote':       return await fmtQuote(payload);
+    default: return null; // 'website' worker'dan değil ai-rag-crawl'dan doğrudan ingest edilir
   }
 }
 
@@ -91,7 +121,7 @@ async function processItem(item: any): Promise<{ ok: boolean; error?: string }> 
   if (op === 'delete') return { ok: true };
 
   // 2) Yeniden indeksle — ai-rag/ingest çağır.
-  const fmt = formatPayload(entity_type, payload);
+  const fmt = await buildDoc(entity_type, payload);
   if (!fmt || !fmt.content?.trim()) return { ok: true }; // boş içerik → atla
 
   const r = await fetch(`${SUPA_URL}/functions/v1/ai-rag`, {
@@ -104,7 +134,8 @@ async function processItem(item: any): Promise<{ ok: boolean; error?: string }> 
         source: entity_type,
         source_id: entity_id,
         content: fmt.content,
-        meta: { auto: true, queue_id: id },
+        // İç korpus (müşteri/iş emri/teklif) PII içerir → is_public DEĞİL (public bota kapalı).
+        meta: { auto: true, queue_id: id, ...(fmt.meta ?? {}) },
       }],
     }),
   });

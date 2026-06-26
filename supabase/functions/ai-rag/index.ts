@@ -53,12 +53,15 @@ async function embedBatch(texts: string[]): Promise<number[][]> {
 
 async function ingest(body: any) {
   const docs = body.documents as Array<{
-    title: string; source?: string; source_id?: string; content: string; meta?: any;
+    title: string; source?: string; source_id?: string; content: string; meta?: any; is_public?: boolean;
   }>;
   if (!Array.isArray(docs) || !docs.length) throw new Error('documents boş.');
 
   const results = [];
   for (const d of docs) {
+    // is_public: YALNIZ web sitesi/kamuya açık içerik true olmalı. İç veriler (müşteri/
+    // iş emri/teklif) PII içerir → false (varsayılan). Public web botu yalnız is_public
+    // korpustan yanıt verir (match_ai_chunks_public).
     const { data: doc, error: e1 } = await supabase
       .from('ai_documents')
       .insert({
@@ -67,6 +70,7 @@ async function ingest(body: any) {
         source_id: d.source_id ?? null,
         content: d.content,
         meta: d.meta ?? {},
+        is_public: d.is_public === true,
       })
       .select('id')
       .single();

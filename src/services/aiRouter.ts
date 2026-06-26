@@ -200,6 +200,20 @@ export async function aiRagQuery(opts: {
   );
 }
 
+/** Web sitesi içeriğini RAG'a tara/öğret (yalnız admin/manager). URL(ler) veya sitemap. */
+export async function aiRagCrawl(opts: {
+  urls?: string[];
+  sitemap?: string;
+  limit?: number;
+}): Promise<{ crawled: number; ok: number; failed: number; results: Array<{ url: string; ok: boolean; error?: string }> }> {
+  ensureReady();
+  const { data, error } = await supabase.functions.invoke('ai-rag-crawl', {
+    body: { urls: opts.urls, sitemap: opts.sitemap, limit: opts.limit },
+  });
+  if (error) throw error;
+  return data as any;
+}
+
 /** Belge ekle / embed. */
 export async function aiRagIngest(documents: Array<{
   title: string;

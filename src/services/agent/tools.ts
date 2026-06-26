@@ -22,6 +22,7 @@ import { WEB_TOOLS } from './webTools';
 import { INTEGRATION_TOOLS } from './integrationStubs';
 import { APOLLO_TOOLS } from './apolloTools';
 import { newUuid } from '../data/repository';
+import { aiRagQuery } from '../aiRouter';
 // Sistem-farkındalığı read-tool'ları için servisler (gerçek veri — uydurma yok)
 import { listVehicles, listVehicleAlerts } from '../vehicles';
 import { lowStockAlerts, listBalances } from '../stock';
@@ -697,6 +698,41 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
         findings,
         hint: 'Her bulgu için add_suggestion ile detaylı öneri kaydı oluştur.',
       };
+    },
+  },
+
+  search_knowledge: {
+    schema: {
+      type: 'function',
+      function: {
+        name: 'search_knowledge',
+        description:
+          'Bilgi tabanında (RAG) semantik arama: geçmiş teklifler, web sitesi içeriği ve eklenen belgeler/SSS. ' +
+          'GEÇMİŞ/GENEL bilgi sorularında ("daha önce benzer işe ne fiyat verdik", "şu hizmeti nasıl anlatıyoruz", ' +
+          '"bu konuda geçmişte ne yaptık") ÖNCE bunu çağır. Kaynaklı, dürüst yanıt döner; bulunamazsa boş döner — uydurma yapma.',
+        parameters: {
+          type: 'object',
+          required: ['query'],
+          properties: {
+            query: { type: 'string', description: 'Bilgi tabanında aranacak soru/konu' },
+          },
+        },
+      },
+    },
+    handler: async (args: any) => {
+      const q = String(args?.query ?? '').trim();
+      if (!q) return { ok: false, message: 'query boş.' };
+      try {
+        const res = await aiRagQuery({ question: q });
+        return {
+          ok: true,
+          answer: res.answer,
+          sources: (res.sources ?? []).map((s: any) => s.title).filter(Boolean),
+        };
+      } catch (e: any) {
+        // Bilgi tabanı yapılandırılmamış/çevrimdışı → dürüst "bulunamadı" (uydurma yok).
+        return { ok: false, message: 'Bilgi tabanı şu an sorgulanamadı: ' + (e?.message || 'bilinmeyen hata') };
+      }
     },
   },
 
