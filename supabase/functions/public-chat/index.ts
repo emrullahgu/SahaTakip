@@ -51,18 +51,25 @@ function json(body: unknown, status = 200) {
 }
 
 function clientIp(req: Request): string {
+  // x-real-ip (proxy'nin verdiği) XFF'ten daha az spoof-edilebilir → önce onu dene.
+  // NOT: hiçbiri tam güvenilir değil; asıl abuse koruması captcha + günlük tavan (fail-closed).
+  const real = (req.headers.get('x-real-ip') || '').trim();
+  if (real) return real;
   const xff = req.headers.get('x-forwarded-for') || '';
-  return (xff.split(',')[0] || '').trim() || req.headers.get('x-real-ip') || 'unknown';
+  return (xff.split(',')[0] || '').trim() || 'unknown';
 }
 
-async function rateOk(bucket: string, limit: number, windowSec: number): Promise<boolean> {
+// failClosed=true → rate-limit altyapısı (RPC/migration) yoksa/hatalıysa REDDET. Günlük global
+// tavan için kullanılır: migration push edilmemişse "sınırsız anon LLM rölesi" yerine bot kilitlenir
+// (maliyet-güvenli fail). Per-IP için failClosed=false (geçici blip tüm botu öldürmesin).
+async function rateOk(bucket: string, limit: number, windowSec: number, failClosed = false): Promise<boolean> {
   try {
     const { data, error } = await supabase.rpc('public_rate_hit', {
       p_bucket: bucket, p_limit: limit, p_window_seconds: windowSec,
     });
-    if (error) return true; // rate-limit altyapısı yoksa botu kilitleme (fail-open, izlenebilir)
+    if (error) return !failClosed;
     return data !== false;
-  } catch { return true; }
+  } catch { return !failClosed; }
 }
 
 async function verifyTurnstile(token: string | undefined, ip: string): Promise<boolean> {
@@ -142,9 +149,10 @@ Deno.serve(async (req) => {
   let body: any = {};
   try { body = await req.json(); } catch { return json({ error: 'Geçersiz JSON' }, 400); }
 
-  // Global günlük tavan (fatura/abuse koruması) — IP'den bağımsız.
-  if (!await rateOk(`pc:day:${new Date().toISOString().slice(0, 10)}`, DAILY_MAX, 86400)) {
-    return json({ error: 'Bugünkü sohbet kapasitesi doldu, lütfen yarın tekrar deneyin veya talep bırakın.' }, 429);
+  // Global günlük tavan (fatura/abuse koruması) — IP'den bağımsız + FAIL-CLOSED:
+  // rate-limit altyapısı yoksa (migration push edilmemişse) sınırsız röle yerine reddet.
+  if (!await rateOk(`pc:day:${new Date().toISOString().slice(0, 10)}`, DAILY_MAX, 86400, true)) {
+    return json({ error: 'Asistan şu an kullanılamıyor (kapasite/yapılandırma). Lütfen talep bırakın, ekibimiz dönsün.' }, 429);
   }
   // IP başına dakikalık tavan.
   if (!await rateOk(`pc:ip:${ip}`, IP_PER_MIN, 60)) {
