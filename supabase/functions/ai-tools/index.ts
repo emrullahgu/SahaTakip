@@ -166,7 +166,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'create_quote',
-      description: 'Yeni teklif (quote) oluştur. Kullanıcı "3+1 ev elektrik tesisatı için teklif" gibi isteyince, sen kalemleri (POZ\'ları) Türkiye piyasasına uygun makul fiyatlarla üret. Müşteri varsa önce find_customer ile customer_id bul.',
+      description: 'Yeni teklif (quote) TASLAĞI oluştur. Kullanıcı "3+1 ev elektrik tesisatı için teklif" gibi isteyince, sen yalnız kalem YAPISINI (poz_name, quantity, unit) üret — FİYAT UYDURMA (İŞ KURALI 5): sistem birim fiyatları 0 bırakır, kullanıcı kataloğdan doldurur. Müşteri varsa önce find_customer ile customer_id bul.',
       parameters: {
         type: 'object',
         properties: {
@@ -185,12 +185,10 @@ const TOOLS = [
                 poz_name: { type: 'string', description: 'Kalem adı (ör: "NYA 2.5mm Kablo", "Anahtar + Priz Seti").' },
                 unit: { type: 'string', description: 'Birim. Adet/m/m²/Set. Default Adet.' },
                 quantity: { type: 'number' },
-                unit_price: { type: 'number', description: 'Birim malzeme fiyatı (TL).' },
-                install_price: { type: 'number', description: 'İşçilik birim fiyatı (opsiyonel, default 0).' },
                 vat_pct: { type: 'number', description: 'KDV%. Default 20.' },
                 notes: { type: 'string' },
               },
-              required: ['poz_name', 'quantity', 'unit_price'],
+              required: ['poz_name', 'quantity'],
             },
           },
         },
@@ -363,20 +361,20 @@ async function execTool(name: string, args: any): Promise<any> {
       const lines = Array.isArray(args.lines) ? args.lines : [];
       if (!lines.length) return { error: 'En az 1 kalem gerekli.' };
 
+      // İŞ KURALI 5 — FİYAT UYDURMA YASAK. Sunucu ajanının POZ/ürün kataloğuna erişimi YOK
+      // (katalog client tarafında). Bu yüzden LLM'in verdiği unit_price'a GÜVENİLMEZ; tüm
+      // fiyatlar 0 bırakılır ve teklif "fiyatlar girilmeli" notuyla Taslak kaydedilir. Kullanıcı
+      // Teklifler ekranında (katalog erişimli) fiyatları doldurur. Client ajanın katalog-dışı
+      // kalemi 0 bırakma davranışının sunucu karşılığı (sunucuda HER kalem katalog-dışıdır).
       let subtotal = 0;
       let vatTotal = 0;
       const linesNorm = lines.map((l: any, idx: number) => {
         const qty = Number(l.quantity ?? 1);
-        const matPrice = Number(l.unit_price ?? 0);
-        const instPrice = Number(l.install_price ?? 0);
+        const matPrice = 0; // uydurma YOK — kataloğdan girilecek
+        const instPrice = 0;
         const overhead = 10;
         const profit = 15;
         const vatPct = Number(l.vat_pct ?? 20);
-        const unitTotal = (matPrice + instPrice) * (1 + overhead / 100 + profit / 100);
-        const lineSub = qty * unitTotal;
-        const lineVat = lineSub * (vatPct / 100);
-        subtotal += lineSub;
-        vatTotal += lineVat;
         return {
           line_no: idx + 1,
           poz_id: l.poz_id ?? `AI-${Date.now().toString(36)}-${idx + 1}`,
@@ -398,6 +396,9 @@ async function execTool(name: string, args: any): Promise<any> {
       const validDays = Number(args.valid_days ?? 30);
       const validUntil = new Date(Date.now() + validDays * 86400000).toISOString().slice(0, 10);
       const number = `TKL-${new Date().getFullYear()}-${Math.floor(Math.random() * 90000 + 10000)}`;
+      // Fiyatlar uydurulmadığı için (Kural 5) kullanıcıya AÇIK not — uydurma 0 sürprizi olmasın.
+      const priceNote = '⚠ Birim fiyatlar girilmedi (AI fiyat uydurmaz). Teklifler ekranından POZ kataloğu ile fiyatları doldurun.';
+      const finalNotes = [args.notes, priceNote].filter(Boolean).join('\n');
 
       const { data: quote, error: e1 } = await supabase
         .from('quotes')
@@ -408,7 +409,7 @@ async function execTool(name: string, args: any): Promise<any> {
           title: args.title,
           valid_until: validUntil,
           engineer: args.engineer ?? 'AI Asistan',
-          notes: args.notes ?? null,
+          notes: finalNotes,
           subtotal: Math.round(subtotal * 100) / 100,
           vat_total: Math.round(vatTotal * 100) / 100,
           grand_total: Math.round(grandTotal * 100) / 100,
@@ -520,10 +521,9 @@ KURALLAR:
 
 TEKLİF OLUŞTURMA:
 - "X için teklif oluştur" denirse create_quote tool'unu kullan.
-- Kalemleri (POZ'ları) SEN, Türkiye piyasasına uygun makul fiyatlarla üret.
-- Örn: "3+1 ev elektrik tesisatı" için tipik kalemler: NYA 1.5mm kablo (m), NYA 2.5mm kablo (m), Anahtar+priz seti (adet), Sıva altı buat (adet), Sigorta kutusu/pano (adet), Otomatik sigortalar (adet), LED tavan armatürü (adet), Topraklama tesisatı (set), İşçilik (set).
-- 3+1 daire için: ~400m 1.5mm kablo, ~250m 2.5mm kablo, 35-45 anahtar/priz, 30+ buat, 1 pano, 8-12 sigorta, 8-10 armatür.
-- Birim malzeme fiyatları 2026 piyasası: 1.5mm kablo ~12-18 TL/m, 2.5mm ~20-28 TL/m, anahtar+priz ~150-300 TL, buat ~25 TL, pano ~800-2000 TL, sigorta ~80-150 TL, LED armatür ~250-600 TL.
+- Kalemlerin YAPISINI (POZ adı, miktar, birim) sen üret; örn "3+1 ev elektrik tesisatı" için: NYA 1.5mm kablo (m), NYA 2.5mm kablo (m), Anahtar+priz seti (adet), Sıva altı buat (adet), Sigorta kutusu/pano (adet), Otomatik sigortalar (adet), LED tavan armatürü (adet), Topraklama tesisatı (set), İşçilik (set). Miktarları makul varsay (3+1 için ~400m 1.5mm, ~250m 2.5mm, 35-45 anahtar/priz, 30+ buat, 1 pano, 8-12 sigorta, 8-10 armatür).
+- FİYAT UYDURMA — KESİNLİKLE YASAK (İŞ KURALI 5). unit_price/install_price GİRME. Sistem tüm birim fiyatları 0 bırakır ve teklifi "fiyatlar girilmeli" notuyla Taslak kaydeder; kullanıcı Teklifler ekranında (POZ kataloğu erişimli) fiyatları doldurur. Sen yalnız kalem yapısını + miktarı ver.
+- Özetinde kullanıcıya AÇIKÇA söyle: "Taslak teklif yapısı oluşturuldu; birim fiyatları Teklifler ekranından kataloğla doldurmanız gerekiyor (fiyat uydurmadım)."
 - Müşteri belirtilmemişse "Adsız Müşteri" kullan veya kısa sor; çoğu zaman create_quote'u SADECE customer_name ile yapabilirsin.
 - Oluşturduktan sonra teklif numarası ve toplam tutarı (KDV dahil) söyle.
 

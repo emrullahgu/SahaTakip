@@ -10,11 +10,12 @@ const SETTINGS_KEY = 'parasut_settings';
 
 export interface ParasutSettings {
   enabled: boolean;          // entegrasyon aktif mi (okuma)
-  invoicingEnabled: boolean; // fatura kesme (POST) aktif mi — varsayılan false
+  invoicingEnabled: boolean; // fatura kesme (POST) aktif mi — varsayılan false (İŞ KURALI 1)
+  offersEnabled: boolean;    // TASLAK teklif (sales_offers POST) aktif mi — faturadan AYRI (İŞ KURALI 2)
   updatedAt?: string;
 }
 
-const DEFAULT_SETTINGS: ParasutSettings = { enabled: false, invoicingEnabled: false };
+const DEFAULT_SETTINGS: ParasutSettings = { enabled: false, invoicingEnabled: false, offersEnabled: false };
 
 // ── Slim tipler (JSON:API attributes düzleştirilir) ──────────────────────────
 export interface ParasutInvoice {
@@ -52,12 +53,15 @@ export interface ParasutContact {
 
 type Op = 'list' | 'show' | 'create';
 interface CallBody {
-  resource: 'sales_invoices' | 'purchase_bills' | 'products' | 'contacts';
+  resource: 'sales_invoices' | 'sales_offers' | 'purchase_bills' | 'products' | 'contacts';
   op: Op;
   id?: string;
   query?: Record<string, string>;
   payload?: unknown;
 }
+
+export interface OfferLineInput { name: string; quantity: number; unitPrice: number; vatRate?: number; }
+export interface OfferInput { contactId?: string; description?: string; issueDate?: string; lines: OfferLineInput[]; }
 
 async function call(body: CallBody): Promise<any> {
   const { data, error } = await supabase.functions.invoke(FN, { body });
@@ -181,4 +185,41 @@ export async function createSalesInvoice(payload: unknown): Promise<any> {
   }
   // Sunucu ayrıca PARASUT_INVOICING_ENABLED secret'ı ile ikinci kez korur.
   return call({ resource: 'sales_invoices', op: 'create', payload });
+}
+
+// ── TASLAK TEKLİF (sales_offers) — faturadan AYRI kilit (İŞ KURALI 2) ─────────
+// Paraşüt v4 JSON:API teklif gövdesi. NOT: İlk canlı testte alan adlarını Paraşüt
+// apidocs'a göre doğrula (sales_offers/sales_offer_details şeması). Çift kilit (bu
+// toggle + sunucu PARASUT_OFFERS_ENABLED) açık değilse çağrı sunucuda reddedilir.
+export function buildSalesOfferPayload(input: OfferInput): { data: any; included: any[] } {
+  const today = input.issueDate || new Date().toISOString().slice(0, 10);
+  const included = input.lines.map((l, i) => ({
+    type: 'sales_offer_details',
+    id: String(i + 1),
+    attributes: {
+      quantity: l.quantity,
+      unit_price: l.unitPrice,
+      vat_rate: l.vatRate ?? 20,
+      description: l.name,
+    },
+  }));
+  const data: any = {
+    type: 'sales_offers',
+    attributes: { description: input.description ?? '', issue_date: today, currency: 'TRL' },
+    relationships: {
+      details: { data: included.map(d => ({ type: 'sales_offer_details', id: d.id })) },
+      ...(input.contactId ? { contact: { data: { type: 'contacts', id: input.contactId } } } : {}),
+    },
+  };
+  return { data, included };
+}
+
+/** Paraşüt'e TASLAK teklif kaydeder — ASLA fatura. İki kilit: bu toggle + sunucu secret. */
+export async function createSalesOffer(input: OfferInput): Promise<any> {
+  const s = await loadParasutSettings();
+  if (!s.offersEnabled) {
+    throw new Error('Paraşüt taslak teklif KAPALI (Ayarlar > Paraşüt). Açıp tekrar deneyin.');
+  }
+  if (!input.lines?.length) throw new Error('Teklif kalemi yok.');
+  return call({ resource: 'sales_offers', op: 'create', payload: buildSalesOfferPayload(input) });
 }

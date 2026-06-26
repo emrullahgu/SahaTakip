@@ -13,6 +13,7 @@
 
 import type { ToolDef } from './tools';
 import { sendGmail, sendWhatsApp } from '../channels';
+import { createSalesOffer } from '../parasut';
 import { supabase, SUPABASE_CONFIGURED } from '../supabase';
 
 const NOT_CONFIGURED = (provider: string, capability: string) => ({
@@ -43,7 +44,10 @@ export const gmail_send: ToolDef = {
     function: {
       name: 'gmail_send',
       description:
-        'Gmail üzerinden e-posta gönderir (gmail-send Edge Function). Müşteriye teklif/rapor/bilgilendirme yollamak için. Body düz metin veya HTML olabilir; otomatik algılanır. (Dosya ekleri şu an desteklenmiyor.)',
+        'Gmail TASLAĞI oluşturur (gmail-send Edge Function · varsayılan DRAFT). İş kuralı: sistem ' +
+        'otomatik e-posta GÖNDERMEZ — taslak Gmail "Taslaklar" klasörüne düşer, kullanıcı gözden ' +
+        'geçirip kendisi gönderir. Müşteriye teklif/rapor/bilgilendirme hazırlamak için. Body düz metin ' +
+        'veya HTML olabilir; otomatik algılanır. (Gerçek gönderim yalnız sunucuda GMAIL_SENDING_ENABLED açıksa.)',
       parameters: {
         type: 'object',
         required: ['to', 'subject', 'body'],
@@ -70,9 +74,13 @@ export const gmail_send: ToolDef = {
         text: looksHtml ? undefined : body,
         relatedType: 'agent',
       });
-      return r.ok
-        ? { ok: true, provider: 'Gmail', to, message: `E-posta gönderildi → ${to}`, result: r.result }
-        : { ok: false, provider: 'Gmail', to, error: r.error || 'Gönderilemedi.' };
+      if (!r.ok) return { ok: false, provider: 'Gmail', to, error: r.error || 'Oluşturulamadı.' };
+      // Edge 'action' döner: 'draft' (varsayılan) | 'send' (yalnız GMAIL_SENDING_ENABLED).
+      // Ajan "gönderdim" yalanı dönmesin — gerçekte ne olduysa onu söyle (Req#3 / Kural 4).
+      const sent = (r as any).action === 'send' || (r.result as any)?.action === 'send';
+      return sent
+        ? { ok: true, provider: 'Gmail', to, sent: true, message: `E-posta gönderildi → ${to}`, result: r.result ?? r }
+        : { ok: true, provider: 'Gmail', to, draft: true, message: `📝 Gmail TASLAĞI oluşturuldu → ${to}. Gmail "Taslaklar"da; gözden geçirip SİZ gönderin (otomatik gönderilmez).`, result: r.result ?? r };
     } catch (e: any) {
       return { ok: false, provider: 'Gmail', to, error: e?.message || String(e) };
     }
@@ -219,6 +227,72 @@ export const parasut_create_invoice: ToolDef = {
   handler: async (args) => NOT_CONFIGURED('Paraşüt', 'fatura oluştur: ' + (args.customerName || '?')),
 };
 
+export const parasut_create_offer: ToolDef = {
+  write: true, // Paraşüt'e TASLAK teklif yazar (fatura DEĞİL); başarısızlığı dürüstçe bildirilir
+  schema: {
+    type: 'function',
+    function: {
+      name: 'parasut_create_offer',
+      description:
+        'Paraşüt\'te TASLAK satış teklifi (sales_offer) oluşturur — ASLA fatura. İş kuralı 2: yalnız ' +
+        'taslak teklif kaydı. Çift kilit: Ayarlar > Paraşüt "taslak teklif aktif" + sunucu PARASUT_OFFERS_ENABLED. ' +
+        'Kapalıysa veya yapılandırılmamışsa dürüstçe reddeder (sahte "oluşturuldu" dönmez). Faturaya ASLA dönüştürmez.',
+      parameters: {
+        type: 'object',
+        required: ['customerName', 'lines'],
+        properties: {
+          customerName: { type: 'string' },
+          contactId: { type: 'string', description: 'Paraşüt cari (contact) id\'si — biliniyorsa.' },
+          description: { type: 'string', description: 'Teklif açıklaması (opsiyonel).' },
+          lines: {
+            type: 'array',
+            description: 'Teklif kalemleri.',
+            items: {
+              type: 'object',
+              required: ['name', 'quantity', 'unitPrice'],
+              properties: {
+                name: { type: 'string', description: 'Kalem açıklaması.' },
+                quantity: { type: 'number' },
+                unitPrice: { type: 'number', description: 'KDV hariç birim fiyat (uydurma YOK — kataloğdan).' },
+                vatRate: { type: 'number', description: 'KDV oranı, varsayılan 20.' },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  handler: async (args) => {
+    if (!SUPABASE_CONFIGURED) return NOT_CONFIGURED('Paraşüt', 'taslak teklif oluştur: ' + (args.customerName || '?'));
+    const lines = Array.isArray(args.lines)
+      ? args.lines.map((l: any) => ({
+          name: String(l.name ?? l.description ?? 'Kalem'),
+          quantity: Number(l.quantity) || 1,
+          unitPrice: Number(l.unitPrice) || 0,
+          vatRate: Number.isFinite(Number(l.vatRate)) ? Number(l.vatRate) : 20,
+        }))
+      : [];
+    if (!lines.length) return { ok: false, provider: 'Paraşüt', error: 'Teklif kalemi yok.' };
+    try {
+      const r = await createSalesOffer({
+        contactId: args.contactId ? String(args.contactId) : undefined,
+        description: String(args.description ?? `${args.customerName ?? ''} – taslak teklif`).trim(),
+        lines,
+      });
+      return {
+        ok: true,
+        provider: 'Paraşüt',
+        draft: true,
+        message: '📝 Paraşüt TASLAK teklifi oluşturuldu (fatura DEĞİL). Paraşüt panelinden gözden geçirin.',
+        result: r,
+      };
+    } catch (e: any) {
+      // offersEnabled kapalı / yapılandırılmamış → dürüst hata (yalan "oluşturuldu" yok).
+      return { ok: false, provider: 'Paraşüt', error: e?.message || String(e) };
+    }
+  },
+};
+
 export const parasut_list_invoices: ToolDef = {
   schema: {
     type: 'function',
@@ -324,6 +398,7 @@ export const INTEGRATION_TOOLS = {
   gmail_send,
   gmail_list_recent,
   whatsapp_send,
+  parasut_create_offer,
   parasut_create_invoice,
   gdrive_search,
   gdrive_read_file,

@@ -19,7 +19,7 @@ import {
 export default function ParasutSettingsScreen() {
   const { hasPermission } = useAuth();
   const isAdmin = hasPermission('settings', 'W'); // admin
-  const [settings, setSettings] = useState<ParasutSettings>({ enabled: false, invoicingEnabled: false });
+  const [settings, setSettings] = useState<ParasutSettings>({ enabled: false, invoicingEnabled: false, offersEnabled: false });
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -76,6 +76,18 @@ export default function ParasutSettingsScreen() {
               <Text style={s.desc}>Muhasebe verilerini (fatura, cari, ürün, harcama) uygulamada görüntüleyin.</Text>
             </View>
             <Switch value={settings.enabled} disabled={!isAdmin || saving} onValueChange={(v) => update({ enabled: v })} />
+          </View>
+        </View>
+
+        <View style={s.card}>
+          <View style={s.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.title}>Taslak Teklif (sales_offers)</Text>
+              <Text style={s.note}>
+                Paraşüt'e TASLAK satış teklifi yazmayı açar — fatura DEĞİL. Faturadan bağımsızdır; açık olsa bile sunucu ayrıca PARASUT_OFFERS_ENABLED gerektirir (çift kilit). AI ajan bu açıkken Paraşüt taslak teklifi oluşturabilir.
+              </Text>
+            </View>
+            <Switch value={settings.offersEnabled} disabled={!isAdmin || saving} onValueChange={(v) => update({ offersEnabled: v })} />
           </View>
         </View>
 

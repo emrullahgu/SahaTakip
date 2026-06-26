@@ -12,11 +12,17 @@
 //   2) İstemci: Ayarlar > Paraşüt > "Fatura kesme aktif" toggle (parasut_settings).
 // İkisi de açık olmadıkça create reddedilir → "sistem oturana kadar fatura yok".
 //
+// TASLAK TEKLİF (POST sales_offers) AYRI bir kilitle açılır (faturadan bağımsız):
+//   PARASUT_OFFERS_ENABLED secret 'true' olmalı (fatura kilidi etkilenmez).
+//   İş kuralı 2: yalnız taslak teklif kaydı; ASLA fatura. Offers açıkken bile invoicing kapalı.
+//
 // Body: { resource, op, id?, query?, payload? }
-//   resource: 'sales_invoices' | 'purchase_bills' | 'products' | 'contacts'
+//   resource: 'sales_invoices' | 'sales_offers' | 'purchase_bills' | 'products' | 'contacts'
 //   op:       'list' | 'show' | 'create'
 //
 // Deploy:  supabase functions deploy parasut-proxy
+//   # taslak teklif yazmayı açmak için (fatura KAPALI kalır):
+//   # supabase secrets set PARASUT_OFFERS_ENABLED=true
 // Secrets (admin tek sefer kurar — repoya yazılmaz):
 //   supabase secrets set PARASUT_CLIENT_ID=...
 //   supabase secrets set PARASUT_CLIENT_SECRET=...
@@ -41,12 +47,15 @@ const API_BASE = 'https://api.parasut.com/v4';
 // Yalnız bu kaynaklara izin var (open-relay yüzeyini daralt).
 const RESOURCES: Record<string, string> = {
   sales_invoices: 'sales_invoices',
+  sales_offers: 'sales_offers',     // Paraşüt v4 teklif (estimate) kaynağı — TASLAK, fatura DEĞİL
   purchase_bills: 'purchase_bills',
   products: 'products',
   contacts: 'contacts',
 };
-// Yazma (POST) yalnız bu kaynak için ve yalnız çift-kilit açıkken.
-const WRITABLE = new Set(['sales_invoices']);
+// Yazma (POST) izinli kaynaklar. Her birinin AYRI kilidi var:
+//   sales_invoices → PARASUT_INVOICING_ENABLED (fatura — ŞİMDİLİK KAPALI tutulur)
+//   sales_offers   → PARASUT_OFFERS_ENABLED   (taslak teklif — faturadan bağımsız açılabilir)
+const WRITABLE = new Set(['sales_invoices', 'sales_offers']);
 
 function json(payload: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(payload), { status, headers: { ...CORS, 'content-type': 'application/json' } });
@@ -148,11 +157,16 @@ Deno.serve(async (req) => {
     : await requireUser(req, { requireApproved: true });
   if (!auth.ok) return json({ error: auth.error }, auth.status);
 
-  // FATURA KESME ÇİFT KİLİDİ (sunucu tarafı).
+  // YAZMA KİLİTLERİ (sunucu tarafı) — kaynağa ÖZGÜ, birbirinden bağımsız:
   if (isWrite) {
     if (!WRITABLE.has(resource)) return json({ error: `${resource} için yazma kapalı.` }, 403);
-    if (env('PARASUT_INVOICING_ENABLED') !== 'true') {
+    // FATURA KESME ÇİFT KİLİDİ (ŞİMDİLİK KAPALI). İş kuralı 1: fatura yok.
+    if (resource === 'sales_invoices' && env('PARASUT_INVOICING_ENABLED') !== 'true') {
       return json({ error: 'Fatura kesme KAPALI. Açmak için PARASUT_INVOICING_ENABLED=true secret gerekir (sistem oturana kadar kapalı tutuluyor).' }, 403);
+    }
+    // TASLAK TEKLİF kilidi (faturadan AYRI). İş kuralı 2: yalnız taslak offer, asla fatura.
+    if (resource === 'sales_offers' && env('PARASUT_OFFERS_ENABLED') !== 'true') {
+      return json({ error: 'Paraşüt taslak teklif yazma KAPALI. Açmak için PARASUT_OFFERS_ENABLED=true secret gerekir.' }, 403);
     }
   }
 
