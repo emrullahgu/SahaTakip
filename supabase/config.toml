@@ -1,0 +1,23 @@
+# Supabase yapılandırması — edge fonksiyonlarının verify_jwt durumunu VERSİYONLAR.
+# Burada listelenmeyen fonksiyonlar varsayılan verify_jwt = true (JWT zorunlu) kalır.
+# Yalnız dışarıdan (kimliksiz) çağrılan fonksiyonlar false; hepsi KENDİ içinde
+# captcha/token/imza/rate-limit ile fail-closed korunur.
+project_id = "mdwcasycfssdkogdlbyh"
+
+# ── Public web botu (anon ziyaretçi) — kendi captcha + IP rate-limit + token bütçesi ──
+[functions.public-chat]
+verify_jwt = false
+
+# ── Dış webhook'lar (sağlayıcı sunucuları çağırır; JWT yok, kendi secret/imza gate'i) ──
+[functions.gchat-webhook]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.gmail-webhook]
+verify_jwt = false
+
+# NOT: ai-proxy / ai-tools / ai-rag / ai-rag-worker / ai-rag-crawl / parasut-proxy /
+# gmail-send / notify-push / ai-sql / ai-vision / ai-voice / ai-route / ai-insights /
+# apollo-proxy / dispatch-email-reports / send-quote-email → verify_jwt = true (KORUMALI).
