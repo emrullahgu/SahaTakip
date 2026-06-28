@@ -26,6 +26,7 @@ import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { SERVICE_CATALOG, MATERIAL_CATALOG, MATERIAL_CATEGORIES, MATERIAL_BRANDS } from '../data/initialData';
 import { loadOverrides, applyOverrides, loadCustomProducts, type OverrideMap } from '../services/catalogOverrides';
+import { listPricingRules, applyPricingRules, type BrandPricingRule } from '../services/productPricing';
 import { getFxRates, liveUnitPriceTry, FX_FALLBACK, type FxRates } from '../services/fx';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 import { localDateISO } from '../utils/date';
@@ -63,11 +64,14 @@ export default function NewServiceScreen() {
   const [selectedMaterials, setSelectedMaterials] = useState<SelectedMaterial[]>([]);
   const [catOverrides, setCatOverrides] = useState<OverrideMap>({});
   const [customProds, setCustomProds] = useState<MaterialCatalogItem[]>([]);
+  // Toplu fiyat/iskonto kuralları — NewQuote ile TUTARLI olması için servis kaleminde de uygulanır.
+  const [productRules, setProductRules] = useState<BrandPricingRule[]>([]);
   // Canlı TCMB kuru — yabancı para (EUR/USD) ürünleri bugünün kuruyla TL'ye çevirmek için.
   const [fx, setFx] = useState<FxRates>(FX_FALLBACK);
   React.useEffect(() => {
     loadOverrides().then(setCatOverrides);
     loadCustomProducts().then(setCustomProds);
+    listPricingRules().then(setProductRules).catch(() => { /* kural yoksa boş */ });
     getFxRates().then(setFx).catch(() => { /* fallback zaten yüklü */ });
   }, []);
   // Usta iş öncesi/sonrası İSTEDİĞİ KADAR foto yükleyebilir (çoklu).
@@ -122,8 +126,9 @@ export default function NewServiceScreen() {
       base = base.filter(m => matchesAnyField([m.name, m.code, m.brand, m.category], q));
     }
     // Performans: ilk 400 sonuç yeterli (FlatList zaten lazy render eder).
-    return base.slice(0, 400);
-  }, [materialSearch, materialCategory, materialBrand, catOverrides, customProds]);
+    // Toplu fiyat/iskonto kurallarını uygula (NewQuote ile aynı) → tutarlı fiyat.
+    return applyPricingRules(base.slice(0, 400), productRules);
+  }, [materialSearch, materialCategory, materialBrand, catOverrides, customProds, productRules]);
 
   const handleCreateCustomer = () => {
     const shortName = newCustomer.shortName.trim();

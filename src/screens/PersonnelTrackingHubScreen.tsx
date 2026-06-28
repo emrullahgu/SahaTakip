@@ -40,6 +40,11 @@ export default function PersonnelTrackingHubScreen() {
   const tileWidth = (Math.min(width, 1200) - spacing.lg * 2 - (cols - 1) * spacing.md) / cols;
 
   const { profile } = useAuth();
+  // Bordro yalnız yönetici/müdüre (maaş gizliliği); RLS de korur ama UI da gate'ler.
+  const isManager = profile?.role === 'admin' || profile?.role === 'manager';
+  const tiles: Tile[] = isManager
+    ? [...TILES, { key: 'PayrollHub', label: 'Bordro & Puantaj', desc: 'Maaş, izin, bordro', icon: 'cash-outline', color: '#10b981', poz: 'POZ-DEV-251' }]
+    : TILES;
   const online = isOnlineMode();
   const [activeCount, setActiveCount] = useState(0);
   const [myShift, setMyShift] = useState<boolean>(false);
@@ -78,7 +83,7 @@ export default function PersonnelTrackingHubScreen() {
         </View>
 
         <View style={[styles.grid, { maxWidth: 1200, alignSelf: 'center', width: '100%' }]}>
-          {TILES.map(t => (
+          {tiles.map(t => (
             <TouchableOpacity
               key={String(t.key)}
               style={[styles.tile, { width: tileWidth }]}

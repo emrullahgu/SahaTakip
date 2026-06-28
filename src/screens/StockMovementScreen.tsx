@@ -117,6 +117,26 @@ export default function StockMovementScreen() {
       return;
     }
 
+    // Negatif stok koruması (karar: UYAR + ONAY). Çıkış/transfer/iş-emri'nde mevcut
+    // bakiyeden fazla çıkış olursa kullanıcıyı uyar ve açık onay iste; engelleme yok.
+    if ((kind === 'cikis' || kind === 'transfer' || kind === 'is-emri') && fromId) {
+      const bal = await getBalance(material.id, fromId);
+      if (q > bal) {
+        const proceed = await new Promise<boolean>(resolve => {
+          Alert.alert(
+            'Yetersiz stok',
+            `Mevcut bakiye ${bal} ${material.unit}, çıkış ${q} ${material.unit}. Stok negatife düşecek (${bal - q} ${material.unit}). Devam edilsin mi?`,
+            [
+              { text: 'Vazgeç', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Devam et', style: 'destructive', onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) },
+          );
+        });
+        if (!proceed) return;
+      }
+    }
+
     await addMovement({
       kind,
       materialId: material.id,

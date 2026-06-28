@@ -245,10 +245,12 @@ export async function acceptPoz(id: string, accepted: boolean) {
 }
 
 // Quote draft
-async function seedQuotes(): Promise<AiQuoteDraft[]> {
-  return [];
+// DÜZELTME: önceden seedQuotes() (boş dizi) dönüyordu → üretilen taslaklar
+// (K.quotes'a yazılmasına rağmen) listede HİÇ görünmüyordu. listPozSuggestions/
+// listUsageLogs deseniyle aynı: kalıcı depodan oku.
+export async function listQuoteDrafts(): Promise<AiQuoteDraft[]> {
+  return load<AiQuoteDraft>(K.quotes);
 }
-export async function listQuoteDrafts() { return seedQuotes(); }
 export async function generateQuoteDraft(customerName: string, surveyText: string): Promise<AiQuoteDraft> {
   const list = await load<AiQuoteDraft>(K.quotes);
   // Çok daha iyi AI akışı:
