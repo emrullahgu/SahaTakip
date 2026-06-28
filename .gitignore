@@ -40,3 +40,12 @@ build-android-run.log
 # Local Netlify folder
 .netlify
 android-build.log
+
+# Build/araç çıktıları (git status'u kirletmesin)
+apk-build*.log
+supabase/.temp/
+
+# Planlama / çalışma notları (anahtar parçaları + iç denetim — repoya girmesin)
+SENDEN-GEREKENLER.md
+IHTIYACLARIM.md
+MODUL-TAMAMLAMA.md

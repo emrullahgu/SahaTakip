@@ -22,7 +22,10 @@
     "sb:link": "supabase link --project-ref",
     "sb:deploy:gchat-webhook": "supabase functions deploy gchat-webhook --no-verify-jwt",
     "sb:deploy:notify-push": "supabase functions deploy notify-push",
-    "sb:deploy:all": "supabase functions deploy ai-proxy && supabase functions deploy ai-rag && supabase functions deploy ai-tools && supabase functions deploy whatsapp-send && supabase functions deploy whatsapp-webhook && supabase functions deploy gmail-send && supabase functions deploy gchat-send && supabase functions deploy notify-push && supabase functions deploy gchat-webhook --no-verify-jwt",
+    "sb:deploy:slack-send": "supabase functions deploy slack-send",
+    "sb:deploy:slack-webhook": "supabase functions deploy slack-webhook --no-verify-jwt",
+    "sb:deploy:slack": "supabase functions deploy slack-send && supabase functions deploy slack-webhook --no-verify-jwt",
+    "sb:deploy:all": "supabase functions deploy ai-proxy && supabase functions deploy ai-rag && supabase functions deploy ai-rag-worker && supabase functions deploy ai-rag-crawl && supabase functions deploy ai-tools && supabase functions deploy ai-sql && supabase functions deploy ai-route && supabase functions deploy ai-vision && supabase functions deploy ai-voice && supabase functions deploy ai-insights && supabase functions deploy parasut-proxy && supabase functions deploy apollo-proxy && supabase functions deploy gmail-send && supabase functions deploy send-quote-email && supabase functions deploy dispatch-email-reports && supabase functions deploy whatsapp-send && supabase functions deploy gchat-send && supabase functions deploy slack-send && supabase functions deploy notify-push && supabase functions deploy public-chat --no-verify-jwt && supabase functions deploy gchat-webhook --no-verify-jwt && supabase functions deploy whatsapp-webhook --no-verify-jwt && supabase functions deploy gmail-webhook --no-verify-jwt && supabase functions deploy slack-webhook --no-verify-jwt",
     "postinstall": "patch-package"
   },
   "dependencies": {
