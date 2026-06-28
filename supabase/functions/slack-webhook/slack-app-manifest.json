@@ -1,0 +1,46 @@
+{
+  "_comment": "SahaTakip Slack App manifest. Kullanım: https://api.slack.com/apps -> Create New App -> From a manifest -> workspace seç -> bu JSON'u yapıştır. Sonra Install to Workspace; Bot User OAuth Token (xoxb-) ve Basic Information > Signing Secret'i al; supabase secrets set SLACK_BOT_TOKEN / SLACK_SIGNING_SECRET. request_url'ler slack-webhook fonksiyonudur (proje ref: mdwcasycfssdkogdlbyh).",
+  "display_information": {
+    "name": "SahaTakip",
+    "description": "Saha iş asistanı: iş emri/teklif komutları + bildirimler",
+    "background_color": "#0ea5e9"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "SahaTakip",
+      "always_online": true
+    },
+    "slash_commands": [
+      {
+        "command": "/saha",
+        "url": "https://mdwcasycfssdkogdlbyh.supabase.co/functions/v1/slack-webhook",
+        "description": "SahaTakip asistanına komut ver",
+        "usage_hint": "yarın 10:00 Demir Yapı için bakım iş emri aç",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "commands",
+        "app_mentions:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://mdwcasycfssdkogdlbyh.supabase.co/functions/v1/slack-webhook",
+      "bot_events": [
+        "app_mention"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": false
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

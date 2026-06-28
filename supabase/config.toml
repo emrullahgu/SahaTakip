@@ -18,6 +18,12 @@ verify_jwt = false
 [functions.gmail-webhook]
 verify_jwt = false
 
+# Slack: webhook (slash-command + @mention) Slack'in sunucusundan gelir, JWT yok →
+# kendi v0 imza doğrulaması (SLACK_SIGNING_SECRET) ile fail-closed korunur.
+[functions.slack-webhook]
+verify_jwt = false
+
 # NOT: ai-proxy / ai-tools / ai-rag / ai-rag-worker / ai-rag-crawl / parasut-proxy /
-# gmail-send / notify-push / ai-sql / ai-vision / ai-voice / ai-route / ai-insights /
-# apollo-proxy / dispatch-email-reports / send-quote-email → verify_jwt = true (KORUMALI).
+# gmail-send / slack-send / notify-push / ai-sql / ai-vision / ai-voice / ai-route /
+# ai-insights / apollo-proxy / dispatch-email-reports / send-quote-email →
+# verify_jwt = true (KORUMALI).
