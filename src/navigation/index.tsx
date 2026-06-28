@@ -567,6 +567,19 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Explore"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: 'Keşfet',
+          // Yönetici/müdür Panel'e düşer; Keşfet grid'ine de Panel'in hemen sağından
+          // erişsin. Saha/mühendiste Home zaten Keşfet olduğundan bu sekme gizli.
+          tabBarItemStyle: canSeeManager ? undefined : { display: 'none' },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="compass-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="WorkOrders"
         component={WorkOrdersScreen}
         options={{

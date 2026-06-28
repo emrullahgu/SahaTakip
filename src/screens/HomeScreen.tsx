@@ -67,6 +67,8 @@ export default function HomeScreen() {
   const isField = !isDemoMode && role === 'field';
   const canSeeFinance = isDemoMode || role === 'admin' || role === 'manager';
   const canSeeReports = isDemoMode || role === 'admin' || role === 'manager' || role === 'engineer';
+  // Ürün & Envanter mühendise de açık (saha hariç).
+  const canSeeInventory = isDemoMode || role === 'admin' || role === 'manager' || role === 'engineer';
   const canSeeAdminTools = isDemoMode || role === 'admin';
 
   const toggleTheme = () => {
@@ -396,7 +398,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
 
-          {canSeeFinance && (
+          {canSeeInventory && (
             <TouchableOpacity
               style={styles.gridItem}
               onPress={() => navigation.navigate('InventoryHub')}

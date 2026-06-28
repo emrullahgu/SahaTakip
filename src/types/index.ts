@@ -4391,6 +4391,7 @@ export type RootStackParamList = {
 
 export type TabParamList = {
   Home: undefined;
+  Explore: undefined;
   WorkOrders: undefined;
   NewService: undefined;
   Quotes: undefined;
