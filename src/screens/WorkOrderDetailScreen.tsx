@@ -26,6 +26,7 @@ import { RootStackParamList, WorkOrderPriority, WorkOrder } from '../types';
 import { useAppContext } from '../context/AppContext';
 import {
   NEXT_STATUS,
+  requiresCheckIn,
   statusColor,
   priorityColor,
   isSlaBreached,
@@ -327,6 +328,18 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
           </View>
         )}
       </View>
+
+      {/* Saha check-in: FIELD işinde 'Başladı' için ZORUNLU (karar). Buradan QR tara. */}
+      {requiresCheckIn(wo) && wo.status !== 'Tamamlandı' && wo.status !== 'İptal' && (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('CheckinScanner', { workOrderId: wo.id })}
+          activeOpacity={0.85}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#0ea5e9', paddingVertical: 14, borderRadius: 12, marginBottom: 12 }}
+        >
+          <Ionicons name="qr-code-outline" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '800' }}>Sahada Check-in (QR)</Text>
+        </TouchableOpacity>
+      )}
 
       {/* STATUS FLOW */}
       {allowed.length > 0 && (

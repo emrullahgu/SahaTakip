@@ -381,6 +381,7 @@ create table if not exists public.location_checkins (
   method text not null check (method in ('qr','nfc','manual')),
   lat numeric(10,7),
   lng numeric(10,7),
+  work_order_id text,   -- FIELD işinde 'Başladı' check-in bağı (app work order id)
   recorded_at timestamptz not null default now()
 );
 

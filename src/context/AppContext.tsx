@@ -21,7 +21,8 @@ import {
   WorkOrderTimeLog,
   Order,
 } from '../types';
-import { recomputeWorkOrderCosts, canTransition } from '../services/workOrderFlow';
+import { recomputeWorkOrderCosts, canTransition, requiresCheckIn } from '../services/workOrderFlow';
+import { checkinsRepo } from '../services/data/checkinsRepo';
 import { runDueTemplates } from '../services/recurringTasks';
 import { recordRevision } from '../services/quoteRevisions';
 import { recordQuoteLines } from '../services/recentPozes';
@@ -667,7 +668,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       showToast(`Geçersiz geçiş: ${current.status} → ${status}`, 'error');
       return { ok: false, error: `Geçersiz geçiş: ${current.status} → ${status}` };
     }
-    const next: WorkOrder = { ...current, status };
+    // Saha (FIELD) işinde 'Başladı' için saha check-in ZORUNLU (karar 2026-06-28):
+    // personel gerçekten sahada olmadan iş başlatılamaz. Ofis/uzaktan işler hariç.
+    if (status === 'Başladı' && requiresCheckIn(current)) {
+      const checkedIn = await checkinsRepo.hasRecentCheckin(id);
+      if (!checkedIn) {
+        showToast('Önce sahada QR/NFC check-in yapın.', 'error');
+        return { ok: false, error: 'Saha check-in gerekli' };
+      }
+    }
+    let next: WorkOrder = { ...current, status };
+    // 'Tamamlandı'ya geçişte açık çalışma sayacını OTOMATİK kapat: aksi halde kronik
+    // açık timeLog kalır, actual_labor_minutes hatalı olur ve işçilik maliyeti eksik
+    // hesaplanır (recompute yalnız sayaç kapanınca çalışır).
+    if (status === 'Tamamlandı' && current.timeLogs?.some(l => !l.endAt)) {
+      const logs = current.timeLogs.map(l => {
+        if (l.endAt) return l;
+        const endAt = new Date().toISOString();
+        const minutes = Math.round((new Date(endAt).getTime() - new Date(l.startAt).getTime()) / 60000);
+        return { ...l, endAt, minutes };
+      });
+      next = recomputeWorkOrderCosts({ ...next, timeLogs: logs });
+    }
     setWorkOrders(prev => prev.map(w => (w.id === id ? next : w)));
     const res = await persistWorkOrder(next, {
       successMsg: `Durum: ${status}`,

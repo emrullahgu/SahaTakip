@@ -3905,8 +3905,8 @@ export type RootStackParamList = {
   EmployeeDetail: { employeeId: string };
   LocationHistory: { userId: string; employeeName?: string };
   Geofences: undefined;
-  CheckinScanner: undefined;
-  NfcCheckin: undefined;
+  CheckinScanner: { workOrderId?: string } | undefined;
+  NfcCheckin: { workOrderId?: string } | undefined;
   ChangePassword: undefined;
   BulkAssign: undefined;
   RecurringTasks: undefined;

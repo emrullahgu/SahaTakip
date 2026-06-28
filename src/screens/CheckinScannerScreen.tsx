@@ -7,8 +7,10 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 
 import { colors, spacing, radius, typography, brand } from '../theme';
+import { RootStackParamList } from '../types';
 import { checkinsRepo } from '../services/data/checkinsRepo';
 import { useAuth } from '../context/AuthContext';
 import { requestAndGetPosition } from '../services/location';
@@ -16,6 +18,9 @@ import { requestAndGetPosition } from '../services/location';
 export default function CheckinScannerScreen() {
   const { session } = useAuth();
   const userId = session?.user?.id ?? 'demo-user';
+  const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<RootStackParamList, 'CheckinScanner'>>();
+  const workOrderId = route.params?.workOrderId;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [lastSite, setLastSite] = useState<string | null>(null);
@@ -50,12 +55,16 @@ export default function CheckinScannerScreen() {
       method: 'qr',
       lat: pos?.latitude,
       lng: pos?.longitude,
+      workOrderId,
     });
     if (r) {
       setLastSite(siteCode);
-      Alert.alert('Check-in başarılı', `Saha: ${siteCode}`, [
+      const buttons: { text: string; onPress: () => void }[] = [
         { text: 'Tekrar Tara', onPress: () => setScanned(false) },
-      ]);
+      ];
+      // İş emrinden gelindiyse 'İşe Dön' ile geri dönüp 'Başladı'ya geçilebilir.
+      if (workOrderId) buttons.unshift({ text: 'İşe Dön', onPress: () => navigation.goBack() });
+      Alert.alert('Check-in başarılı', `Saha: ${siteCode}`, buttons);
     } else {
       setScanned(false);
     }
