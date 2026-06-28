@@ -1,12 +1,11 @@
 // Faz 47 — EmployeeRankingScreen (POZ-DEV-176)
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, radius, typography } from '../theme';
-import { listEmployeeProductivity } from '../services/exec';
-import type { EmployeeProductivityEntry } from '../types';
+import { useAppContext } from '../context/AppContext';
+import { computeStaffScores, toProductivityEntries } from '../services/scoring';
 import EmptyState from '../components/EmptyState';
 import { FLATLIST_DEFAULTS } from '../utils/perf';
 
@@ -14,10 +13,9 @@ const effColor = (e: number) => e >= 85 ? '#22c55e' : e >= 75 ? '#f59e0b' : '#ef
 const medal = (r: number) => r === 1 ? '#facc15' : r === 2 ? '#94a3b8' : r === 3 ? '#cd7f32' : '#475569';
 
 export default function EmployeeRankingScreen() {
-  const [list, setList] = useState<EmployeeProductivityEntry[]>([]);
-  useFocusEffect(useCallback(() => { (async () => setList(await listEmployeeProductivity()))(); }, []));
-
-  const sorted = useMemo(() => [...list].sort((a, b) => a.ranking - b.ranking), [list]);
+  const { workOrders } = useAppContext();
+  // Canlı skor: work_orders'tan tamamlama + rapor eksiksizliği + hacim (scoring.ts).
+  const sorted = useMemo(() => toProductivityEntries(computeStaffScores(workOrders)), [workOrders]);
   const max = Math.max(...sorted.map(e => e.efficiencyScore), 100);
 
   return (
