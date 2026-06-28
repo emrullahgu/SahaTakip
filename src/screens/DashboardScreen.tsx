@@ -114,6 +114,14 @@ export default function DashboardScreen() {
           <Ionicons name="document-text-outline" size={16} color={brand.blueLight} />
           <Text style={styles.openReportsText}>Tüm Raporlar</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.openReportsBtn}
+          onPress={() => navigation.navigate('EmployeeRanking')}
+        >
+          <Ionicons name="trophy-outline" size={16} color={brand.green} />
+          <Text style={styles.openReportsText}>Personel Performans Sıralaması</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
