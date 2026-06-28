@@ -521,6 +521,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const GateStackNav = createNativeStackNavigator();
 
+// Rol-bazlı landing: yönetici (admin/manager/demo) girişte sade Dashboard panosuna
+// (bugün/ay KPI + SLA), saha/mühendis ise mevcut Keşfet/USTA MODU ekranına düşer.
+// Tek nokta — AppNavigator ve Login değişmez; her iki ekran da useNavigation hook
+// kullandığı için prop'suz render güvenli.
+function RoleHome() {
+  const { profile, isDemoMode } = useAuth();
+  const role = profile?.role ?? 'engineer';
+  const isManagerial = isDemoMode || role === 'admin' || role === 'manager';
+  return isManagerial ? <DashboardScreen /> : <HomeScreen />;
+}
+
 function MainTabs() {
   const { profile, isDemoMode } = useAuth();
   const insets = useSafeAreaInsets();
@@ -547,11 +558,11 @@ function MainTabs() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={RoleHome}
         options={{
-          tabBarLabel: 'Keşfet',
+          tabBarLabel: canSeeManager ? 'Panel' : 'Keşfet',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+            <Ionicons name={canSeeManager ? 'grid-outline' : 'home-outline'} color={color} size={size} />
           ),
         }}
       />

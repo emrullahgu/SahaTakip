@@ -13,6 +13,7 @@ import { colors, spacing, radius, typography, brand } from '../theme';
 import { useAppContext } from '../context/AppContext';
 import { computeKpi, rangeFor, listSlaItems } from '../services/reports';
 import MiniBarChart from '../components/MiniBarChart';
+import AppHeader from '../components/AppHeader';
 import { RootStackParamList, ReportBucket } from '../types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
@@ -52,6 +53,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <AppHeader />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Yönetici Dashboard</Text>
         <Text style={styles.sub}>Canlı veriler (yerel)</Text>
