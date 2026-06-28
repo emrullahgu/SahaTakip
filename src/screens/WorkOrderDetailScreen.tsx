@@ -24,6 +24,7 @@ import { uploadPhoto } from '../services/photoUpload';
 import { colors, brand } from '../theme';
 import { RootStackParamList, WorkOrderPriority, WorkOrder } from '../types';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import {
   NEXT_STATUS,
   requiresCheckIn,
@@ -76,6 +77,9 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
     attachWorkOrderMedia,
     showToast,
   } = useAppContext();
+  const { profile, isDemoMode } = useAuth();
+  // Saha (field) personeli maliyet/kâr/teklif tutarını GÖRMEZ (karar: ticari gizlilik).
+  const canSeeCost = isDemoMode || (profile?.role ?? 'engineer') !== 'field';
 
   const wo = workOrders.find(w => w.id === workOrderId);
   const [showAssign, setShowAssign] = useState(false);
@@ -608,7 +612,8 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      {/* COST SUMMARY */}
+      {/* COST SUMMARY — saha personeline gizli (ticari gizlilik) */}
+      {canSeeCost && (
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Maliyet</Text>
         <KV k="İşçilik" v={wo.laborCost} />
@@ -617,6 +622,7 @@ export default function WorkOrderDetailScreen({ route, navigation }: Props) {
         <KV k="Teklif" v={wo.quoteAmount} />
         <KV k="Kâr" v={wo.profit} highlight />
       </View>
+      )}
 
       {/* FOTOĞRAFLAR — İş Öncesi / Sonrası */}
       <View style={styles.card}>
