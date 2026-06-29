@@ -4,24 +4,33 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  TextInput, Modal, Pressable, Alert, useWindowDimensions,
+  TextInput, Modal, Pressable, Alert, useWindowDimensions, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import {
-  RootStackParamList, OfficeBoard, OfficeBoardCard, OfficeBoardColumn, OfficeCardPriority,
+  RootStackParamList, OfficeBoard, OfficeBoardCard, OfficeBoardColumn, OfficeCardPriority, OfficeAttachment,
 } from '../types';
 import {
   getBoard, saveBoard, deleteBoard, newCard, moveCard, subscribeOffice,
   PRIORITY_LABEL, PRIORITY_COLOR, LABEL_COLORS, newLabel, newChecklistItem, checklistProgress,
-  dueStatus, DUE_COLOR,
+  dueStatus, DUE_COLOR, newAttachment,
 } from '../services/officeWorkspace';
+import { uploadAttachment } from '../services/photoUpload';
+import { notifyUsers } from '../services/notifications';
+import { useAppContext } from '../context/AppContext';
 import { newUuid } from '../services/data/repository';
 import { localDateISO } from '../utils/date';
+
+const ATTACH_ICON: Record<OfficeAttachment['kind'], keyof typeof Ionicons.glyphMap> = {
+  image: 'image-outline', video: 'videocam-outline', pdf: 'document-text-outline', audio: 'musical-notes-outline', other: 'document-outline',
+};
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'OfficeBoard'>;
@@ -36,6 +45,7 @@ export default function OfficeBoardScreen() {
   const { width } = useWindowDimensions();
   const colW = Math.max(260, Math.min(320, Math.round(width * 0.82)));
   const boardId = route.params?.boardId;
+  const { employees } = useAppContext();
 
   const [board, setBoard] = useState<OfficeBoard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +54,8 @@ export default function OfficeBoardScreen() {
   const [addingIn, setAddingIn] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [remoteChanged, setRemoteChanged] = useState(false);
+  // Mobilde yatay kanban dar geliyor → varsayılan dikey "liste" görünümü; geniş ekranda board.
+  const [view, setView] = useState<'board' | 'list'>(width < 700 ? 'list' : 'board');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dirtyRef = useRef(false);
 
@@ -120,11 +132,60 @@ export default function OfficeBoardScreen() {
   const editCard = editing ? board.columns.find(c => c.id === editing.columnId)?.cards.find(k => k.id === editing.cardId) : undefined;
   const menuCol = colMenu ? board.columns.find(c => c.id === colMenu) : undefined;
 
+  const cardTile = (card: OfficeBoardCard, ci: number) => {
+    const ds = dueStatus(card.dueDate);
+    const prog = checklistProgress(card);
+    const who = card.assigneeName || card.assignee;
+    return (
+      <TouchableOpacity key={card.id} style={[s.kanbanCard, card.priority && { borderLeftWidth: 3, borderLeftColor: PRIORITY_COLOR[card.priority] }]} onPress={() => setEditing({ columnId: board.columns[ci].id, cardId: card.id })} activeOpacity={0.8}>
+        <Text style={s.kanbanTitle} numberOfLines={3}>{card.title}</Text>
+        {!!card.labels?.length && (
+          <View style={s.labelRow}>
+            {card.labels.map((l, i) => <View key={i} style={[s.labelChip, { backgroundColor: l.color + '22', borderColor: l.color }]}><Text style={[s.labelText, { color: l.color }]}>{l.text}</Text></View>)}
+          </View>
+        )}
+        {!!card.description && <Text style={s.kanbanDesc} numberOfLines={2}>{card.description}</Text>}
+        <View style={s.kanbanMeta}>
+          {card.priority && card.priority !== 'normal' && <View style={[s.prioPill, { backgroundColor: PRIORITY_COLOR[card.priority] + '22', borderColor: PRIORITY_COLOR[card.priority] }]}><Text style={[s.prioText, { color: PRIORITY_COLOR[card.priority] }]}>{PRIORITY_LABEL[card.priority]}</Text></View>}
+          {prog.total > 0 && <Text style={[s.metaChip, prog.pct === 100 && { color: brand.green }]}>☑ {prog.done}/{prog.total}</Text>}
+          {!!card.attachments?.length && <Text style={s.metaChip}>📎 {card.attachments.length}</Text>}
+          {!!card.dueDate && <Text style={[s.metaChip, { color: DUE_COLOR[ds] }]}>📅 {card.dueDate}{DUE_LABEL[ds] ? ` · ${DUE_LABEL[ds]}` : ''}</Text>}
+          {!!who && <Text style={s.metaChip} numberOfLines={1}>👤 {who}</Text>}
+        </View>
+        <View style={s.cardMoveRow}>
+          {ci > 0 && <TouchableOpacity onPress={() => shiftCard(card.id, -1)} hitSlop={HS} style={s.moveArrow}><Ionicons name="arrow-back" size={15} color={colors.text.muted} /></TouchableOpacity>}
+          <View style={{ flex: 1 }} />
+          {ci < board.columns.length - 1 && <TouchableOpacity onPress={() => shiftCard(card.id, 1)} hitSlop={HS} style={s.moveArrow}><Ionicons name="arrow-forward" size={15} color={colors.text.muted} /></TouchableOpacity>}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const quickAddRow = (col: OfficeBoardColumn) => (
+    addingIn === col.id ? (
+      <View style={s.quickAdd}>
+        <TextInput
+          style={s.quickInput} value={draft} onChangeText={setDraft} placeholder="Kart başlığı…" placeholderTextColor={colors.text.faint}
+          autoFocus blurOnSubmit={false} returnKeyType="done"
+          onSubmitEditing={() => { addCard(col.id, draft); setDraft(''); }}
+          onBlur={() => { if (draft.trim()) addCard(col.id, draft); setDraft(''); setAddingIn(null); }}
+        />
+      </View>
+    ) : (
+      <TouchableOpacity style={s.addCard} onPress={() => { setDraft(''); setAddingIn(col.id); }} activeOpacity={0.7}>
+        <Ionicons name="add" size={16} color={colors.text.muted} /><Text style={s.addCardText}>Kart ekle</Text>
+      </TouchableOpacity>
+    )
+  );
+
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <View style={s.toolbar}>
         <Text style={s.boardIcon}>{board.icon}</Text>
         <TextInput style={s.boardTitle} value={board.title} onChangeText={t => update(b => ({ ...b, title: t }), true)} placeholder="Pano adı" placeholderTextColor={colors.text.faint} />
+        <TouchableOpacity onPress={() => setView(v => v === 'board' ? 'list' : 'board')} hitSlop={HS} style={{ marginRight: 4 }}>
+          <Ionicons name={view === 'board' ? 'list-outline' : 'grid-outline'} size={20} color={colors.text.muted} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={onDeleteBoard} hitSlop={HS}><Ionicons name="trash-outline" size={20} color={colors.rose.default} /></TouchableOpacity>
       </View>
 
@@ -135,65 +196,44 @@ export default function OfficeBoardScreen() {
         </TouchableOpacity>
       )}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.columns} snapToInterval={colW + spacing.md} decelerationRate="fast">
-        {board.columns.map((col, ci) => (
-          <View key={col.id} style={[s.column, { width: colW }]}>
-            <View style={s.colHeader}>
-              <View style={[s.colDot, { backgroundColor: col.color }]} />
-              <TextInput style={s.colTitle} value={col.title} onChangeText={t => setColumns(board.columns.map(c => c.id === col.id ? { ...c, title: t } : c), true)} />
-              <Text style={s.colCount}>{col.cards.length}</Text>
-              <TouchableOpacity onPress={() => setColMenu(col.id)} hitSlop={HS}><Ionicons name="ellipsis-horizontal" size={18} color={colors.text.faint} /></TouchableOpacity>
-            </View>
-
-            <ScrollView style={s.colScroll} showsVerticalScrollIndicator={false}>
+      {view === 'list' ? (
+        /* MOBİL-DOSTU DİKEY LİSTE: kolonlar üst üste, kartlar tam genişlik */
+        <ScrollView contentContainerStyle={s.listContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {board.columns.map((col, ci) => (
+            <View key={col.id} style={s.listSection}>
+              <View style={s.colHeader}>
+                <View style={[s.colDot, { backgroundColor: col.color }]} />
+                <TextInput style={s.colTitle} value={col.title} onChangeText={t => setColumns(board.columns.map(c => c.id === col.id ? { ...c, title: t } : c), true)} />
+                <Text style={s.colCount}>{col.cards.length}</Text>
+                <TouchableOpacity onPress={() => setColMenu(col.id)} hitSlop={HS}><Ionicons name="ellipsis-horizontal" size={18} color={colors.text.faint} /></TouchableOpacity>
+              </View>
               {col.cards.length === 0 && addingIn !== col.id && <Text style={s.colEmpty}>Buraya görev ekleyin</Text>}
-              {col.cards.map(card => {
-                const ds = dueStatus(card.dueDate);
-                const prog = checklistProgress(card);
-                return (
-                  <TouchableOpacity key={card.id} style={[s.kanbanCard, card.priority && { borderLeftWidth: 3, borderLeftColor: PRIORITY_COLOR[card.priority] }]} onPress={() => setEditing({ columnId: col.id, cardId: card.id })} activeOpacity={0.8}>
-                    <Text style={s.kanbanTitle} numberOfLines={3}>{card.title}</Text>
-                    {!!card.labels?.length && (
-                      <View style={s.labelRow}>
-                        {card.labels.map((l, i) => <View key={i} style={[s.labelChip, { backgroundColor: l.color + '22', borderColor: l.color }]}><Text style={[s.labelText, { color: l.color }]}>{l.text}</Text></View>)}
-                      </View>
-                    )}
-                    {!!card.description && <Text style={s.kanbanDesc} numberOfLines={2}>{card.description}</Text>}
-                    <View style={s.kanbanMeta}>
-                      {card.priority && card.priority !== 'normal' && <View style={[s.prioPill, { backgroundColor: PRIORITY_COLOR[card.priority] + '22', borderColor: PRIORITY_COLOR[card.priority] }]}><Text style={[s.prioText, { color: PRIORITY_COLOR[card.priority] }]}>{PRIORITY_LABEL[card.priority]}</Text></View>}
-                      {prog.total > 0 && <Text style={[s.metaChip, prog.pct === 100 && { color: brand.green }]}>☑ {prog.done}/{prog.total}</Text>}
-                      {!!card.dueDate && <Text style={[s.metaChip, { color: DUE_COLOR[ds] }]}>📅 {card.dueDate}{DUE_LABEL[ds] ? ` · ${DUE_LABEL[ds]}` : ''}</Text>}
-                      {!!card.assignee && <Text style={s.metaChip} numberOfLines={1}>👤 {card.assignee}</Text>}
-                    </View>
-                    <View style={s.cardMoveRow}>
-                      {ci > 0 && <TouchableOpacity onPress={() => shiftCard(card.id, -1)} hitSlop={HS} style={s.moveArrow}><Ionicons name="arrow-back" size={15} color={colors.text.muted} /></TouchableOpacity>}
-                      <View style={{ flex: 1 }} />
-                      {ci < board.columns.length - 1 && <TouchableOpacity onPress={() => shiftCard(card.id, 1)} hitSlop={HS} style={s.moveArrow}><Ionicons name="arrow-forward" size={15} color={colors.text.muted} /></TouchableOpacity>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {addingIn === col.id ? (
-                <View style={s.quickAdd}>
-                  <TextInput
-                    style={s.quickInput} value={draft} onChangeText={setDraft} placeholder="Kart başlığı…" placeholderTextColor={colors.text.faint}
-                    autoFocus blurOnSubmit={false} returnKeyType="done"
-                    onSubmitEditing={() => { addCard(col.id, draft); setDraft(''); }}
-                    onBlur={() => { if (draft.trim()) addCard(col.id, draft); setDraft(''); setAddingIn(null); }}
-                  />
-                </View>
-              ) : (
-                <TouchableOpacity style={s.addCard} onPress={() => { setDraft(''); setAddingIn(col.id); }} activeOpacity={0.7}>
-                  <Ionicons name="add" size={16} color={colors.text.muted} /><Text style={s.addCardText}>Kart ekle</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-        ))}
-
-        <TouchableOpacity style={s.addColumn} onPress={addColumn} activeOpacity={0.8}><Ionicons name="add" size={22} color={colors.text.muted} /><Text style={s.addColText}>Kolon</Text></TouchableOpacity>
-      </ScrollView>
+              {col.cards.map(card => cardTile(card, ci))}
+              {quickAddRow(col)}
+            </View>
+          ))}
+          <TouchableOpacity style={s.addColumnWide} onPress={addColumn} activeOpacity={0.8}><Ionicons name="add" size={20} color={colors.text.muted} /><Text style={s.addColText}>Kolon ekle</Text></TouchableOpacity>
+        </ScrollView>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.columns} snapToInterval={colW + spacing.md} decelerationRate="fast">
+          {board.columns.map((col, ci) => (
+            <View key={col.id} style={[s.column, { width: colW }]}>
+              <View style={s.colHeader}>
+                <View style={[s.colDot, { backgroundColor: col.color }]} />
+                <TextInput style={s.colTitle} value={col.title} onChangeText={t => setColumns(board.columns.map(c => c.id === col.id ? { ...c, title: t } : c), true)} />
+                <Text style={s.colCount}>{col.cards.length}</Text>
+                <TouchableOpacity onPress={() => setColMenu(col.id)} hitSlop={HS}><Ionicons name="ellipsis-horizontal" size={18} color={colors.text.faint} /></TouchableOpacity>
+              </View>
+              <ScrollView style={s.colScroll} showsVerticalScrollIndicator={false}>
+                {col.cards.length === 0 && addingIn !== col.id && <Text style={s.colEmpty}>Buraya görev ekleyin</Text>}
+                {col.cards.map(card => cardTile(card, ci))}
+                {quickAddRow(col)}
+              </ScrollView>
+            </View>
+          ))}
+          <TouchableOpacity style={s.addColumn} onPress={addColumn} activeOpacity={0.8}><Ionicons name="add" size={22} color={colors.text.muted} /><Text style={s.addColText}>Kolon</Text></TouchableOpacity>
+        </ScrollView>
+      )}
 
       {/* Kolon menüsü */}
       <Modal visible={!!colMenu} transparent animationType="fade" onRequestClose={() => setColMenu(null)}>
@@ -219,6 +259,7 @@ export default function OfficeBoardScreen() {
       {editing && editCard && (
         <CardEditor
           card={editCard} columns={board.columns} currentColumnId={editing.columnId}
+          employees={employees} boardTitle={board.title} cardId={editing.cardId}
           onClose={() => setEditing(null)}
           onSave={c => saveCard(editing.columnId, c)}
           onDelete={() => deleteCard(editing.columnId, editing.cardId)}
@@ -229,20 +270,65 @@ export default function OfficeBoardScreen() {
   );
 }
 
-function CardEditor({ card, columns, currentColumnId, onClose, onSave, onDelete, onMove }: {
+function CardEditor({ card, columns, currentColumnId, employees, boardTitle, cardId, onClose, onSave, onDelete, onMove }: {
   card: OfficeBoardCard; columns: OfficeBoardColumn[]; currentColumnId: string;
+  employees: { id: string; name: string }[]; boardTitle: string; cardId: string;
   onClose: () => void; onSave: (c: OfficeBoardCard) => void; onDelete: () => void; onMove: (colId: string) => void;
 }) {
   const [draft, setDraft] = useState<OfficeBoardCard>(card);
   const [labelText, setLabelText] = useState('');
   const [labelColor, setLabelColor] = useState(LABEL_COLORS[0]);
   const [checkText, setCheckText] = useState('');
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const commit = (patch: Partial<OfficeBoardCard>) => { const next = { ...draft, ...patch }; setDraft(next); onSave(next); };
   const prog = checklistProgress(draft);
 
   const addLabel = () => { const t = labelText.trim(); if (!t) return; commit({ labels: [...(draft.labels ?? []), newLabel(t, labelColor)] }); setLabelText(''); };
   const addCheck = () => { const t = checkText.trim(); if (!t) return; commit({ checklist: [...(draft.checklist ?? []), newChecklistItem(t)] }); setCheckText(''); };
   const quickDue = (days: number | null) => commit({ dueDate: days === null ? undefined : addDays(localDateISO(), days) });
+
+  // Görevi kişiye ata → kişiye bildirim gönder (notifyUsers userNames ile profili eşler).
+  const assignTo = (emp: { id: string; name: string } | null) => {
+    setAssignOpen(false);
+    if (!emp) { commit({ assigneeId: undefined, assigneeName: undefined, assignee: undefined }); return; }
+    commit({ assigneeId: emp.id, assigneeName: emp.name, assignee: emp.name });
+    notifyUsers(
+      { userNames: [emp.name] },
+      'task_assigned',
+      'Size görev atandı',
+      `${boardTitle}: ${draft.title}`,
+      cardId,
+    ).catch(() => {});
+  };
+
+  const addPickedFiles = async (assets: { uri: string; name?: string }[]) => {
+    if (!assets.length) return;
+    setUploading(true);
+    try {
+      const uploaded: OfficeAttachment[] = [];
+      for (const a of assets) {
+        const name = a.name || a.uri.split('/').pop() || 'dosya';
+        const url = await uploadAttachment(a.uri, `office/cards/${cardId}`, name);
+        uploaded.push(newAttachment(name, url));
+      }
+      commit({ attachments: [...(draft.attachments ?? []), ...uploaded] });
+    } catch (e: any) {
+      Alert.alert('Yüklenemedi', e?.message || 'Dosya yüklenemedi');
+    } finally { setUploading(false); }
+  };
+
+  const pickMedia = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.All, quality: 0.7, allowsMultipleSelection: true });
+    if (res.canceled) return;
+    await addPickedFiles(res.assets.map(x => ({ uri: x.uri, name: x.fileName || undefined })));
+  };
+  const pickDocument = async () => {
+    const res = await DocumentPicker.getDocumentAsync({ type: '*/*', multiple: true, copyToCacheDirectory: true });
+    if (res.canceled) return;
+    await addPickedFiles(res.assets.map(x => ({ uri: x.uri, name: x.name })));
+  };
+  const removeAttachment = (id: string) => commit({ attachments: (draft.attachments ?? []).filter(a => a.id !== id) });
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -306,8 +392,47 @@ function CardEditor({ card, columns, currentColumnId, onClose, onSave, onDelete,
               <TouchableOpacity style={s.addMini} onPress={addCheck}><Ionicons name="add" size={20} color="#fff" /></TouchableOpacity>
             </View>
 
-            <Text style={s.label}>Sorumlu</Text>
-            <TextInput style={s.input} value={draft.assignee} onChangeText={t => commit({ assignee: t })} placeholder="İsim" placeholderTextColor={colors.text.faint} />
+            <Text style={s.label}>Sorumlu (atama → bildirim gider)</Text>
+            <TouchableOpacity style={s.assignBtn} onPress={() => setAssignOpen(o => !o)} activeOpacity={0.7}>
+              <Ionicons name="person-outline" size={16} color={colors.text.muted} />
+              <Text style={[s.assignText, !draft.assigneeName && { color: colors.text.faint }]}>{draft.assigneeName || draft.assignee || 'Kişi seç'}</Text>
+              {(draft.assigneeName || draft.assignee) ? (
+                <TouchableOpacity onPress={() => assignTo(null)} hitSlop={HS}><Ionicons name="close-circle" size={18} color={colors.text.faint} /></TouchableOpacity>
+              ) : <Ionicons name="chevron-down" size={16} color={colors.text.faint} />}
+            </TouchableOpacity>
+            {assignOpen && (
+              <View style={s.assignList}>
+                {employees.length === 0 && <Text style={s.colEmpty}>Personel listesi boş.</Text>}
+                {employees.map(emp => (
+                  <TouchableOpacity key={emp.id} style={s.assignRow} onPress={() => assignTo(emp)} activeOpacity={0.7}>
+                    <Ionicons name={draft.assigneeId === emp.id ? 'radio-button-on' : 'radio-button-off'} size={16} color={draft.assigneeId === emp.id ? brand.green : colors.text.faint} />
+                    <Text style={s.assignRowText} numberOfLines={1}>{emp.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <View style={s.checkHeader}>
+              <Text style={s.label}>Ekler (görüntü · video · PDF · diğer)</Text>
+              {uploading && <ActivityIndicator size="small" color={brand.green} style={{ marginTop: spacing.md }} />}
+            </View>
+            {(draft.attachments ?? []).map(att => (
+              <View key={att.id} style={s.attRow}>
+                <Ionicons name={ATTACH_ICON[att.kind]} size={18} color={colors.indigo.default} />
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => Linking.openURL(att.url).catch(() => Alert.alert('Açılamadı', att.url))}>
+                  <Text style={s.attName} numberOfLines={1}>{att.name}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => removeAttachment(att.id)} hitSlop={HS}><Ionicons name="close" size={16} color={colors.text.faint} /></TouchableOpacity>
+              </View>
+            ))}
+            <View style={s.attBtnRow}>
+              <TouchableOpacity style={s.attBtn} onPress={pickMedia} disabled={uploading} activeOpacity={0.8}>
+                <Ionicons name="image-outline" size={18} color={colors.text.primary} /><Text style={s.attBtnText}>Görüntü / Video</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.attBtn} onPress={pickDocument} disabled={uploading} activeOpacity={0.8}>
+                <Ionicons name="document-attach-outline" size={18} color={colors.text.primary} /><Text style={s.attBtnText}>Dosya / PDF</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={s.label}>Termin</Text>
             <View style={s.prioRow}>
@@ -409,4 +534,20 @@ const s = StyleSheet.create({
   moveText: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '600' },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.rose.default, paddingVertical: 12, borderRadius: radius.md, marginTop: spacing.xl },
   deleteText: { color: '#fff', fontWeight: '800', fontSize: typography.base },
+  // Liste görünümü
+  listContent: { padding: spacing.md, paddingBottom: 80, gap: spacing.md },
+  listSection: { backgroundColor: colors.bg.secondary, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary, padding: spacing.sm },
+  addColumnWide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.md, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border.secondary },
+  // Atama
+  assignBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 11 },
+  assignText: { flex: 1, color: colors.text.primary, fontSize: typography.base, fontWeight: '600' },
+  assignList: { backgroundColor: colors.bg.secondary, borderWidth: 1, borderColor: colors.border.primary, borderRadius: radius.md, marginTop: 6, maxHeight: 200 },
+  assignRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.primary },
+  assignRowText: { flex: 1, color: colors.text.primary, fontSize: typography.base },
+  // Ekler
+  attRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.primary },
+  attName: { color: colors.indigo.default, fontSize: typography.sm, fontWeight: '600', textDecorationLine: 'underline' },
+  attBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  attBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border.primary },
+  attBtnText: { color: colors.text.primary, fontSize: typography.sm, fontWeight: '700' },
 });

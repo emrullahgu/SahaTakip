@@ -1,6 +1,6 @@
 // OfficeMeetingScreen — toplantı notu detay/düzenleme (başlık, tarih, katılımcılar,
 // not, aksiyon maddeleri). Aksiyon maddeleri tamamlandı olarak işaretlenebilir.
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
@@ -15,6 +15,7 @@ import { RootStackParamList, OfficeMeeting, OfficeActionItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { getMeeting, saveMeeting, deleteMeeting, newActionItem } from '../services/officeWorkspace';
+import { notifyUsers } from '../services/notifications';
 import { localDateISO } from '../utils/date';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -37,6 +38,7 @@ export default function OfficeMeetingScreen() {
   const [notes, setNotes] = useState('');
   const [actions, setActions] = useState<OfficeActionItem[]>([]);
   const [actInput, setActInput] = useState('');
+  const origOwners = useRef<Record<string, string>>({}); // id → owner (kayıt anındaki) — yeni atamada bildirim
 
   const load = useCallback(async () => {
     if (meetingId) {
@@ -44,6 +46,7 @@ export default function OfficeMeetingScreen() {
       if (m) {
         setTitle(m.title); setDate(m.date); setTime(m.time ?? '');
         setAttendees(m.attendees); setNotes(m.notes); setActions(m.actionItems);
+        origOwners.current = Object.fromEntries(m.actionItems.map(a => [a.id, a.owner ?? '']));
       }
     }
     setLoading(false);
@@ -72,13 +75,22 @@ export default function OfficeMeetingScreen() {
     if (saving) return;
     setSaving(true);
     try {
-      await saveMeeting({
+      const saved = await saveMeeting({
         id: meetingId,
         title: title.trim() || 'Toplantı',
         date, time: time.trim() || undefined,
         attendees, notes, actionItems: actions,
         createdBy: user?.id, createdByName: profile?.full_name ?? undefined,
       });
+      // Yeni/değişen sorumlulara aksiyon bildirimi gönder (aynı sorumluya tekrar gönderme).
+      const notified = new Set<string>();
+      for (const a of actions) {
+        const owner = (a.owner ?? '').trim();
+        if (owner && origOwners.current[a.id] !== owner && !notified.has(owner)) {
+          notified.add(owner);
+          notifyUsers({ userNames: [owner] }, 'task_assigned', 'Size aksiyon atandı', `${saved.title}: ${a.text}`, saved.id).catch(() => {});
+        }
+      }
       showToast('Toplantı kaydedildi');
       nav.goBack();
     } catch (e: any) {

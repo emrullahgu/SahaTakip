@@ -523,6 +523,7 @@ import OfficeBoardsScreen from '../screens/OfficeBoardsScreen';
 import OfficeBoardScreen from '../screens/OfficeBoardScreen';
 import OfficeMeetingsScreen from '../screens/OfficeMeetingsScreen';
 import OfficeMeetingScreen from '../screens/OfficeMeetingScreen';
+import BordroScreen from '../screens/BordroScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -1575,6 +1576,7 @@ function MainStack() {
       <Stack.Screen name="OfficeBoard" component={OfficeBoardScreen} options={{ headerShown: true, title: 'Pano', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="OfficeMeetings" component={OfficeMeetingsScreen} options={{ headerShown: true, title: 'Toplantılar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="OfficeMeeting" component={OfficeMeetingScreen} options={{ headerShown: true, title: 'Toplantı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="Bordro" component={BordroScreen} options={{ headerShown: true, title: 'Bordro', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="FuelReport" component={FuelReportScreen} options={{ headerShown: true, title: 'Akaryakıt Raporu', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="InventoryHub" component={InventoryHubScreen} options={{ headerShown: true, title: 'Ürün & Envanter', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ProductItems" component={ProductItemsScreen} options={{ headerShown: true, title: 'Ürünler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

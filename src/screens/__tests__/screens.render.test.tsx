@@ -72,6 +72,7 @@ import BackupScreen from '../BackupScreen';
 import BackupsScreen from '../BackupsScreen';
 import BarcodeScanScreen from '../BarcodeScanScreen';
 import BiHubScreen from '../BiHubScreen';
+import BordroScreen from '../BordroScreen';
 import BroadcastMessageScreen from '../BroadcastMessageScreen';
 import BudgetVsActualScreen from '../BudgetVsActualScreen';
 import BulkAssignScreen from '../BulkAssignScreen';
@@ -554,6 +555,7 @@ const SCREENS: Array<[string, React.ComponentType<any>]> = [
   ['BackupsScreen', BackupsScreen],
   ['BarcodeScanScreen', BarcodeScanScreen],
   ['BiHubScreen', BiHubScreen],
+  ['BordroScreen', BordroScreen],
   ['BroadcastMessageScreen', BroadcastMessageScreen],
   ['BudgetVsActualScreen', BudgetVsActualScreen],
   ['BulkAssignScreen', BulkAssignScreen],
@@ -968,7 +970,7 @@ const SCREENS: Array<[string, React.ComponentType<any>]> = [
   ['WorkOrdersScreen', WorkOrdersScreen],
 ];
 
-describe('TÜM ekranlar smoke-render (480)', () => {
+describe('TÜM ekranlar smoke-render (481)', () => {
   it.each(SCREENS)('%s çökmeden mount olur', async (_name, Screen) => {
     const { json } = await renderScreen(Screen);
     expect(json !== undefined).toBe(true);

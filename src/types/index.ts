@@ -3924,15 +3924,25 @@ export interface OfficeChecklistItem {
   text: string;
   done: boolean;
 }
+export type OfficeAttachmentKind = 'image' | 'video' | 'pdf' | 'audio' | 'other';
+export interface OfficeAttachment {
+  id: string;
+  name: string;
+  url: string;
+  kind: OfficeAttachmentKind;
+}
 export interface OfficeBoardCard {
   id: string;
   title: string;
   description?: string;
   priority?: OfficeCardPriority;
-  assignee?: string;
-  dueDate?: string;          // YYYY-MM-DD
+  assignee?: string;          // serbest metin (geriye dönük)
+  assigneeId?: string;        // employee/user id
+  assigneeName?: string;      // atanan kişi adı (bildirim eşleşmesi)
+  dueDate?: string;           // YYYY-MM-DD
   labels?: OfficeLabel[];
   checklist?: OfficeChecklistItem[];
+  attachments?: OfficeAttachment[];
 }
 export interface OfficeBoardColumn {
   id: string;
@@ -3969,6 +3979,32 @@ export interface OfficeMeeting {
   actionItems: OfficeActionItem[];
   createdBy?: string;
   createdByName?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// =============================================================
+// BORDRO (birleşik net-maaş bordrosu) — herkes kendi, yönetici/müdür herkesi görür
+// =============================================================
+export type BordroStatus = 'taslak' | 'onaylandi' | 'odendi';
+export interface Bordro {
+  id: string;
+  employeeId: string;
+  period: string;            // YYYY-MM
+  fullName: string;          // İsim Soyisim
+  nationalId: string;        // TC
+  agreedNet: number;         // Anlaşılan net
+  workedDays: number;        // Gün
+  overtimeHours: number;     // Mesai (saat)
+  sundayHolidayDays: number; // pazar/resmi tatil gün
+  absentDays: number;        // gelmedi gün
+  advance: number;           // Avans
+  expense: number;           // gider
+  bonus: number;             // Prim
+  officialSalary: number;    // Resmi maaş
+  extraPayment: number;      // Ek ödeme
+  status: BordroStatus;
+  createdBy?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -4484,6 +4520,8 @@ export type RootStackParamList = {
   OfficeBoard: { boardId: string };
   OfficeMeetings: undefined;
   OfficeMeeting: { meetingId?: string } | undefined;
+  // Bordro
+  Bordro: { period?: string } | undefined;
 };
 
 export type TabParamList = {

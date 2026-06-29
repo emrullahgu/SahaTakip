@@ -211,6 +211,12 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.fieldLabel}>Check-in / Konum</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.fieldItem} onPress={() => navigation.navigate('Bordro')} activeOpacity={0.8}>
+                <View style={[styles.fieldIcon, { backgroundColor: colors.rose.bg }]}>
+                  <Ionicons name="receipt-outline" size={40} color={colors.rose.default} />
+                </View>
+                <Text style={styles.fieldLabel}>Bordrom</Text>
+              </TouchableOpacity>
             </>
           ) : (
           <>
@@ -302,6 +308,18 @@ export default function HomeScreen() {
               <Ionicons name="business-outline" size={26} color={colors.blue.default} />
             </View>
             <Text style={styles.gridLabel}>Firma Bilgisi</Text>
+          </TouchableOpacity>
+
+          {/* Bordro — herkes kendi bordrosunu görür; yönetici/müdür herkesi yönetir */}
+          <TouchableOpacity
+            style={styles.gridItem}
+            onPress={() => navigation.navigate('Bordro')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.gridIcon, { backgroundColor: colors.rose.bg }]}>
+              <Ionicons name="receipt-outline" size={26} color={colors.rose.default} />
+            </View>
+            <Text style={styles.gridLabel}>Bordro</Text>
           </TouchableOpacity>
 
           {canSeeReports && (

@@ -7,10 +7,11 @@ import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { newUuid } from './data/repository';
 import { localDateISO } from '../utils/date';
 import { matchesAnyField } from '../utils/search';
+import { attachmentKind } from './photoUpload';
 import type {
   OfficePage, OfficeBlock, OfficeBlockType,
   OfficeBoard, OfficeBoardColumn, OfficeBoardCard, OfficeCardPriority,
-  OfficeMeeting, OfficeActionItem, OfficeLabel, OfficeChecklistItem,
+  OfficeMeeting, OfficeActionItem, OfficeLabel, OfficeChecklistItem, OfficeAttachment,
 } from '../types';
 
 const KEYS = {
@@ -489,6 +490,9 @@ export function newLabel(text: string, color = LABEL_COLORS[0]): OfficeLabel {
 }
 export function newChecklistItem(text: string): OfficeChecklistItem {
   return { id: newUuid(), text, done: false };
+}
+export function newAttachment(name: string, url: string): OfficeAttachment {
+  return { id: newUuid(), name, url, kind: attachmentKind(name || url) };
 }
 /** Kontrol listesi ilerlemesi: {done, total, pct}. */
 export function checklistProgress(card: OfficeBoardCard): { done: number; total: number; pct: number } {

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, getAuthRedirectUrl } from '../services/supabase';
 import { sendGmail } from '../services/channels';
+import { clearBordroCache } from '../services/bordro';
 import { BRAND } from '../config/brand';
 
 /** Yeni kayıt olan kullanıcıya kendi sistemimizden (gmail-send) bilgilendirme e-postası. */
@@ -227,6 +228,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (SUPABASE_CONFIGURED) {
       await supabase.auth.signOut();
     }
+    // Hassas yerel önbelleği temizle — paylaşılan cihazda bir kullanıcının
+    // maaş/TC verisi diğerine sızmasın (PII gizliliği).
+    try { await clearBordroCache(); } catch { /* sessiz */ }
     setIsDemoMode(false);
     setSession(null);
     setUser(null);

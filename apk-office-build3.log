@@ -1,0 +1,726 @@
+﻿> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-module-gradle-plugin:processResources UP-TO-DATE
+> Task :expo-updates-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin UP-TO-DATE
+> Task :expo-updates-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-updates-gradle-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileKotlin UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:pluginDescriptors UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:processResources UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+> Task :expo-updates-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-module-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :expo-updates-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:classes UP-TO-DATE
+> Task :expo-updates-gradle-plugin:classes UP-TO-DATE
+> Task :expo-module-gradle-plugin:jar UP-TO-DATE
+> Task :expo-updates-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :app
+WARNING: The option setting 'android.overridePathCheck=true' is experimental.
+The current default is 'false'.
+ ??  [33mApplying gradle plugin[0m '[32mexpo-max-sdk-override-plugin[0m'
+  [expo-max-sdk-override-plugin] This plugin will find all permissions declared with `android:maxSdkVersion`. If there exists a declaration with the `android:maxSdkVersion` annotation and another one without, the plugin will remove the annotation from the final merged manifest. In order to see a log with the changes run a clean build of the app.
+ ??  [33mApplying gradle plugin[0m '[32mexpo-updates-gradle-plugin[0m'
+
+> Configure project :
+[32m[ExpoRootProject][0m Using the following versions:
+  - buildTools:  [32m36.0.0[0m
+  - minSdk:      [32m24[0m
+  - compileSdk:  [32m36[0m
+  - targetSdk:   [32m36[0m
+  - ndk:         [32m27.1.12297006[0m
+  - kotlin:      [32m2.1.20[0m
+  - ksp:         [32m2.1.20-2.0.1[0m
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-log-box[0m (56.0.12)
+  - [32mexpo-constants[0m (56.0.16)
+  - [32mexpo-eas-client[0m (56.0.1)
+  - [32mexpo-json-utils[0m (56.0.0)
+  - [32mexpo-manifests[0m (56.0.4)
+  - [32mexpo-modules-core[0m (56.0.14)
+  - [32mexpo-structured-headers[0m (56.0.0)
+  - [32mexpo-updates[0m (56.0.17)
+  - [32mexpo-updates-interface[0m (56.0.2)
+  - [33m[?][0m [32mexpo-dom-webview[0m (56.0.5)
+  - [33m[?][0m [32mexpo-application[0m (56.0.3)
+  - [33m[?][0m [32mexpo-asset[0m (56.0.15)
+  - [33m[?][0m [32mexpo-audio[0m (56.0.11)
+  - [33m[?][0m [32mexpo-camera[0m (56.0.7)
+  - [33m[?][0m [32mexpo-device[0m (56.0.4)
+  - [33m[?][0m [32mexpo-document-picker[0m (56.0.4)
+  - [33m[?][0m [32mexpo-file-system[0m (56.0.7)
+  - [33m[?][0m [32mexpo-font[0m (56.0.5)
+  - [33m[?][0m [32mexpo-image-loader[0m (56.0.3)
+  - [33m[?][0m [32mexpo-image-manipulator[0m (56.0.17)
+  - [33m[?][0m [32mexpo-image-picker[0m (56.0.15)
+  - [33m[?][0m [32mexpo-keep-awake[0m (56.0.3)
+  - [33m[?][0m [32mexpo-location[0m (56.0.15)
+  - [33m[?][0m [32mexpo-network[0m (56.0.4)
+  - [33m[?][0m [32mexpo-notifications[0m (56.0.15)
+  - [33m[?][0m [32mexpo-print[0m (56.0.3)
+  - [33m[?][0m [32mexpo-sharing[0m (56.0.15)
+  - [33m[?][0m [32mexpo-splash-screen[0m (56.0.10)
+  - [33m[?][0m [32mexpo-status-bar[0m (56.0.4)
+
+
+> Task :expo-eas-client:preBuild UP-TO-DATE
+> Task :expo-log-box:preBuild UP-TO-DATE
+> Task :react-native-maps:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :expo-manifests:preBuild UP-TO-DATE
+> Task :expo-json-utils:preBuild UP-TO-DATE
+> Task :expo-structured-headers:preBuild UP-TO-DATE
+> Task :expo-updates:preBuild UP-TO-DATE
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-updates-interface:preBuild UP-TO-DATE
+> Task :expo-eas-client:preReleaseBuild UP-TO-DATE
+> Task :expo-structured-headers:preReleaseBuild UP-TO-DATE
+> Task :expo-log-box:preReleaseBuild UP-TO-DATE
+> Task :expo-manifests:preReleaseBuild UP-TO-DATE
+> Task :expo-modules-core:preReleaseBuild UP-TO-DATE
+> Task :expo-updates:preReleaseBuild UP-TO-DATE
+> Task :expo-json-utils:preReleaseBuild UP-TO-DATE
+> Task :expo-updates-interface:preReleaseBuild UP-TO-DATE
+> Task :react-native-maps:generateCodegenArtifactsFromSchema SKIPPED
+> Task :react-native-maps:preBuild UP-TO-DATE
+> Task :react-native-maps:preReleaseBuild UP-TO-DATE
+> Task :expo-eas-client:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo:generatePackagesList UP-TO-DATE
+> Task :react-native-maps:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-manifests:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-log-box:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo:preBuild UP-TO-DATE
+> Task :expo-structured-headers:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo:preReleaseBuild UP-TO-DATE
+> Task :expo-updates-interface:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-json-utils:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-manifests:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-eas-client:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-maps:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-log-box:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-structured-headers:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-updates-interface:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-json-utils:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :expo:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-manifests:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-maps:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-manifests:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-eas-client:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-eas-client:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-structured-headers:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-log-box:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-eas-client:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo-json-utils:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-structured-headers:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-manifests:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo-json-utils:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-updates-interface:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-community_datetimepicker:preBuild UP-TO-DATE
+> Task :react-native-community_datetimepicker:preReleaseBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :expo-manifests:generateReleaseResValues UP-TO-DATE
+> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :expo:generateReleaseResValues UP-TO-DATE
+> Task :expo-eas-client:generateReleaseResValues UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-json-utils:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-maps:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-manifests:generateReleaseResources UP-TO-DATE
+> Task :expo-updates-interface:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-screens:preReleaseBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preReleaseBuild UP-TO-DATE
+> Task :expo-log-box:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :expo-eas-client:generateReleaseResources UP-TO-DATE
+> Task :expo-json-utils:generateReleaseResValues UP-TO-DATE
+> Task :react-native-safe-area-context:preReleaseBuild UP-TO-DATE
+> Task :expo:generateReleaseResources UP-TO-DATE
+> Task :react-native-maps:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo-structured-headers:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-log-box:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo-json-utils:generateReleaseResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseNativeLibs NO-SOURCE
+> Task :app:generateAutolinkingNewArchitectureFiles
+> Task :expo-log-box:generateReleaseResValues UP-TO-DATE
+> Task :expo-updates-interface:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :react-native-maps:generateReleaseResValues UP-TO-DATE
+> Task :expo-structured-headers:generateReleaseResValues UP-TO-DATE
+> Task :react-native-community_datetimepicker:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-updates-interface:generateReleaseResValues UP-TO-DATE
+> Task :react-native-community_datetimepicker:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-manifests:packageReleaseResources UP-TO-DATE
+> Task :react-native-maps:generateReleaseResources UP-TO-DATE
+> Task :expo-updates-interface:generateReleaseResources UP-TO-DATE
+> Task :expo-log-box:generateReleaseResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-community_datetimepicker:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo-manifests:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-structured-headers:generateReleaseResources UP-TO-DATE
+> Task :expo-json-utils:packageReleaseResources UP-TO-DATE
+> Task :expo-eas-client:packageReleaseResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :app:generateAutolinkingPackageList
+> Task :expo:packageReleaseResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateReleaseResValues UP-TO-DATE
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :react-native-safe-area-context:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-json-utils:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateReleaseResources UP-TO-DATE
+> Task :expo:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-eas-client:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-manifests:generateReleaseRFile UP-TO-DATE
+> Task :app:generateReactNativeEntryPoint
+> Task :react-native-safe-area-context:generateReleaseBuildConfig UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseResValues UP-TO-DATE
+> Task :expo-updates-interface:packageReleaseResources UP-TO-DATE
+> Task :expo-manifests:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseResValues UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseResources UP-TO-DATE
+> Task :react-native-maps:packageReleaseResources UP-TO-DATE
+> Task :expo-updates-interface:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-json-utils:generateReleaseRFile UP-TO-DATE
+> Task :expo-eas-client:generateReleaseRFile UP-TO-DATE
+> Task :app:buildKotlinToolingMetadata
+> Task :expo-manifests:writeReleaseAarMetadata UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo:generateReleaseRFile UP-TO-DATE
+> Task :expo-json-utils:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseResources UP-TO-DATE
+> Task :expo-eas-client:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-maps:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-structured-headers:packageReleaseResources UP-TO-DATE
+> Task :expo-json-utils:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo-manifests:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-eas-client:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-community_datetimepicker:packageReleaseResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:packageReleaseResources UP-TO-DATE
+> Task :expo-updates-interface:generateReleaseRFile UP-TO-DATE
+> Task :expo-structured-headers:parseReleaseLocalResources UP-TO-DATE
+> Task :react-native-maps:generateReleaseRFile UP-TO-DATE
+> Task :expo:javaPreCompileRelease UP-TO-DATE
+> Task :expo-json-utils:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-eas-client:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-updates-interface:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-updates-interface:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-community_datetimepicker:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-log-box:packageReleaseResources UP-TO-DATE
+> Task :expo:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo-updates-interface:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-safe-area-context:packageReleaseResources UP-TO-DATE
+> Task :expo:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-json-utils:processReleaseManifest UP-TO-DATE
+> Task :expo-structured-headers:generateReleaseRFile UP-TO-DATE
+> Task :react-native-maps:compileReleaseKotlin NO-SOURCE
+> Task :expo-eas-client:processReleaseManifest UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseRFile UP-TO-DATE
+> Task :react-native-safe-area-context:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-log-box:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-manifests:processReleaseManifest UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateReleaseRFile UP-TO-DATE
+> Task :expo-json-utils:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-maps:javaPreCompileRelease UP-TO-DATE
+> Task :expo-structured-headers:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:javaPreCompileRelease UP-TO-DATE
+> Task :expo-json-utils:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-eas-client:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-manifests:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-json-utils:mergeReleaseShaders UP-TO-DATE
+> Task :expo-structured-headers:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo:processReleaseManifest UP-TO-DATE
+> Task :expo-eas-client:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-updates-interface:processReleaseManifest UP-TO-DATE
+> Task :expo-json-utils:compileReleaseShaders NO-SOURCE
+> Task :expo-json-utils:generateReleaseAssets UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseRFile UP-TO-DATE
+> Task :expo-structured-headers:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-manifests:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-eas-client:mergeReleaseShaders UP-TO-DATE
+> Task :expo:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-updates-interface:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-json-utils:mergeReleaseAssets UP-TO-DATE
+> Task :expo-log-box:generateReleaseRFile UP-TO-DATE
+> Task :expo-manifests:mergeReleaseShaders UP-TO-DATE
+> Task :expo-updates-interface:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-manifests:compileReleaseShaders NO-SOURCE
+> Task :expo-manifests:generateReleaseAssets UP-TO-DATE
+> Task :expo-eas-client:compileReleaseShaders NO-SOURCE
+> Task :expo-eas-client:generateReleaseAssets UP-TO-DATE
+> Task :expo:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-log-box:javaPreCompileRelease UP-TO-DATE
+> Task :expo-json-utils:extractProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :expo-updates-interface:mergeReleaseShaders UP-TO-DATE
+> Task :expo-eas-client:mergeReleaseAssets UP-TO-DATE
+> Task :expo:mergeReleaseShaders UP-TO-DATE
+> Task :expo-eas-client:extractProguardFiles UP-TO-DATE
+> Task :expo-log-box:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo-updates-interface:compileReleaseShaders NO-SOURCE
+> Task :expo-updates-interface:generateReleaseAssets UP-TO-DATE
+> Task :expo-json-utils:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :expo-manifests:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-community_datetimepicker:compileReleaseKotlin UP-TO-DATE
+> Task :react-native-maps:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :expo-json-utils:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-eas-client:prepareLintJarForPublish UP-TO-DATE
+> Task :expo:compileReleaseShaders NO-SOURCE
+> Task :expo:generateReleaseAssets UP-TO-DATE
+> Task :expo-log-box:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-updates-interface:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeReleaseAarMetadata UP-TO-DATE
+> Task :react-native-community_datetimepicker:javaPreCompileRelease UP-TO-DATE
+> Task :expo-eas-client:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-manifests:extractProguardFiles UP-TO-DATE
+> Task :expo-updates-interface:extractProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractDeepLinksRelease UP-TO-DATE
+> Task :expo:mergeReleaseAssets UP-TO-DATE
+> Task :expo-json-utils:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-maps:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :expo-structured-headers:processReleaseManifest UP-TO-DATE
+> Task :expo-eas-client:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-maps:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo:extractProguardFiles UP-TO-DATE
+> Task :expo-log-box:processReleaseManifest UP-TO-DATE
+> Task :expo-manifests:prepareLintJarForPublish UP-TO-DATE
+> Task :expo-eas-client:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :expo-updates-interface:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-maps:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-structured-headers:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-updates-interface:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-manifests:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-json-utils:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :expo-log-box:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :expo-eas-client:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :expo:prepareLintJarForPublish UP-TO-DATE
+> Task :expo-manifests:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo-updates-interface:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo-log-box:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-json-utils:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :expo:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-structured-headers:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processReleaseManifest UP-TO-DATE
+> Task :expo-manifests:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :expo:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo-eas-client:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :expo-log-box:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-manifests:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-maps:processReleaseManifest UP-TO-DATE
+> Task :react-native-community_datetimepicker:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :expo-updates-interface:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :expo-log-box:compileReleaseShaders NO-SOURCE
+> Task :expo:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :expo-log-box:generateReleaseAssets UP-TO-DATE
+> Task :expo-structured-headers:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-maps:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-json-utils:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :expo-structured-headers:compileReleaseShaders NO-SOURCE
+> Task :expo-structured-headers:generateReleaseAssets UP-TO-DATE
+> Task :react-native-maps:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :expo-updates-interface:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :expo:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-log-box:mergeReleaseAssets UP-TO-DATE
+> Task :expo-manifests:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :expo-structured-headers:mergeReleaseAssets UP-TO-DATE
+> Task :expo-log-box:extractProguardFiles UP-TO-DATE
+> Task :expo-updates-interface:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseShaders UP-TO-DATE
+> Task :expo-json-utils:mergeReleaseResources UP-TO-DATE
+> Task :expo-structured-headers:extractProguardFiles UP-TO-DATE
+> Task :expo-log-box:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-async-storage_async-storage:compileReleaseShaders NO-SOURCE
+> Task :react-native-async-storage_async-storage:generateReleaseAssets UP-TO-DATE
+> Task :expo-log-box:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-json-utils:verifyReleaseResources UP-TO-DATE
+> Task :expo-structured-headers:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseAssets UP-TO-DATE
+> Task :expo-log-box:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :expo-structured-headers:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-manifests:mergeReleaseResources UP-TO-DATE
+> Task :expo-log-box:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-maps:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-community_datetimepicker:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo-structured-headers:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-async-storage_async-storage:processReleaseJavaRes NO-SOURCE
+> Task :expo-updates-interface:mergeReleaseResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-maps:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :expo-structured-headers:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:createFullJarRelease UP-TO-DATE
+> Task :expo-structured-headers:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :expo-manifests:verifyReleaseResources UP-TO-DATE
+> Task :expo-updates-interface:verifyReleaseResources UP-TO-DATE
+> Task :react-native-maps:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-community_datetimepicker:processReleaseManifest UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractProguardFiles UP-TO-DATE
+> Task :react-native-maps:compileReleaseShaders NO-SOURCE
+> Task :react-native-community_datetimepicker:compileReleaseLibraryResources UP-TO-DATE
+> Task :react-native-maps:generateReleaseAssets UP-TO-DATE
+> Task :react-native-community_datetimepicker:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :react-native-maps:mergeReleaseAssets UP-TO-DATE
+> Task :expo-structured-headers:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-community_datetimepicker:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-maps:processReleaseJavaRes NO-SOURCE
+> Task :react-native-maps:createFullJarRelease UP-TO-DATE
+> Task :react-native-community_datetimepicker:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseKotlin UP-TO-DATE
+> Task :react-native-maps:extractProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseLintModel UP-TO-DATE
+> Task :react-native-safe-area-context:javaPreCompileRelease UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseShaders UP-TO-DATE
+> Task :react-native-async-storage_async-storage:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-community_datetimepicker:compileReleaseShaders NO-SOURCE
+> Task :react-native-community_datetimepicker:generateReleaseAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-maps:generateReleaseLintModel UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-maps:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-maps:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-maps:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-community_datetimepicker:processReleaseJavaRes UP-TO-DATE
+> Task :react-native-maps:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :react-native-async-storage_async-storage:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-community_datetimepicker:createFullJarRelease UP-TO-DATE
+> Task :react-native-community_datetimepicker:extractProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-maps:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-maps:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-maps:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-async-storage_async-storage:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-maps:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-maps:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :react-native-maps:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :react-native-async-storage_async-storage:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :react-native-async-storage_async-storage:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-maps:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :react-native-maps:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateReleaseLintVitalModel UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateReleaseLintModel UP-TO-DATE
+> Task :react-native-community_datetimepicker:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-async-storage_async-storage:bundleReleaseAar UP-TO-DATE
+> Task :react-native-community_datetimepicker:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-async-storage_async-storage:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-community_datetimepicker:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-community_datetimepicker:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-community_datetimepicker:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-community_datetimepicker:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-community_datetimepicker:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :react-native-maps:generateReleaseLintVitalModel UP-TO-DATE
+> Task :expo-structured-headers:mergeReleaseResources UP-TO-DATE
+> Task :react-native-maps:bundleReleaseAar UP-TO-DATE
+> Task :react-native-maps:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseResources UP-TO-DATE
+> Task :expo-structured-headers:verifyReleaseResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-community_datetimepicker:generateReleaseLintVitalModel UP-TO-DATE
+> Task :react-native-community_datetimepicker:bundleReleaseAar UP-TO-DATE
+> Task :react-native-community_datetimepicker:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-async-storage_async-storage:verifyReleaseResources UP-TO-DATE
+> Task :react-native-async-storage_async-storage:assembleRelease UP-TO-DATE
+> Task :react-native-maps:mergeReleaseResources UP-TO-DATE
+
+> Task :expo-constants:createExpoConfig
+env: load .env
+env: export EXPO_PUBLIC_AI_DEFAULT_PROVIDER EXPO_PUBLIC_APOLLO_API_KEY EXPO_PUBLIC_CLAUDE_KEY EXPO_PUBLIC_GEMINI_KEY EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_GOOGLE_MAPS_KEY EXPO_PUBLIC_OPENAI_KEY EXPO_PUBLIC_SITE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_SUPABASE_URL
+.\gradlew.bat : The NODE_ENV environment variable is required but was not specified. Ensure the project is bundled with
+ Expo CLI or NODE_ENV is set. Using only .env.local and .env
+At line:1 char:36
++ ... k\android'; .\gradlew.bat assembleRelease --offline --console=plain 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (The NODE_ENV en....local and .env:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> Task :expo-constants:preBuild
+> Task :expo-constants:preReleaseBuild
+> Task :expo-constants:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :expo-constants:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-constants:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-constants:generateReleaseBuildConfig UP-TO-DATE
+> Task :expo-constants:generateReleaseResValues UP-TO-DATE
+> Task :expo-constants:generateReleaseResources UP-TO-DATE
+> Task :react-native-community_datetimepicker:mergeReleaseResources UP-TO-DATE
+> Task :expo-constants:packageReleaseResources UP-TO-DATE
+> Task :react-native-maps:verifyReleaseResources UP-TO-DATE
+> Task :react-native-maps:assembleRelease UP-TO-DATE
+> Task :expo-constants:parseReleaseLocalResources UP-TO-DATE
+> Task :expo-constants:generateReleaseRFile UP-TO-DATE
+> Task :expo-constants:javaPreCompileRelease UP-TO-DATE
+> Task :expo-constants:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo-constants:extractDeepLinksRelease UP-TO-DATE
+> Task :expo-constants:processReleaseManifest UP-TO-DATE
+> Task :expo-constants:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-log-box:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :expo-eas-client:mergeReleaseResources UP-TO-DATE
+> Task :expo-eas-client:verifyReleaseResources UP-TO-DATE
+> Task :expo-log-box:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :expo-constants:prepareReleaseArtProfile UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :react-native-safe-area-context:writeReleaseAarMetadata UP-TO-DATE
+> Task :expo-constants:mergeReleaseShaders UP-TO-DATE
+> Task :expo-constants:compileReleaseShaders NO-SOURCE
+> Task :expo-constants:generateReleaseAssets UP-TO-DATE
+> Task :react-native-safe-area-context:extractDeepLinksRelease UP-TO-DATE
+> Task :react-native-community_datetimepicker:verifyReleaseResources UP-TO-DATE
+> Task :expo-constants:mergeReleaseAssets UP-TO-DATE
+> Task :react-native-community_datetimepicker:assembleRelease UP-TO-DATE
+> Task :react-native-safe-area-context:processReleaseManifest UP-TO-DATE
+> Task :expo-constants:extractProguardFiles UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseLibraryResources UP-TO-DATE
+> Task :expo-constants:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :expo-constants:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-constants:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-safe-area-context:prepareReleaseArtProfile UP-TO-DATE
+> Task :expo-constants:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :expo-constants:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseShaders UP-TO-DATE
+> Task :expo-constants:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :react-native-safe-area-context:compileReleaseShaders NO-SOURCE
+> Task :react-native-safe-area-context:generateReleaseAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseAssets UP-TO-DATE
+> Task :expo-constants:mergeReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:processReleaseJavaRes UP-TO-DATE
+> Task :expo-constants:verifyReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:createFullJarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:extractProguardFiles UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseLintModel UP-TO-DATE
+> Task :react-native-safe-area-context:prepareLintJarForPublish UP-TO-DATE
+> Task :react-native-safe-area-context:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-safe-area-context:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :react-native-safe-area-context:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :react-native-safe-area-context:extractReleaseAnnotations UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseJavaResource UP-TO-DATE
+> Task :react-native-safe-area-context:syncReleaseLibJars UP-TO-DATE
+> Task :react-native-safe-area-context:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :react-native-safe-area-context:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :react-native-safe-area-context:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :react-native-safe-area-context:generateReleaseLintVitalModel UP-TO-DATE
+> Task :react-native-safe-area-context:bundleReleaseAar UP-TO-DATE
+> Task :react-native-safe-area-context:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :expo-log-box:mergeReleaseResources UP-TO-DATE
+> Task :expo-log-box:verifyReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:verifyReleaseResources UP-TO-DATE
+> Task :react-native-safe-area-context:assembleRelease UP-TO-DATE
+
+> Task :app:createBundleReleaseJsAndAssets
+env: load .env
+env: export EXPO_PUBLIC_AI_DEFAULT_PROVIDER EXPO_PUBLIC_APOLLO_API_KEY EXPO_PUBLIC_CLAUDE_KEY EXPO_PUBLIC_GEMINI_KEY EXPO_PUBLIC_GOOGLE_MAPS_API_KEY EXPO_PUBLIC_GOOGLE_MAPS_KEY EXPO_PUBLIC_OPENAI_KEY EXPO_PUBLIC_SITE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_SUPABASE_URL
+Starting Metro Bundler
+
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+
+> Task :react-native-community_datetimepicker:lintVitalAnalyzeRelease
+> Task :react-native-screens:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :expo-updates:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :expo-modules-core:configureCMakeRelWithDebInfo[arm64-v8a]
+
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a] FAILED
+C/C++: ninja: Entering directory `C:\Users\emrul\OneDrive\Masa?st?\SahaTakip\node_modules\expo-modules-core\android\.cxx\RelWithDebInfo\264v3v59\arm64-v8a'
+C/C++: C:\Users\emrul\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android24 --sysroot=C:/Users/emrul/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot  -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp/JSI -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/src/jsi -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/jsi/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/08e71a75e5875365fa8f4daa728ce6a6/workspace/transformed/fbjni-0.7.0/prefab/modules/fbjni/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/reactnative/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC --std=c++20 -O2 -frtti -fexceptions -Wall -fstack-protector-all -DUSE_HERMES=0 -DUNIT_TEST=0 -DIS_NEW_ARCHITECTURE_ENABLED=1 -DRN_FABRIC_ENABLED=1 -DRN_SERIALIZABLE_STATE=1 -DFOLLY_NO_CONFIG=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_MOBILE=1 -DFOLLY_HAVE_RECVMMSG=1 -DFOLLY_HAVE_PTHREAD=1 -DFOLLY_HAVE_XSI_STRERROR_R=1 -DREACT_NATIVE_TARGET_VERSION=85 -DREACT_NATIVE_MINOR_VERSION=85 -std=gnu++20 -Winvalid-pch -fpch-instantiate-templates -Xclang -emit-pch -Xclang -include -Xclang C:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx -x c++-header -MD -MT CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.pch -MF CMakeFiles\expo-modules-jsi.dir\cmake_pch.hxx.pch.d -o CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.pch -c C:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.cxx
+C/C++: In file included from <built-in>:1:
+C/C++: C:/Users/emrul/OneDrive/Masa�st�/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx:5:10: fatal error: cannot open file 'C:/Users/emrul/OneDrive/Masa<FC>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cpp/ExpoHeader.pch': unspecified system_category error
+C/C++:     5 | #include "C:/Users/emrul/OneDrive/Masa<FC>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cpp/ExpoHeader.pch"
+C/C++:       |          ^
+C/C++: 1 error generated.
+C/C++: C:\Users\emrul\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android24 --sysroot=C:/Users/emrul/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dexpo_modules_core_EXPORTS -IC:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/reactnative/include/react -IC:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/reactnative/include/react/fabric -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/react-native/ReactAndroid/src/main/jni -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/src/fabric -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp/fabric -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp/JSI -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/src/jsi -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/jsi/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/08e71a75e5875365fa8f4daa728ce6a6/workspace/transformed/fbjni-0.7.0/prefab/modules/fbjni/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/reactnative/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC --std=c++20 -O2 -frtti -fexceptions -Wall -fstack-protector-all -DUSE_HERMES=0 -DUNIT_TEST=0 -DIS_NEW_ARCHITECTURE_ENABLED=1 -DRN_FABRIC_ENABLED=1 -DRN_SERIALIZABLE_STATE=1 -DFOLLY_NO_CONFIG=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_MOBILE=1 -DFOLLY_HAVE_RECVMMSG=1 -DFOLLY_HAVE_PTHREAD=1 -DFOLLY_HAVE_XSI_STRERROR_R=1 -DREACT_NATIVE_TARGET_VERSION=85 -DREACT_NATIVE_MINOR_VERSION=85 -std=gnu++20 -Winvalid-pch -fpch-instantiate-templates -Xclang -emit-pch -Xclang -include -Xclang C:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-core.dir/cmake_pch.hxx -x c++-header -MD -MT CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch -MF CMakeFiles\expo-modules-core.dir\cmake_pch.hxx.pch.d -o CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch -c C:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.cxx
+C/C++: In file included from <built-in>:1:
+C/C++: C:/Users/emrul/OneDrive/Masa�st�/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-core.dir/cmake_pch.hxx:5:10: fatal error: cannot open file 'C:/Users/emrul/OneDrive/Masa<FC>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cpp/ExpoHeader.pch': unspecified system_category error
+C/C++:     5 | #include "C:/Users/emrul/OneDrive/Masa<FC>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cpp/ExpoHeader.pch"
+C/C++:       |          ^
+C/C++: 1 error generated.
+
+> Task :expo-updates:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-screens:buildCMakeRelWithDebInfo[arm64-v8a]
+
+> Task :app:createBundleReleaseJsAndAssets
+Android Bundled 12855ms ..\Users\emrul\OneDrive\Masa�st�\SahaTakip\index.js (1777 modules)
+Writing bundle output to: android\app\build\generated\assets\react\release\index.android.bundle
+Writing sourcemap output to: android\app\build\intermediates\sourcemaps\react\release\index.android.bundle.packager.map
+Copying 26 asset files
+Done writing bundle output
+Done writing sourcemap output
+
+[Incubating] Problems report is available at: file:///C:/stk_apk/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `C:\Users\emrul\OneDrive\Masa?st?\SahaTaki
+p\node_modules\expo-modules-core\android\.cxx\RelWithDebInfo\264v3v59\arm64-v8a'
+  [1/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.pch
+  FAILED: CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.pch 
+  C:\Users\emrul\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --
+target=aarch64-none-linux-android24 --sysroot=C:/Users/emrul/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llv
+m/prebuilt/windows-x86_64/sysroot  -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/
+../common/cpp/JSI -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/src/jsi -isystem 
+C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.8
+5.3-release/prefab/modules/jsi/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/08e71a75e5875365fa8f4daa
+728ce6a6/workspace/transformed/fbjni-0.7.0/prefab/modules/fbjni/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/tr
+ansforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/reactnative
+/include -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefix
+es -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC --std=c++
+20 -O2 -frtti -fexceptions -Wall -fstack-protector-all -DUSE_HERMES=0 -DUNIT_TEST=0 -DIS_NEW_ARCHITECTURE_ENABLED=1 -DR
+N_FABRIC_ENABLED=1 -DRN_SERIALIZABLE_STATE=1 -DFOLLY_NO_CONFIG=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -DFOLLY_USE_LIBCPP=1 -DFO
+LLY_CFG_NO_COROUTINES=1 -DFOLLY_MOBILE=1 -DFOLLY_HAVE_RECVMMSG=1 -DFOLLY_HAVE_PTHREAD=1 -DFOLLY_HAVE_XSI_STRERROR_R=1 -
+DREACT_NATIVE_TARGET_VERSION=85 -DREACT_NATIVE_MINOR_VERSION=85 -std=gnu++20 -Winvalid-pch -fpch-instantiate-templates 
+-Xclang -emit-pch -Xclang -include -Xclang C:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/an
+droid/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx -x c++-header -MD -MT CMakeF
+iles/expo-modules-jsi.dir/cmake_pch.hxx.pch -MF CMakeFiles\expo-modules-jsi.dir\cmake_pch.hxx.pch.d -o CMakeFiles/expo-
+modules-jsi.dir/cmake_pch.hxx.pch -c C:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/
+.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.cxx
+  In file included from <built-in>:1:
+  C:/Users/emrul/OneDrive/Masa�st�/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-
+v8a/CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx:5:10: fatal error: cannot open file 'C:/Users/emrul/OneDrive/Masa<FC>
+st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cpp/ExpoHeader.pch': unspecified system_category error
+      5 | #include "C:/Users/emrul/OneDrive/Masa<FC>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cp
+p/ExpoHeader.pch"
+        |          ^
+  1 error generated.
+  [2/62] Building CXX object CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch
+  FAILED: CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch 
+  C:\Users\emrul\AppData\Local\Android\Sdk\ndk\27.1.12297006\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --
+target=aarch64-none-linux-android24 --sysroot=C:/Users/emrul/AppData/Local/Android/Sdk/ndk/27.1.12297006/toolchains/llv
+m/prebuilt/windows-x86_64/sysroot -Dexpo_modules_core_EXPORTS -IC:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05ff
+f90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/reactnative/include/react -I
+C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.8
+5.3-release/prefab/modules/reactnative/include/react/fabric -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/r
+eact-native/ReactAndroid/src/main/jni -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/andro
+id/src/fabric -IC:/Users/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp -IC:/Us
+ers/emrul/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp/fabric -IC:/Users/emrul/OneD
+rive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/../common/cpp/JSI -IC:/Users/emrul/OneDrive/Masa?st?/Sah
+aTakip/node_modules/expo-modules-core/android/src/jsi -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff
+90298ab095fd8938d0d94a5/workspace/transformed/react-android-0.85.3-release/prefab/modules/jsi/include -isystem C:/Users
+/emrul/.gradle/caches/9.3.1/transforms/08e71a75e5875365fa8f4daa728ce6a6/workspace/transformed/fbjni-0.7.0/prefab/module
+s/fbjni/include -isystem C:/Users/emrul/.gradle/caches/9.3.1/transforms/3a9a05fff90298ab095fd8938d0d94a5/workspace/tran
+sformed/react-android-0.85.3-release/prefab/modules/reactnative/include -g -DANDROID -fdata-sections -ffunction-section
+s -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wf
+ormat -Werror=format-security   -O2 -g -DNDEBUG -fPIC --std=c++20 -O2 -frtti -fexceptions -Wall -fstack-protector-all -
+DUSE_HERMES=0 -DUNIT_TEST=0 -DIS_NEW_ARCHITECTURE_ENABLED=1 -DRN_FABRIC_ENABLED=1 -DRN_SERIALIZABLE_STATE=1 -DFOLLY_NO_
+CONFIG=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_MOBILE=1 -DFOLLY_HAVE_RE
+CVMMSG=1 -DFOLLY_HAVE_PTHREAD=1 -DFOLLY_HAVE_XSI_STRERROR_R=1 -DREACT_NATIVE_TARGET_VERSION=85 -DREACT_NATIVE_MINOR_VER
+SION=85 -std=gnu++20 -Winvalid-pch -fpch-instantiate-templates -Xclang -emit-pch -Xclang -include -Xclang C:/Users/emru
+l/OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/
+expo-modules-core.dir/cmake_pch.hxx -x c++-header -MD -MT CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch -MF CMakeF
+iles\expo-modules-core.dir\cmake_pch.hxx.pch.d -o CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch -c C:/Users/emrul/
+OneDrive/Masa?st?/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-v8a/CMakeFiles/ex
+po-modules-core.dir/cmake_pch.hxx.cxx
+  In file included from <built-in>:1:
+  C:/Users/emrul/OneDrive/Masa�st�/SahaTakip/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/264v3v59/arm64-
+v8a/CMakeFiles/expo-modules-core.dir/cmake_pch.hxx:5:10: fatal error: cannot open file 'C:/Users/emrul/OneDrive/Masa<FC
+>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cpp/ExpoHeader.pch': unspecified system_category erro
+r
+      5 | #include "C:/Users/emrul/OneDrive/Masa<FC>st<FC>/SahaTakip/node_modules/expo-modules-core/android/src/main/cp
+p/ExpoHeader.pch"
+        |          ^
+  1 error generated.
+  ninja: build stopped: subcommand failed.
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "C:\\Users\\emrul\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "C:\\Users\\emrul\\OneDrive\\Masa�st�\\SahaTakip\\node_modules\\expo-modules-core\\android\\.cxx\\RelWithDebInf
+o\\264v3v59\\arm64-v8a" ^
+        expo-modules-core
+    from C:\Users\emrul\OneDrive\Masa�st�\SahaTakip\node_modules\expo-modules-core\android
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 46s
+402 actionable tasks: 13 executed, 389 up-to-date
