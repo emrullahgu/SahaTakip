@@ -276,6 +276,13 @@ import NotificationHubScreen from '../NotificationHubScreen';
 import NotificationPreferencesScreen from '../NotificationPreferencesScreen';
 import NotificationStatsScreen from '../NotificationStatsScreen';
 import NotificationsScreen from '../NotificationsScreen';
+import OfficeBoardScreen from '../OfficeBoardScreen';
+import OfficeBoardsScreen from '../OfficeBoardsScreen';
+import OfficeHubScreen from '../OfficeHubScreen';
+import OfficeMeetingScreen from '../OfficeMeetingScreen';
+import OfficeMeetingsScreen from '../OfficeMeetingsScreen';
+import OfficePageScreen from '../OfficePageScreen';
+import OfficePagesScreen from '../OfficePagesScreen';
 import OfflineOpDetailScreen from '../OfflineOpDetailScreen';
 import OfflineQueueScreen from '../OfflineQueueScreen';
 import OperationReplayScreen from '../OperationReplayScreen';
@@ -751,6 +758,13 @@ const SCREENS: Array<[string, React.ComponentType<any>]> = [
   ['NotificationPreferencesScreen', NotificationPreferencesScreen],
   ['NotificationStatsScreen', NotificationStatsScreen],
   ['NotificationsScreen', NotificationsScreen],
+  ['OfficeBoardScreen', OfficeBoardScreen],
+  ['OfficeBoardsScreen', OfficeBoardsScreen],
+  ['OfficeHubScreen', OfficeHubScreen],
+  ['OfficeMeetingScreen', OfficeMeetingScreen],
+  ['OfficeMeetingsScreen', OfficeMeetingsScreen],
+  ['OfficePageScreen', OfficePageScreen],
+  ['OfficePagesScreen', OfficePagesScreen],
   ['OfflineOpDetailScreen', OfflineOpDetailScreen],
   ['OfflineQueueScreen', OfflineQueueScreen],
   ['OperationReplayScreen', OperationReplayScreen],
@@ -954,7 +968,7 @@ const SCREENS: Array<[string, React.ComponentType<any>]> = [
   ['WorkOrdersScreen', WorkOrdersScreen],
 ];
 
-describe('TÜM ekranlar smoke-render (473)', () => {
+describe('TÜM ekranlar smoke-render (480)', () => {
   it.each(SCREENS)('%s çökmeden mount olur', async (_name, Screen) => {
     const { json } = await renderScreen(Screen);
     expect(json !== undefined).toBe(true);

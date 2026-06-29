@@ -3884,6 +3884,84 @@ export interface OrdSummary {
   topProducts: { name: string; qty: number; revenue: number }[];
 }
 
+// =============================================================
+// OFİS TAKİP (Notion benzeri ofis çalışma alanı) — sayfa/blok, pano, toplantı
+// =============================================================
+export type OfficeBlockType =
+  | 'heading1' | 'heading2' | 'heading3'
+  | 'text' | 'todo' | 'bullet' | 'numbered'
+  | 'divider' | 'callout' | 'quote' | 'code';
+
+export interface OfficeBlock {
+  id: string;
+  type: OfficeBlockType;
+  text: string;
+  checked?: boolean;          // yalnız 'todo' için
+}
+
+export interface OfficePage {
+  id: string;
+  parentId: string | null;   // iç içe (alt-sayfa) ağacı
+  title: string;
+  icon: string;              // emoji
+  blocks: OfficeBlock[];
+  isFavorite: boolean;
+  archived: boolean;
+  orderIndex: number;
+  createdBy?: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type OfficeCardPriority = 'low' | 'normal' | 'high' | 'urgent';
+export interface OfficeBoardCard {
+  id: string;
+  title: string;
+  description?: string;
+  priority?: OfficeCardPriority;
+  assignee?: string;
+  dueDate?: string;          // YYYY-MM-DD
+}
+export interface OfficeBoardColumn {
+  id: string;
+  title: string;
+  color: string;
+  cards: OfficeBoardCard[];
+}
+export interface OfficeBoard {
+  id: string;
+  title: string;
+  icon: string;
+  description?: string;
+  columns: OfficeBoardColumn[];
+  archived: boolean;
+  createdBy?: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface OfficeActionItem {
+  id: string;
+  text: string;
+  owner?: string;
+  done: boolean;
+}
+export interface OfficeMeeting {
+  id: string;
+  title: string;
+  date: string;              // YYYY-MM-DD
+  time?: string;             // HH:mm
+  attendees: string[];
+  notes: string;
+  actionItems: OfficeActionItem[];
+  createdBy?: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export type RootStackParamList = {
   MainTabs: undefined;
   Company: undefined;
@@ -4387,11 +4465,20 @@ export type RootStackParamList = {
   OrdDetail: { id: string };
   OrdRecurring: undefined;
   OrdAnalytics: undefined;
+  // Ofis Takip — Notion benzeri ofis çalışma alanı
+  OfficeHub: undefined;
+  OfficePages: { parentId?: string } | undefined;
+  OfficePage: { pageId: string };
+  OfficeBoards: undefined;
+  OfficeBoard: { boardId: string };
+  OfficeMeetings: undefined;
+  OfficeMeeting: { meetingId?: string } | undefined;
 };
 
 export type TabParamList = {
   Home: undefined;
   Explore: undefined;
+  Office: undefined;
   WorkOrders: undefined;
   NewService: undefined;
   Quotes: undefined;

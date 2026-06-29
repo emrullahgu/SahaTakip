@@ -515,6 +515,14 @@ import OrdFormScreen from '../screens/OrdFormScreen';
 import OrdDetailScreen from '../screens/OrdDetailScreen';
 import OrdRecurringScreen from '../screens/OrdRecurringScreen';
 import OrdAnalyticsScreen from '../screens/OrdAnalyticsScreen';
+// Ofis Takip — Notion benzeri ofis çalışma alanı
+import OfficeHubScreen from '../screens/OfficeHubScreen';
+import OfficePagesScreen from '../screens/OfficePagesScreen';
+import OfficePageScreen from '../screens/OfficePageScreen';
+import OfficeBoardsScreen from '../screens/OfficeBoardsScreen';
+import OfficeBoardScreen from '../screens/OfficeBoardScreen';
+import OfficeMeetingsScreen from '../screens/OfficeMeetingsScreen';
+import OfficeMeetingScreen from '../screens/OfficeMeetingScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -537,6 +545,8 @@ function MainTabs() {
   const insets = useSafeAreaInsets();
   const role = profile?.role ?? 'engineer';
   const canSeeManager = isDemoMode || role === 'admin' || role === 'manager';
+  // Ofis Takip: ofis ekibi (yönetici/müdür/mühendis) görür; saha personeli görmez.
+  const canSeeOffice = isDemoMode || role === 'admin' || role === 'manager' || role === 'engineer';
   // Saha personeli: teklif/mali bölümleri gizle.
   const canSeeQuotes = isDemoMode || role !== 'field';
   return (
@@ -576,6 +586,18 @@ function MainTabs() {
           tabBarItemStyle: canSeeManager ? undefined : { display: 'none' },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="compass-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Office"
+        component={OfficeHubScreen}
+        options={{
+          tabBarLabel: 'Ofis',
+          // Ofis Takip — Keşfet'in hemen sağında; yalnız ofis ekibi (admin/manager/engineer) görür.
+          tabBarItemStyle: canSeeOffice ? undefined : { display: 'none' },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="briefcase-outline" color={color} size={size} />
           ),
         }}
       />
@@ -1545,6 +1567,14 @@ function MainStack() {
       <Stack.Screen name="Tasks" component={TasksScreen} options={{ headerShown: true, title: 'Görevler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="TaskForm" component={TaskFormScreen} options={{ headerShown: true, title: 'Görev', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="TaskKanban" component={TaskKanbanScreen} options={{ headerShown: true, title: 'Kanban', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      {/* Ofis Takip — Notion benzeri ofis çalışma alanı */}
+      <Stack.Screen name="OfficeHub" component={OfficeHubScreen} options={{ headerShown: true, title: 'Ofis Takip', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OfficePages" component={OfficePagesScreen} options={{ headerShown: true, title: 'Çalışma Alanı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OfficePage" component={OfficePageScreen} options={{ headerShown: true, title: 'Sayfa', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OfficeBoards" component={OfficeBoardsScreen} options={{ headerShown: true, title: 'Panolar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OfficeBoard" component={OfficeBoardScreen} options={{ headerShown: true, title: 'Pano', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OfficeMeetings" component={OfficeMeetingsScreen} options={{ headerShown: true, title: 'Toplantılar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="OfficeMeeting" component={OfficeMeetingScreen} options={{ headerShown: true, title: 'Toplantı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="FuelReport" component={FuelReportScreen} options={{ headerShown: true, title: 'Akaryakıt Raporu', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="InventoryHub" component={InventoryHubScreen} options={{ headerShown: true, title: 'Ürün & Envanter', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ProductItems" component={ProductItemsScreen} options={{ headerShown: true, title: 'Ürünler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
