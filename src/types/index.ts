@@ -4522,6 +4522,8 @@ export type RootStackParamList = {
   OfficeMeeting: { meetingId?: string } | undefined;
   // Bordro
   Bordro: { period?: string } | undefined;
+  // Kullanım & Skor (yönetici/müdür)
+  UsageScore: undefined;
 };
 
 export type TabParamList = {

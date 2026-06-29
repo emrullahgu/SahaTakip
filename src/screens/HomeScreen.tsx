@@ -322,6 +322,20 @@ export default function HomeScreen() {
             <Text style={styles.gridLabel}>Bordro</Text>
           </TouchableOpacity>
 
+          {/* Kullanım & Skor — yalnız yönetici/müdür: kim ne kadar kullanmış */}
+          {canSeeFinance && (
+            <TouchableOpacity
+              style={styles.gridItem}
+              onPress={() => navigation.navigate('UsageScore')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.gridIcon, { backgroundColor: colors.indigo.bg }]}>
+                <Ionicons name="podium-outline" size={26} color={colors.indigo.default} />
+              </View>
+              <Text style={styles.gridLabel}>Kullanım & Skor</Text>
+            </TouchableOpacity>
+          )}
+
           {canSeeReports && (
             <TouchableOpacity
               style={styles.gridItem}

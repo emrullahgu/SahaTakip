@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -524,6 +524,8 @@ import OfficeBoardScreen from '../screens/OfficeBoardScreen';
 import OfficeMeetingsScreen from '../screens/OfficeMeetingsScreen';
 import OfficeMeetingScreen from '../screens/OfficeMeetingScreen';
 import BordroScreen from '../screens/BordroScreen';
+import UsageScoreScreen from '../screens/UsageScoreScreen';
+import { recordUsage, flushUsage, setUsageUser } from '../services/usageTracker';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -687,6 +689,17 @@ function GateFlow() {
 export default function AppNavigator() {
   const { session, isDemoMode, loading, profile, user } = useAuth();
 
+  // Kullanım takibi: aktif kullanıcı adını ayarla + oturum kaydı (girişten sonra bir kez).
+  const authed = !!session || isDemoMode;
+  React.useEffect(() => { setUsageUser(profile?.full_name); }, [profile?.full_name]);
+  React.useEffect(() => {
+    if (!authed) return;
+    recordUsage('session').catch(() => {});
+    // Arka plana geçince tamponu sunucuya yaz (kapanmadan önce kaybolmasın).
+    const sub = AppState.addEventListener('change', s => { if (s !== 'active') flushUsage().catch(() => {}); });
+    return () => { sub.remove(); flushUsage().catch(() => {}); };
+  }, [authed]);
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg.primary }}>
@@ -712,7 +725,13 @@ export default function AppNavigator() {
     sessionActive && !isDemoMode && (approvalStatus === 'pending' || approvalStatus === 'rejected');
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer
+      ref={navigationRef}
+      onStateChange={() => {
+        const r = navigationRef.getCurrentRoute?.();
+        if (r?.name) recordUsage('screen', r.name).catch(() => {});
+      }}
+    >
       {blockedByApproval ? (
         <GateFlow />
       ) : session || isDemoMode ? (
@@ -1577,6 +1596,7 @@ function MainStack() {
       <Stack.Screen name="OfficeMeetings" component={OfficeMeetingsScreen} options={{ headerShown: true, title: 'Toplantılar', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="OfficeMeeting" component={OfficeMeetingScreen} options={{ headerShown: true, title: 'Toplantı', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="Bordro" component={BordroScreen} options={{ headerShown: true, title: 'Bordro', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="UsageScore" component={UsageScoreScreen} options={{ headerShown: true, title: 'Kullanım & Skor', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="FuelReport" component={FuelReportScreen} options={{ headerShown: true, title: 'Akaryakıt Raporu', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="InventoryHub" component={InventoryHubScreen} options={{ headerShown: true, title: 'Ürün & Envanter', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="ProductItems" component={ProductItemsScreen} options={{ headerShown: true, title: 'Ürünler', headerStyle: { backgroundColor: colors.bg.secondary }, headerTintColor: colors.text.primary, headerTitleStyle: { fontWeight: '700' } }} />

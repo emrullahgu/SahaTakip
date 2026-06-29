@@ -453,6 +453,7 @@ import UatReportScreen from '../UatReportScreen';
 import UatStockScreen from '../UatStockScreen';
 import UatWorkOrderScreen from '../UatWorkOrderScreen';
 import UsageLimitsScreen from '../UsageLimitsScreen';
+import UsageScoreScreen from '../UsageScoreScreen';
 import UserApprovalsScreen from '../UserApprovalsScreen';
 import UsersAdminScreen from '../UsersAdminScreen';
 import VehicleAlertsScreen from '../VehicleAlertsScreen';
@@ -936,6 +937,7 @@ const SCREENS: Array<[string, React.ComponentType<any>]> = [
   ['UatStockScreen', UatStockScreen],
   ['UatWorkOrderScreen', UatWorkOrderScreen],
   ['UsageLimitsScreen', UsageLimitsScreen],
+  ['UsageScoreScreen', UsageScoreScreen],
   ['UserApprovalsScreen', UserApprovalsScreen],
   ['UsersAdminScreen', UsersAdminScreen],
   ['VehicleAlertsScreen', VehicleAlertsScreen],
@@ -970,7 +972,7 @@ const SCREENS: Array<[string, React.ComponentType<any>]> = [
   ['WorkOrdersScreen', WorkOrdersScreen],
 ];
 
-describe('TÜM ekranlar smoke-render (481)', () => {
+describe('TÜM ekranlar smoke-render (482)', () => {
   it.each(SCREENS)('%s çökmeden mount olur', async (_name, Screen) => {
     const { json } = await renderScreen(Screen);
     expect(json !== undefined).toBe(true);
