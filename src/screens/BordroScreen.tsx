@@ -21,6 +21,7 @@ import {
 } from '../services/bordro';
 import { fmtTRY } from '../services/bordroEngine';
 import { exportBordroSingle, exportBordroBulk } from '../services/bordroPdf';
+import { newUuid } from '../services/data/repository';
 import EmptyState from '../components/EmptyState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -51,6 +52,12 @@ export default function BordroScreen() {
   const onAddEmployee = (emp: { id: string; name: string; monthlyWage?: number }) => {
     setPickOpen(false);
     setEditing(draftFor(emp.id, emp.name, period, emp.monthlyWage || 0));
+  };
+
+  // Kayıtlı personel olmasa da elle yeni kişi ekle (ad/TC editörde girilir).
+  const onAddManual = () => {
+    setPickOpen(false);
+    setEditing(draftFor(newUuid(), '', period, 0));
   };
 
   const onSave = async (b: Bordro) => {
@@ -175,9 +182,21 @@ export default function BordroScreen() {
         <Pressable style={s.modalBg} onPress={() => setPickOpen(false)}>
           <Pressable style={s.sheet} onPress={e => e.stopPropagation()}>
             <Text style={s.sheetTitle}>Personel ekle — {period}</Text>
-            <ScrollView style={{ maxHeight: 380 }}>
-              {addable.length === 0 && <Text style={s.muted}>Bu dönem için tüm personel eklenmiş.</Text>}
-              {addable.map(e => (
+            {/* Her zaman erişilebilir: elle yeni kişi (kayıtlı personel olmasa da çalışır) */}
+            <TouchableOpacity style={[s.pickRow, { borderBottomWidth: 1, borderBottomColor: colors.border.secondary }]} onPress={onAddManual} activeOpacity={0.7}>
+              <Ionicons name="add-circle" size={24} color={brand.green} />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.pickName, { color: brand.green }]}>Yeni kişi ekle (manuel)</Text>
+                <Text style={s.pickRole}>Ad, TC ve maaş bir sonraki ekranda girilir</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.text.faint} />
+            </TouchableOpacity>
+            <ScrollView style={{ maxHeight: 340 }}>
+              {employees.length === 0 ? (
+                <Text style={s.muted}>Kayıtlı personel yok. Yukarıdan "manuel" ile ekleyin.</Text>
+              ) : addable.length === 0 ? (
+                <Text style={s.muted}>Tüm kayıtlı personel bu döneme eklendi. Yeni kişi için "manuel" kullanın.</Text>
+              ) : addable.map(e => (
                 <TouchableOpacity key={e.id} style={s.pickRow} onPress={() => onAddEmployee(e)} activeOpacity={0.7}>
                   <Ionicons name="person-circle-outline" size={22} color={colors.text.muted} />
                   <View style={{ flex: 1 }}><Text style={s.pickName}>{e.name}</Text><Text style={s.pickRole}>{e.role}</Text></View>
