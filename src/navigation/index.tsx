@@ -590,18 +590,6 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Office"
-        component={OfficeHubScreen}
-        options={{
-          tabBarLabel: 'Ofis',
-          // Ofis Takip — Keşfet'in hemen sağında; yalnız ofis ekibi (admin/manager/engineer) görür.
-          tabBarItemStyle: canSeeOffice ? undefined : { display: 'none' },
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="briefcase-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="WorkOrders"
         component={WorkOrdersScreen}
         options={{
@@ -635,6 +623,18 @@ function MainTabs() {
             >
               <Ionicons name="add" color={colors.bg.primary} size={30} />
             </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Office"
+        component={OfficeHubScreen}
+        options={{
+          tabBarLabel: 'Ofis',
+          // Ofis Takip — Teklifler'in hemen solunda; yalnız ofis ekibi (admin/manager/engineer) görür.
+          tabBarItemStyle: canSeeOffice ? undefined : { display: 'none' },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="briefcase-outline" color={color} size={size} />
           ),
         }}
       />

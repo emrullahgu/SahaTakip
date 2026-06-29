@@ -97,3 +97,12 @@ drop policy if exists office_meetings_write on public.office_meetings;
 create policy office_meetings_write on public.office_meetings for all to authenticated
   using (public.is_office_member())
   with check (public.is_office_member());
+
+-- ── GERÇEK ZAMANLI (ekip eşzamanlılığı) ─────────────────────
+-- Tabloları supabase_realtime publication'a ekle (zaten ekliyse hata vermesin).
+do $$
+begin
+  begin execute 'alter publication supabase_realtime add table public.office_pages'; exception when duplicate_object then null; end;
+  begin execute 'alter publication supabase_realtime add table public.office_boards'; exception when duplicate_object then null; end;
+  begin execute 'alter publication supabase_realtime add table public.office_meetings'; exception when duplicate_object then null; end;
+end $$;

@@ -1,5 +1,5 @@
 // OfficeBoardsScreen — Ofis panoları listesi (Notion-database benzeri kanban panolar).
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { RootStackParamList, OfficeBoard } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { listBoards, saveBoard, countCards } from '../services/officeWorkspace';
+import { listBoards, saveBoard, countCards, subscribeOffice } from '../services/officeWorkspace';
 import EmptyState from '../components/EmptyState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +27,7 @@ export default function OfficeBoardsScreen() {
     finally { setLoading(false); }
   }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+  useEffect(() => subscribeOffice('office_boards', refresh), [refresh]);
 
   const create = async () => {
     const name = title.trim();

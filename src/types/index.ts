@@ -3915,6 +3915,15 @@ export interface OfficePage {
 }
 
 export type OfficeCardPriority = 'low' | 'normal' | 'high' | 'urgent';
+export interface OfficeLabel {
+  text: string;
+  color: string;
+}
+export interface OfficeChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
 export interface OfficeBoardCard {
   id: string;
   title: string;
@@ -3922,6 +3931,8 @@ export interface OfficeBoardCard {
   priority?: OfficeCardPriority;
   assignee?: string;
   dueDate?: string;          // YYYY-MM-DD
+  labels?: OfficeLabel[];
+  checklist?: OfficeChecklistItem[];
 }
 export interface OfficeBoardColumn {
   id: string;

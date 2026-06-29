@@ -6,10 +6,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, SUPABASE_CONFIGURED } from './supabase';
 import { newUuid } from './data/repository';
 import { localDateISO } from '../utils/date';
+import { matchesAnyField } from '../utils/search';
 import type {
   OfficePage, OfficeBlock, OfficeBlockType,
   OfficeBoard, OfficeBoardColumn, OfficeBoardCard, OfficeCardPriority,
-  OfficeMeeting, OfficeActionItem,
+  OfficeMeeting, OfficeActionItem, OfficeLabel, OfficeChecklistItem,
 } from '../types';
 
 const KEYS = {
@@ -29,6 +30,31 @@ async function loadList<T>(key: string): Promise<T[]> {
 }
 async function saveList<T>(key: string, list: T[]): Promise<void> {
   await AsyncStorage.setItem(key, JSON.stringify(list));
+}
+
+// ── Pending outbox ──────────────────────────────────────────
+// DB'ye yazılamayan (RLS/ağ) kayıtların id'leri. listX() sunucudan tazelerken
+// bu id'lere ait yerel kopyalar EZİLMEZ — böylece "local-first" sözü tazelemeden
+// sonra da korunur (Req#3 dürüstlük: sessiz veri kaybı yok).
+const PEND = { pages: 'office_pend_pages_v1', boards: 'office_pend_boards_v1', meetings: 'office_pend_meet_v1' };
+async function getPending(key: string): Promise<string[]> {
+  try { const raw = await AsyncStorage.getItem(key); return raw ? JSON.parse(raw) : []; } catch { return []; }
+}
+async function addPending(key: string, id: string): Promise<void> {
+  const ids = await getPending(key);
+  if (!ids.includes(id)) await AsyncStorage.setItem(key, JSON.stringify([...ids, id]));
+}
+async function clearPending(key: string, id: string): Promise<void> {
+  const ids = await getPending(key);
+  if (ids.includes(id)) await AsyncStorage.setItem(key, JSON.stringify(ids.filter(x => x !== id)));
+}
+/** Sunucu listesine, henüz senkronlanmamış (pending) yerel kayıtları geri ekler. */
+function mergePending<T extends { id: string }>(server: T[], cache: T[], pendingIds: string[]): T[] {
+  if (!pendingIds.length) return server;
+  const serverIds = new Set(server.map(x => x.id));
+  const byId = new Map(cache.map(x => [x.id, x]));
+  const extra = pendingIds.filter(id => !serverIds.has(id)).map(id => byId.get(id)).filter(Boolean) as T[];
+  return [...server, ...extra];
 }
 
 const now = () => new Date().toISOString();
@@ -54,6 +80,65 @@ export const BLOCK_MENU: OfficeBlockType[] = [
 export function newBlock(type: OfficeBlockType = 'text', text = ''): OfficeBlock {
   return { id: newUuid(), type, text, ...(type === 'todo' ? { checked: false } : {}) };
 }
+
+/** Tüm blok metnini düz metne indirger (arama/önizleme için). */
+export function pagePlainText(p: OfficePage): string {
+  return p.blocks.map(b => b.text).filter(Boolean).join(' ');
+}
+
+// ── Sayfa şablonları (Notion benzeri hızlı başlangıç) ──
+export interface PageTemplate {
+  key: string;
+  label: string;
+  icon: string;
+  desc: string;
+  build: () => OfficeBlock[];
+}
+export const PAGE_TEMPLATES: PageTemplate[] = [
+  { key: 'blank', label: 'Boş Sayfa', icon: '📄', desc: 'Temiz başla', build: () => [newBlock('text', '')] },
+  {
+    key: 'meeting', label: 'Toplantı Notu', icon: '📝', desc: 'Katılımcı · gündem · aksiyon',
+    build: () => [
+      newBlock('heading2', 'Katılımcılar'),
+      newBlock('bullet', ''),
+      newBlock('heading2', 'Gündem'),
+      newBlock('numbered', ''),
+      newBlock('heading2', 'Kararlar'),
+      newBlock('text', ''),
+      newBlock('heading2', 'Aksiyonlar'),
+      newBlock('todo', ''),
+    ],
+  },
+  {
+    key: 'project', label: 'Proje Planı', icon: '🎯', desc: 'Hedef · kilometre taşı · riskler',
+    build: () => [
+      newBlock('heading2', 'Amaç'),
+      newBlock('callout', 'Bu projenin hedefi…'),
+      newBlock('heading2', 'Kilometre Taşları'),
+      newBlock('todo', ''),
+      newBlock('heading2', 'Riskler & Notlar'),
+      newBlock('bullet', ''),
+    ],
+  },
+  {
+    key: 'checklist', label: 'Kontrol Listesi', icon: '✅', desc: 'Yapılacaklar listesi',
+    build: () => [
+      newBlock('heading2', 'Kontrol Listesi'),
+      newBlock('todo', ''), newBlock('todo', ''), newBlock('todo', ''),
+    ],
+  },
+  {
+    key: 'sop', label: 'Prosedür (SOP)', icon: '⚙️', desc: 'Adım adım iş akışı',
+    build: () => [
+      newBlock('heading2', 'Amaç'),
+      newBlock('text', ''),
+      newBlock('heading2', 'Adımlar'),
+      newBlock('numbered', ''),
+      newBlock('heading2', 'Dikkat'),
+      newBlock('callout', ''),
+    ],
+  },
+];
 
 // =============================================================
 // SAYFALAR
@@ -97,9 +182,11 @@ export async function listPages(): Promise<OfficePage[]> {
       const { data, error } = await supabase
         .from('office_pages').select('*').order('order_index', { ascending: true });
       if (!error && data) {
-        const list = data.map(pageFromRow);
-        await saveList(KEYS.pages, list);
-        return list;
+        const server = data.map(pageFromRow);
+        const pending = await getPending(PEND.pages);
+        const merged = pending.length ? mergePending(server, await loadList<OfficePage>(KEYS.pages), pending) : server;
+        await saveList(KEYS.pages, merged);
+        return merged;
       }
     } catch { /* offline fallback */ }
   }
@@ -135,17 +222,20 @@ export async function savePage(
     page = normalizeNewPage(input);
     list.unshift(page);
   }
+  // LOCAL-FIRST: önce yerele yaz — DB hata verse bile kullanıcı verisi KAYBOLMAZ.
+  await saveList(KEYS.pages, list);
   if (SUPABASE_CONFIGURED) {
-    // DÜRÜSTLÜK: DB reddederse (RLS) fırlat — sahte "kaydedildi" gösterilmesin.
+    // DÜRÜSTLÜK: DB reddederse (RLS) fırlat — sahte "kaydedildi" yok. Yerel kopya + outbox durur.
     const { data, error } = await supabase
       .from('office_pages').upsert(pageToRow(page)).select().single();
-    if (error) throw new Error(`Sayfa kaydedilemedi: ${error.message}`);
-    if (data) page = pageFromRow(data);
-    const fresh = await loadList<OfficePage>(KEYS.pages);
-    await saveList(KEYS.pages, [page, ...fresh.filter(p => p.id !== page.id)]);
-    return page;
+    if (error) { await addPending(PEND.pages, page.id); throw new Error(`Sayfa kaydedilemedi: ${error.message}`); }
+    await clearPending(PEND.pages, page.id);
+    if (data) {
+      page = pageFromRow(data);
+      const fresh = await loadList<OfficePage>(KEYS.pages);
+      await saveList(KEYS.pages, fresh.map(p => (p.id === page.id ? page : p)));
+    }
   }
-  await saveList(KEYS.pages, list);
   return page;
 }
 
@@ -171,6 +261,7 @@ export async function deletePage(id: string): Promise<void> {
   const list = await loadList<OfficePage>(KEYS.pages);
   const toDelete = new Set<string>();
   const collect = (pid: string) => {
+    if (toDelete.has(pid)) return; // döngü guard (bozuk veride sonsuz özyineleme olmasın)
     toDelete.add(pid);
     list.filter(p => p.parentId === pid).forEach(c => collect(c.id));
   };
@@ -186,6 +277,86 @@ export async function toggleFavorite(id: string): Promise<void> {
   const p = await getPage(id);
   if (!p) return;
   await savePage({ id, isFavorite: !p.isFavorite });
+}
+
+/** id'in kendisi + tüm alt ağacı (taşımada döngüyü önlemek için). Döngüye karşı guard'lı. */
+export function descendantIds(all: OfficePage[], id: string): Set<string> {
+  const out = new Set<string>([id]);
+  const walk = (pid: string) => all.filter(p => p.parentId === pid).forEach(c => {
+    if (!out.has(c.id)) { out.add(c.id); walk(c.id); }
+  });
+  walk(id);
+  return out;
+}
+
+/** Sayfayı başka bir ebeveyne (veya köke) taşır. Döngü oluşturacak hedef reddedilir. */
+export async function movePage(id: string, newParentId: string | null): Promise<void> {
+  if (newParentId) {
+    const all = await listPages();
+    if (descendantIds(all, id).has(newParentId)) {
+      throw new Error('Bir sayfa kendi alt sayfasının altına taşınamaz.');
+    }
+  }
+  await savePage({ id, parentId: newParentId, orderIndex: Date.now() });
+}
+
+/**
+ * Kardeşler arasında bir basamak yukarı/aşağı taşır. Eşit/çakışan orderIndex'lere
+ * dayanıklı: tüm kardeş grubunu yeni sıraya göre kesin artan adımlarla yeniden numaralandırır.
+ */
+export async function reorderSibling(all: OfficePage[], id: string, dir: -1 | 1): Promise<void> {
+  const me = all.find(p => p.id === id);
+  if (!me) return;
+  const sibs = childrenOf(all, me.parentId ?? null);
+  const i = sibs.findIndex(p => p.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= sibs.length) return;
+  const ordered = sibs.slice();
+  [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+  // Yeni konuma göre kesin artan orderIndex (adım 1000) — eşit-index no-op'unu engeller.
+  for (let k = 0; k < ordered.length; k++) {
+    const want = (k + 1) * 1000;
+    if (ordered[k].orderIndex !== want) await savePage({ id: ordered[k].id, orderIndex: want });
+  }
+}
+
+// ── Son görüntülenenler ──
+const RECENT_KEY = 'office_recent_v1';
+export async function touchRecent(id: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(RECENT_KEY);
+    const ids: string[] = raw ? JSON.parse(raw) : [];
+    const next = [id, ...ids.filter(x => x !== id)].slice(0, 15);
+    await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch { /* sessiz */ }
+}
+export async function recentPageIds(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+/** Görüntülenme sırasına göre, arşivlenmemiş son sayfalar. */
+export function orderByRecent(all: OfficePage[], ids: string[], limit = 8): OfficePage[] {
+  const byId = new Map(all.map(p => [p.id, p]));
+  const out: OfficePage[] = [];
+  for (const id of ids) {
+    const p = byId.get(id);
+    if (p && !p.archived) out.push(p);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+// ── Arama (başlık + blok içeriği, aksan-duyarsız) ──
+export interface OfficeSearchHit { page: OfficePage; snippet: string; }
+export function searchPages(all: OfficePage[], term: string): OfficeSearchHit[] {
+  const q = term.trim();
+  if (!q) return [];
+  return all
+    .filter(p => !p.archived && matchesAnyField([p.title, pagePlainText(p)], q))
+    .slice(0, 50)
+    .map(p => ({ page: p, snippet: pagePlainText(p).slice(0, 120) }));
 }
 
 // =============================================================
@@ -227,7 +398,10 @@ function boardFromRow(r: any): OfficeBoard {
     title: r.title ?? '',
     icon: r.icon ?? '📋',
     description: r.description ?? undefined,
-    columns: Array.isArray(r.columns) ? r.columns : [],
+    // Savunmasız deserializasyon koruması: her kolonun cards'ı her zaman dizi olsun.
+    columns: Array.isArray(r.columns)
+      ? r.columns.map((c: any) => ({ ...c, cards: Array.isArray(c?.cards) ? c.cards : [] }))
+      : [],
     archived: !!r.archived,
     createdBy: r.created_by ?? undefined,
     createdByName: r.created_by_name ?? undefined,
@@ -242,9 +416,11 @@ export async function listBoards(): Promise<OfficeBoard[]> {
       const { data, error } = await supabase
         .from('office_boards').select('*').order('created_at', { ascending: false });
       if (!error && data) {
-        const list = data.map(boardFromRow);
-        await saveList(KEYS.boards, list);
-        return list;
+        const server = data.map(boardFromRow);
+        const pending = await getPending(PEND.boards);
+        const merged = pending.length ? mergePending(server, await loadList<OfficeBoard>(KEYS.boards), pending) : server;
+        await saveList(KEYS.boards, merged);
+        return merged;
       }
     } catch { /* offline fallback */ }
   }
@@ -277,16 +453,19 @@ export async function saveBoard(input: Partial<OfficeBoard> & { id?: string }): 
     };
     list.unshift(board);
   }
+  // LOCAL-FIRST: önce yerele yaz — DB hata verse bile veri kaybolmaz.
+  await saveList(KEYS.boards, list);
   if (SUPABASE_CONFIGURED) {
     const { data, error } = await supabase
       .from('office_boards').upsert(boardToRow(board)).select().single();
-    if (error) throw new Error(`Pano kaydedilemedi: ${error.message}`);
-    if (data) board = boardFromRow(data);
-    const fresh = await loadList<OfficeBoard>(KEYS.boards);
-    await saveList(KEYS.boards, [board, ...fresh.filter(b => b.id !== board.id)]);
-    return board;
+    if (error) { await addPending(PEND.boards, board.id); throw new Error(`Pano kaydedilemedi: ${error.message}`); }
+    await clearPending(PEND.boards, board.id);
+    if (data) {
+      board = boardFromRow(data);
+      const fresh = await loadList<OfficeBoard>(KEYS.boards);
+      await saveList(KEYS.boards, fresh.map(b => (b.id === board.id ? board : b)));
+    }
   }
-  await saveList(KEYS.boards, list);
   return board;
 }
 
@@ -302,6 +481,39 @@ export async function deleteBoard(id: string): Promise<void> {
 export function newCard(title: string): OfficeBoardCard {
   return { id: newUuid(), title, priority: 'normal' };
 }
+
+// ── Etiket & kontrol listesi (jsonb içinde — migration gerektirmez) ──
+export const LABEL_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#64748b'];
+export function newLabel(text: string, color = LABEL_COLORS[0]): OfficeLabel {
+  return { text, color };
+}
+export function newChecklistItem(text: string): OfficeChecklistItem {
+  return { id: newUuid(), text, done: false };
+}
+/** Kontrol listesi ilerlemesi: {done, total, pct}. */
+export function checklistProgress(card: OfficeBoardCard): { done: number; total: number; pct: number } {
+  const items = card.checklist ?? [];
+  const done = items.filter(i => i.done).length;
+  const total = items.length;
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+// ── Termin durumu (gecikme/yaklaşma görsel vurgusu) ──
+export type DueStatus = 'overdue' | 'today' | 'soon' | 'future' | 'none';
+export function dueStatus(dueDate?: string): DueStatus {
+  if (!dueDate) return 'none';
+  const today = localDateISO();
+  if (dueDate < today) return 'overdue';
+  if (dueDate === today) return 'today';
+  // 3 gün içinde mi?
+  const d = new Date(dueDate + 'T00:00:00');
+  const t = new Date(today + 'T00:00:00');
+  const diff = (d.getTime() - t.getTime()) / 86400000;
+  return diff <= 3 ? 'soon' : 'future';
+}
+export const DUE_COLOR: Record<DueStatus, string> = {
+  overdue: '#ef4444', today: '#f59e0b', soon: '#f59e0b', future: '#64748b', none: '#64748b',
+};
 
 /** Kartı kolonlar arası taşır (yeni columns dizisi döndürür — saf). */
 export function moveCard(
@@ -363,9 +575,11 @@ export async function listMeetings(): Promise<OfficeMeeting[]> {
       const { data, error } = await supabase
         .from('office_meetings').select('*').order('date', { ascending: false });
       if (!error && data) {
-        const list = data.map(meetingFromRow);
-        await saveList(KEYS.meetings, list);
-        return list;
+        const server = data.map(meetingFromRow);
+        const pending = await getPending(PEND.meetings);
+        const merged = pending.length ? mergePending(server, await loadList<OfficeMeeting>(KEYS.meetings), pending) : server;
+        await saveList(KEYS.meetings, merged);
+        return merged;
       }
     } catch { /* offline fallback */ }
   }
@@ -400,16 +614,19 @@ export async function saveMeeting(input: Partial<OfficeMeeting> & { id?: string 
     };
     list.unshift(m);
   }
+  // LOCAL-FIRST: önce yerele yaz — DB hata verse bile veri kaybolmaz.
+  await saveList(KEYS.meetings, list);
   if (SUPABASE_CONFIGURED) {
     const { data, error } = await supabase
       .from('office_meetings').upsert(meetingToRow(m)).select().single();
-    if (error) throw new Error(`Toplantı kaydedilemedi: ${error.message}`);
-    if (data) m = meetingFromRow(data);
-    const fresh = await loadList<OfficeMeeting>(KEYS.meetings);
-    await saveList(KEYS.meetings, [m, ...fresh.filter(x => x.id !== m.id)]);
-    return m;
+    if (error) { await addPending(PEND.meetings, m.id); throw new Error(`Toplantı kaydedilemedi: ${error.message}`); }
+    await clearPending(PEND.meetings, m.id);
+    if (data) {
+      m = meetingFromRow(data);
+      const fresh = await loadList<OfficeMeeting>(KEYS.meetings);
+      await saveList(KEYS.meetings, fresh.map(x => (x.id === m.id ? m : x)));
+    }
   }
-  await saveList(KEYS.meetings, list);
   return m;
 }
 
@@ -453,4 +670,25 @@ export async function officeStats(): Promise<OfficeStats> {
     meetings: meetings.length,
     openActions: openActionItems(meetings).length,
   };
+}
+
+// =============================================================
+// GERÇEK ZAMANLI (ekip eşzamanlılığı) — Supabase realtime
+// =============================================================
+type OfficeTable = 'office_pages' | 'office_boards' | 'office_meetings';
+/**
+ * Tabloya gelen değişikliklerde cb() çağırır. SUPABASE_CONFIGURED değilse no-op.
+ * Dönen fonksiyon aboneliği kapatır (useEffect cleanup'ında çağır).
+ */
+export function subscribeOffice(table: OfficeTable, cb: () => void): () => void {
+  if (!SUPABASE_CONFIGURED) return () => {};
+  try {
+    const channel = supabase
+      .channel(`office-${table}-${newUuid().slice(0, 8)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, () => cb())
+      .subscribe();
+    return () => { try { supabase.removeChannel(channel); } catch { /* sessiz */ } };
+  } catch {
+    return () => {};
+  }
 }

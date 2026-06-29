@@ -1,7 +1,7 @@
 // OfficeHubScreen — "Ofis Takip" merkez ekranı (Notion benzeri ofis çalışma alanı).
 // Ofis ekibi (admin/manager/engineer) için: Çalışma Alanı (sayfa/blok), Panolar (kanban),
 // Toplantı Notları + mevcut ofis araçlarına kısayol. İstatistikler + son sayfalar.
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, spacing, radius, typography, brand } from '../theme';
 import { RootStackParamList, OfficePage } from '../types';
-import { officeStats, listPages, OfficeStats } from '../services/officeWorkspace';
+import { officeStats, listPages, recentPageIds, orderByRecent, subscribeOffice, OfficeStats } from '../services/officeWorkspace';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -24,16 +24,16 @@ export default function OfficeHubScreen() {
   const [recent, setRecent] = useState<OfficePage[]>([]);
 
   const refresh = useCallback(async () => {
-    const [s, pages] = await Promise.all([officeStats(), listPages()]);
-    setStats(s);
-    setRecent(
-      pages
-        .filter(p => !p.archived)
-        .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
-        .slice(0, 5),
-    );
+    const [st, pages, ids] = await Promise.all([officeStats(), listPages(), recentPageIds()]);
+    setStats(st);
+    const recentList = orderByRecent(pages, ids, 5);
+    // Henüz hiç görüntüleme yoksa son güncellenenlere düş.
+    setRecent(recentList.length > 0
+      ? recentList
+      : pages.filter(p => !p.archived).sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt)).slice(0, 5));
   }, []);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+  useEffect(() => subscribeOffice('office_pages', refresh), [refresh]);
 
   const TILES: { key: keyof RootStackParamList; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
     { key: 'OfficePages',    label: 'Çalışma Alanı', desc: 'Sayfa · blok · alt-sayfa', icon: 'documents-outline', color: brand.blue },
