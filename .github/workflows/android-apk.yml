@@ -48,6 +48,33 @@ jobs:
       - name: Native android/ üret (expo prebuild)
         run: npx expo prebuild --platform android --no-install
 
+      - name: Gradle init (JitPack içerik filtresi)
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/jitpack-filter.gradle << 'EOF'
+          // JitPack yalnızca com.github.* paketleri barındırır.
+          // Diğer bağımlılıklar (örn. org.bouncycastle) için JitPack'e istek
+          // gönderilmesini engelleyerek zaman aşımı hatasını önler.
+
+          def applyJitPackFilter = { repo ->
+              if (repo instanceof MavenArtifactRepository && repo.url.host.endsWith('jitpack.io')) {
+                  repo.content {
+                      includeGroupByRegex('com\\.github\\..*')
+                  }
+              }
+          }
+
+          // React Native 0.74+ — dependencyResolutionManagement (settings.gradle)
+          beforeSettings { settings ->
+              settings.dependencyResolutionManagement.repositories.configureEach { applyJitPackFilter(it) }
+          }
+
+          // Eski yapı — allprojects.repositories (build.gradle)
+          allprojects {
+              repositories.configureEach { applyJitPackFilter(it) }
+          }
+          EOF
+
       - name: Gradle ile APK derle
         run: |
           cd android
