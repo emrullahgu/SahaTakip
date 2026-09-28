@@ -7,6 +7,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { VisitProvider } from './src/context/VisitContext';
 import AppNavigator from './src/navigation';
 import ConnectionBanner from './src/components/ConnectionBanner';
+import SunucuDurumu from './src/components/SunucuDurumu';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { installGlobalErrorHandler } from './src/services/crashReporter';
 import { installWebAlertShim } from './src/utils/webAlertShim';
@@ -22,6 +23,7 @@ export default function App() {
           <VisitProvider>
             <AppProvider>
               <View style={{ flex: 1 }}>
+                <SunucuDurumu />
                 <ConnectionBanner />
                 <AppNavigator />
               </View>
