@@ -160,7 +160,11 @@ export default function SunucuDurumu() {
 
 const styles = StyleSheet.create({
   perde: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 9999,
     backgroundColor: 'rgba(15, 23, 42, 0.72)',
     alignItems: 'center',
