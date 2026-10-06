@@ -19,6 +19,8 @@
   # Netlify UI → Site settings → Environment variables üzerinden de override
   # edebilirsiniz (örn. özel domain bağlandığında).
   EXPO_PUBLIC_SITE_URL = "https://saha.kobinerji.com.tr"
+  # Supabase adresi: sitenin kendi adresi uzerinden (/sb/* proxy). netlify.toml, Netlify UI degerini ezer.
+  EXPO_PUBLIC_SUPABASE_URL = "https://saha.kobinerji.com.tr/sb"
   # app.json / eas.json mobil derleme yapılandırması içindir; web build'in parçası değildir.
   SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_SUPABASE_ANON_KEY"
   # netlify.toml de hariç tutuluyor: build env değerleri burada tanımlı olduğu için
@@ -28,6 +30,14 @@
   SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyCK07v1Y92w9-x56uyUSSsYEHszNof1deE"
 
 # SPA fallback — React Navigation history için
+# Sunucu API'si: uygulama https://saha.kobinerji.com.tr/sb/... ister, Netlify bunu sunucuya iletir.
+# Sunucu adresi degisince SADECE "to" satiri degisir. SPA kuralindan ONCE durmali.
+[[redirects]]
+  from = "/sb/*"
+  to = "https://casa-inexpensive-redeem-aerospace.trycloudflare.com/sahatakip/:splat"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
